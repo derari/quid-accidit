@@ -1,9 +1,5 @@
 package de.hpi.accidit.testapp;
 
-/**
- *
- * @author Arian Treffer
- */
 public class X {
     
     public String convert(int i) {
