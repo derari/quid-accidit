@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Accidit Eclipse Plugin
+Bundle-SymbolicName: de.hpi.accidit.eclipse; singleton:=true
+Bundle-Version: 0.1.0
+Bundle-Activator: de.hpi.accidit.eclipse.Activator
+Bundle-Vendor: EPIC
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy
