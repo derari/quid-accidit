@@ -33,9 +33,9 @@ public class JdiTest {
     }
     
     public static void main(String[] args) throws Exception {
-        VirtualMachine vm = new VMAcquirer().connect(5000, 100, 100);
+        VirtualMachine vm = new VMAcquirer().connect(5000, 200, 100);
         vm.suspend();
-        System.out.println("connected");
+        System.out.print("connected");
         erm = vm.eventRequestManager();
         fieldWatcher = new GlobalFieldWatcher(erm);
         
@@ -67,14 +67,16 @@ public class JdiTest {
         vm.resume();
         try (Out out = new CsvOut(new File("target/trace"))) {
             trace = new Trace(out);
-            
-            while (true) {
-                try {
-                    processEvents(queue);
-                    
-                } catch (InterruptedException | VMDisconnectedException exc) {
-                    break;
+
+            try {
+                while (true) {
+                    processEvents(queue);                    
+                    if (ThreadHandler.triggerGC) {
+                        ThreadHandler.triggerGC = false;
+                        System.gc();
+                    }
                 }
+            } catch (InterruptedException | VMDisconnectedException exc) {
             }
         } finally {
             HandlerThread.stop();
@@ -140,11 +142,11 @@ public class JdiTest {
                     r.enable();
                     i++;
                     testMethods++;
-                    if (testMethods % 100 == 0) System.out.println("watching " + testMethods + " test methods");
+                    if (testMethods % 100 == 0) System.out.print("\nwatching " + testMethods + " test methods");
                 }
             }
             if (i > 0) {
-                System.out.println(t.name() + ": " + i + " tests");
+                System.out.print("\n" + t.name() + ": " + i + " tests");
             }
         }
     }
@@ -155,7 +157,7 @@ public class JdiTest {
             if (name.contains("junit") &&
                     (name.endsWith(".TestCase") || name.endsWith(".ParentRunner"))) {
                 initialized = true;
-                System.out.println(t.name() + " loaded.");
+                System.out.print("\n" + t.name() + " loaded.");
                 
                 Method run = null;
                 for (Method m: t.visibleMethods()) {
@@ -163,7 +165,7 @@ public class JdiTest {
                         run = m;
                     }
                 }
-                System.out.println("waiting for " + run);
+                System.out.print("\nwaiting for " + run);
                 Location l = run.locationOfCodeIndex(0);
                 BreakpointRequest r = erm.createBreakpointRequest(l);
                 testCaseRun = r;
@@ -181,11 +183,11 @@ public class JdiTest {
         if (e instanceof MethodEntryEvent) {
             MethodEntryEvent m = (MethodEntryEvent) e;
             if (!m.method().name().startsWith("run")) return;
-            System.out.println("Watching methods... " + m.method());
+            System.out.print("\nWatching methods... " + m.method());
             testCaseRun.disable();
             testCaseRun = null;
         } else {
-            System.out.println("Watching test methods... ");
+            System.out.print("\nWatching test methods... ");
             testCaseRun.disable();
             testCaseRun = null;            
         }

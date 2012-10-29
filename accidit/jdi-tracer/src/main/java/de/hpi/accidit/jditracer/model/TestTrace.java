@@ -1,8 +1,7 @@
 package de.hpi.accidit.jditracer.model;
 
 import com.sun.jdi.*;
-import com.sun.jdi.event.MethodEntryEvent;
-import de.hpi.accidit.jditracer.HandlerThread;
+import de.hpi.accidit.jditracer.FrameHandler;
 import java.util.*;
 
 /**
@@ -16,13 +15,12 @@ public class TestTrace {
     private final String name;
     private final long startMs = System.currentTimeMillis();
 
-    private final List<InvocationTrace> invocations = new ArrayList<>(1024);
-    private final Map<ObjectReference, ObjectTrace> objects = new HashMap<>(1024);
+    private List<InvocationTrace> invocations = new ArrayList<>(1024);
+    private Map<Long, ObjectTrace> objects = new HashMap<>(1024);
     private int step = 0;
     private int nextTraceStep = 2000;
     
     private long nextObjectId = 1;
-    private long objectsMapCapacity = 1024;
     
     public TestTrace(Model model, int id, Method m, ThreadReference t) throws IncompatibleThreadStateException {
         StringBuilder sb = new StringBuilder();
@@ -42,6 +40,7 @@ public class TestTrace {
         this.name = sb.toString();
         this.id = id;
         model.out.test(this);
+        System.out.println();
         System.out.print(name);
     }
     
@@ -51,19 +50,19 @@ public class TestTrace {
     
     private ObjectTrace getObject(ObjectReference obj) {
         if (obj == null) return null;
-        ObjectTrace t = objects.get(obj);
+        ObjectTrace t = objects.get(obj.uniqueID());
         if (t == null) {
-            if (objects.size() > objectsMapCapacity) {
-                Iterator<ObjectReference> it = objects.keySet().iterator();
-                while (it.hasNext()) {
-                    ObjectReference o = it.next();
-                    if (o.isCollected()) it.remove();
-                }
-                while (objects.size() > objectsMapCapacity) objectsMapCapacity *= 2;
-            }
-            
+//            if (objects.size() > objectsMapCapacity) {
+//                Iterator<ObjectReference> it = objects.keySet().iterator();
+//                while (it.hasNext()) {
+//                    ObjectReference o = it.next();
+//                    if (o.isCollected()) it.remove();
+//                }
+//                while (objects.size() > objectsMapCapacity) objectsMapCapacity *= 2;
+//            }
             t = new ObjectTrace(model, model.getType(obj.type()), id, nextObjectId++);
-            objects.put(obj, t);
+            objects.put(obj.uniqueID(), t);
+            
         }
         return t;
     }
@@ -76,8 +75,10 @@ public class TestTrace {
             if (value == null || value instanceof NullValue)  {
                 trace.value = 0;
             } else {
-                ObjectReference obj = (ObjectReference) value;              
-                trace.value = getObject(obj).getId();
+                ObjectReference obj = (ObjectReference) value;   
+                ObjectTrace ot = getObject(obj);
+                ot.ensureIsTraced();
+                trace.value = ot.getId();
             }
         } else {
             trace.value = PrimitiveDescriptor.primitiveData(value, primType);
@@ -93,10 +94,29 @@ public class TestTrace {
         trace.line = loc.lineNumber();
     }
     
+    private final List<FrameHandler> lastPrintedFrames = new ArrayList<>();
+    
     public InvocationTrace invoke(final Method method, final int depth, final int callLine, final ObjectReference thisObject) {
-        if (step > nextTraceStep) {
-            nextTraceStep += 2000;
+        while (step > nextTraceStep) {
             System.out.print(".");
+            if (nextTraceStep % 20000 == 0) {
+                System.out.println();
+                int i = 0;
+                int m = Math.min(frames.size(), lastPrintedFrames.size());
+                while (i < m && lastPrintedFrames.get(i) == frames.get(i)) {
+                    System.out.print("/");
+                    i++;
+                }
+                for (int r = lastPrintedFrames.size()-1; r >= i; r--)
+                    lastPrintedFrames.remove(r);
+                m = Math.min(i+5, frames.size());
+                for (;i < m; i++) {
+                    FrameHandler f = frames.get(i);
+                    f.printLastStep();
+                    lastPrintedFrames.add(f);
+                }
+            }
+            nextTraceStep += 2000;
         }
         
         ObjectTrace thisObjTrace = getObject(thisObject);
@@ -237,7 +257,10 @@ public class TestTrace {
         double testS = (now - startMs) / 1000.0;
         double totalS = (now - ms) / 1000.0;
 //        System.out.println(name + " completed (" + s + " s)");
-        System.out.printf(Locale.US, " completed (%d steps, %.1f s, %.1f s total)%n", step, testS, totalS);
+        System.out.printf(Locale.US, " completed (%d steps, %.1f s, %.1f s total)", step, testS, totalS);
+        frames = null;
+        objects = null;
+        invocations = null;
     }
 
     private static final long ms = System.currentTimeMillis();
@@ -248,6 +271,12 @@ public class TestTrace {
         for (InvocationTrace inv: invocations) {
             inv.dump();
         }
+    }
+    
+    private List<FrameHandler> frames;
+
+    public void setRoot(List<FrameHandler> frames) {
+        this.frames = frames;
     }
 
 }

@@ -13,22 +13,29 @@ import java.util.Stack;
  */
 public class ThreadHandler {
     
+    public static boolean triggerGC = false;
+    
     // hard ignore, no tracing below this point
     private static final String[][] IGNORE = new String[][]{
-        {"java.lang.ClassLoader"},        {"loadClass", "checkPackageAccess"},
+        {"java.lang.ClassLoader"},        {""},//{"loadClass", "checkPackageAccess"},
         {"java.io.OutputStreamClass"},    {""},
         {"sun."},                         {""},
+        {"java.util.HashMap"},            {""},
+        {"$", "java.lang.reflect"},
+            {""},
     };
     
     private final Trace trace;
     private TestTrace testTrace = null;
     
+    private final EventRequestManager erm;
     private final GlobalFieldWatcher.T fieldWatcher;
     private final StepRequest stepRequest;
     private final MethodEntryRequest entryRequest;
     private final MethodExitRequest exitRequest;
     private final ExceptionRequest exceptionRequest;
     private final Stack<FrameHandler> frames = new Stack<>();
+    private MethodExitRequest ignoreExitRequest;
     
     private boolean active;
     private String lastTestClass;
@@ -38,6 +45,7 @@ public class ThreadHandler {
     private ObjectReference toBeCaught = null;
     private Location catchLocation = null;
     private ThreadReference thread = null;
+    private boolean enableSteps = true;
     
     private int stepCount = 0;
     private int enterCount = 0;
@@ -49,7 +57,7 @@ public class ThreadHandler {
     public ThreadHandler(ThreadReference thread, GlobalFieldWatcher fieldWatcher, Trace trace) {
         this.trace = trace;
         this.fieldWatcher = fieldWatcher.getT(thread);
-        EventRequestManager erm = thread.virtualMachine().eventRequestManager();
+        erm = thread.virtualMachine().eventRequestManager();
         stepRequest = erm.createStepRequest(thread, StepRequest.STEP_MIN, StepRequest.STEP_INTO);
         entryRequest = erm.createMethodEntryRequest();
         entryRequest.addThreadFilter(thread);
@@ -64,53 +72,65 @@ public class ThreadHandler {
     int myHID = hId++;
     
     public void handle(LocatableEvent event) throws IncompatibleThreadStateException {
-//        System.out.println(myHID);
-        if (toBeCaught != null) {
-            handleCatch(event);
-            if (frames.isEmpty()) return;
-        }
-        
-        if (event instanceof StepEvent) {
-            if (ignoreBaseFrame > 0) ignore2Count++;
-            stepCount++;
-            handleStep((StepEvent) event);
-
-        } else if (event instanceof ModificationWatchpointEvent) {
-            if (ignoreBaseFrame > 0) ignore2Count++;
-            modAccCount++;
-            handleModificationWatchpoint((ModificationWatchpointEvent) event);
-        
-        } else if (event instanceof AccessWatchpointEvent) {
-            if (ignoreBaseFrame > 0) ignore2Count++;
-            modAccCount++;
-            handleAccessWatchpoint((AccessWatchpointEvent) event);
-        
-        } else if (event instanceof MethodEntryEvent) {
-            if (ignoreBaseFrame > 0) ignoreCount++;
-            enterCount++;
-            if (event.request() == entryRequest) {
-                handleMethodEntry(event, ((MethodEntryEvent) event).method());
-            } else {
-                activate((MethodEntryEvent) event);
+        try {
+    //        System.out.println(myHID);
+            if (toBeCaught != null) {
+                if (!handleCatch(event)) {
+                    if (event.request() != ignoreExitRequest) return;
+                }
+                if (frames.isEmpty()) return;
             }
-        
-        } else if (event instanceof MethodExitEvent) {
-            if (ignoreBaseFrame > 0) ignoreCount++;
-            otherCount++;
-            handleMethodExit((MethodExitEvent) event);
-        
-        } else if (event instanceof ExceptionEvent) {
-            if (ignoreBaseFrame > 0) ignoreCount++;
-            otherCount++;
-            handleException((ExceptionEvent) event);
-        
-        } else if (event instanceof BreakpointEvent) {
-            if (ignoreBaseFrame > 0) ignoreCount++;
-            otherCount++;
-            activate(event);
-        } else {
-            throw new IllegalArgumentException(event.toString());
+
+            if (event instanceof StepEvent) {
+                if (ignoreBaseFrame > 0) ignore2Count++;
+                stepCount++;
+                handleStep((StepEvent) event);
+
+            } else if (event instanceof ModificationWatchpointEvent) {
+                if (ignoreBaseFrame > 0) ignore2Count++;
+                modAccCount++;
+                handleModificationWatchpoint((ModificationWatchpointEvent) event);
+
+            } else if (event instanceof AccessWatchpointEvent) {
+                if (ignoreBaseFrame > 0) ignore2Count++;
+                modAccCount++;
+                handleAccessWatchpoint((AccessWatchpointEvent) event);
+
+            } else if (event instanceof MethodEntryEvent) {
+                if (ignoreBaseFrame > 0) ignoreCount++;
+                enterCount++;
+                if (event.request() == entryRequest) {
+                    handleMethodEntry(event, ((MethodEntryEvent) event).method());
+                } else {
+                    activate((MethodEntryEvent) event);
+                }
+
+            } else if (event instanceof MethodExitEvent) {
+                if (ignoreBaseFrame > 0) ignoreCount++;
+                otherCount++;
+                handleMethodExit((MethodExitEvent) event);
+
+            } else if (event instanceof ExceptionEvent) {
+                if (ignoreBaseFrame > 0) ignoreCount++;
+                otherCount++;
+                handleException((ExceptionEvent) event);
+
+            } else if (event instanceof BreakpointEvent) {
+                if (ignoreBaseFrame > 0) ignoreCount++;
+                otherCount++;
+                activate(event);
+            } else {
+                throw new IllegalArgumentException(event.toString());
+            }
+        } catch (IllegalTracerStateException e) {
+            e.printStackTrace();
+            deactivate();
         }
+    }
+    
+    private void enableSteps(boolean b) {
+        enableSteps = b;
+        stepRequest.setEnabled(b);
     }
     
     private void activate(LocatableEvent e) throws IncompatibleThreadStateException {
@@ -144,6 +164,7 @@ public class ThreadHandler {
         try {
             baseFrame = e.thread().frameCount();
             testTrace = trace.createTestTrace(m, thread);
+            testTrace.setRoot(frames);
         } catch (IncompatibleThreadStateException ex) {
             throw new RuntimeException(ex);
         }
@@ -153,6 +174,7 @@ public class ThreadHandler {
     }
 
     private void deactivate() {
+        while (!frames.isEmpty()) frames.pop().errorExit();
         active = false;
         stepRequest.disable();
         entryRequest.disable();
@@ -163,6 +185,7 @@ public class ThreadHandler {
         testTrace = null;
         JdiTest.threadFreezer.deactivate();
         JdiTest.threadFreezer.makeInactive(thread);
+        triggerGC = true;
 //        System.out.println("<");
 //        System.out.println("  -- step   " + stepCount);
 //        System.out.println("  -- modacc " + modAccCount);
@@ -173,14 +196,26 @@ public class ThreadHandler {
     }
     
     private void beginIgnore() {
+        if (ignoreExitRequest != null) {
+            ignoreExitRequest.disable();
+            erm.deleteEventRequest(ignoreExitRequest);
+            ignoreExitRequest = null;
+        }
         stepRequest.disable();
         entryRequest.disable();
+        exitRequest.disable();
         fieldWatcher.beginIgnore();
     }
 
     private void endIgnore() {
+        if (ignoreExitRequest != null) {
+            ignoreExitRequest.disable();
+            erm.deleteEventRequest(ignoreExitRequest);
+            ignoreExitRequest = null;
+        }
         stepRequest.enable();
         entryRequest.enable();
+        exitRequest.enable();
         fieldWatcher.endIgnore();
     }
 
@@ -201,6 +236,10 @@ public class ThreadHandler {
                     if (mName.startsWith(im)) {
                         ignoreBaseFrame = baseFrame + frames.size() + 1;
                         beginIgnore();
+                        ignoreExitRequest = erm.createMethodExitRequest();
+                        ignoreExitRequest.addThreadFilter(thread);
+                        ignoreExitRequest.addClassFilter(m.declaringType());
+                        ignoreExitRequest.enable();
                         return;
                     }
                 }
@@ -211,7 +250,11 @@ public class ThreadHandler {
         if (frames.isEmpty()) callLine = 0;
         else callLine = frames.peek().getLastStepLine();
         
-        frames.push(new FrameHandler(event, m, frames.size(), callLine, testTrace));
+        FrameHandler f = new FrameHandler(event, m, frames.size(), callLine, testTrace);
+        frames.push(f);
+        
+        f.entry(event, m, callLine);
+        enableSteps(f.isTraceVariables());
 //        try {
 //            if (men.method().isNative()) return;
 //            for (Value v: men.thread().frame(0).getArgumentValues()) {
@@ -238,12 +281,12 @@ public class ThreadHandler {
             //System.out.println("<");
         } else {
             frames.peek().returnBack();
+            enableSteps(frames.peek().isTraceVariables());
         }
     }
 
     private void handleStep(StepEvent step) throws IncompatibleThreadStateException {
         if (ignoreBaseFrame > 0 | !active) return;
-        
         frames.peek().step(step);
     }
 
@@ -274,21 +317,26 @@ public class ThreadHandler {
     private void handleException(ExceptionEvent exe) {
         toBeCaught = exe.exception();
         catchLocation = exe.catchLocation();
-        frames.peek().throwException(exe);
-        if (ignoreBaseFrame > 0) stepRequest.enable();
+        if (ignoreBaseFrame > 0 || !enableSteps) stepRequest.enable();
+        else frames.peek().throwException(exe);
     }
 
     private boolean handleCatch(LocatableEvent evt) throws IncompatibleThreadStateException {
         final ObjectReference exception = toBeCaught;
         final Location location = catchLocation;
+        boolean ignoreThisCatch = false;
 
         if (ignoreBaseFrame > 0) {
             if (evt instanceof WatchpointEvent || 
                     evt instanceof MethodExitEvent) return false;
             toBeCaught = null;
-            catchLocation = null;        
+            catchLocation = null;       
+            ignoreThisCatch = true;
 
             if (evt.thread().frameCount() < ignoreBaseFrame) {
+//                int c = evt.thread().frameCount();
+//                for (int i = 0; i < c; i++)
+//                    System.out.println("~~ " + evt.thread().frame(i).location());
                 ignoreBaseFrame = 0;
                 endIgnore();
             }
@@ -325,9 +373,10 @@ public class ThreadHandler {
             deactivate();
         } else {
             frames.peek().catchException(exception, location);
+            enableSteps(frames.peek().isTraceVariables());
         }
         
-        return true;
+        return !ignoreThisCatch;
     }
     
 }

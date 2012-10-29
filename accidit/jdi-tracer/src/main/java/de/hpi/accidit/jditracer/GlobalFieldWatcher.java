@@ -19,6 +19,7 @@ public class GlobalFieldWatcher {
     private static final int T_FIELD_MOD = THREAD_WATCHERS ?
                 (FIELD_MOD >= 1000 ? FIELD_MOD/10 : FIELD_MOD) :
                 FIELD_MOD;
+    private static final int T_I_FIELD_MOD = T_FIELD_MOD/10;
     
     private final EventRequestManager erm;
     private List<ReferenceType> preInitTypesToWatch = new ArrayList<>(1024);
@@ -44,7 +45,7 @@ public class GlobalFieldWatcher {
     
     public synchronized void init() {
         if (preInitTypesToWatch == null) return;
-        System.out.println("Initializing field watcher (" + preInitTypesToWatch.size() + " classes)");
+        System.out.print("\nInitializing field watcher (" + preInitTypesToWatch.size() + " classes)");
         for (ReferenceType t: preInitTypesToWatch)
             createGlobalRequests(t);
         preInitTypesToWatch = null;
@@ -54,7 +55,7 @@ public class GlobalFieldWatcher {
         try {
             List<Field> fields = type.fields();
             classCount++;
-            if (classCount % CLASS_MOD == 0) System.out.println("watching " + classCount + " classes");
+            if (classCount % CLASS_MOD == 0) System.out.print("\nwatching " + classCount + " classes");
 
             if (globalT != null) {
                 for (Field field: fields) {
@@ -64,12 +65,13 @@ public class GlobalFieldWatcher {
                 return;
             }
             if (type.name().endsWith("CharsetDecoder")) {
-                // a bug? not having this causes the target vm to crash sometimes...
-                // charset decoder fields will always be disabled outside of tests
-                for (Field field: fields) {
-                    watchInThreads(field, true);
-                    watchInThreads(field, false);
-                }
+                // dont watch at all
+//                // a bug? not having this causes the target vm to crash sometimes...
+//                // charset decoder fields will always be disabled outside of tests
+//                for (Field field: fields) {
+//                    watchInThreads(field, true);
+//                    watchInThreads(field, false);
+//                }
                 return;
             }
             
@@ -82,7 +84,7 @@ public class GlobalFieldWatcher {
                         erm.createAccessWatchpointRequest(field);
                 initWatchpointRequest(awReq);
                 fieldRequestCount += 2;
-                if (fieldRequestCount % FIELD_MOD == 0) System.out.println(fieldRequestCount + " global field requests");
+                if (fieldRequestCount % FIELD_MOD == 0) System.out.printf("%n%d global field requests", fieldRequestCount);
             }
         } catch (ObjectCollectedException e) { }
     }
@@ -175,7 +177,7 @@ public class GlobalFieldWatcher {
         
         private synchronized void init() {
             GlobalFieldWatcher.this.init();
-            System.out.println("Initializing field watcher (" + name + ", " + (preInitWatchMod.size() + preInitWatchAcc.size()) + " field requests)");
+            System.out.print("\nInitializing field watcher (" + name + ", " + (preInitWatchMod.size() + preInitWatchAcc.size()) + " field requests)");
             for (Field f: preInitWatchMod)
                 createRequests(f, true);
             for (Field f: preInitWatchAcc)
@@ -190,7 +192,7 @@ public class GlobalFieldWatcher {
                     erm.createAccessWatchpointRequest(field);
             initWatchpointRequest(wReq);
             fieldRequestCount++;
-            if (fieldRequestCount % T_FIELD_MOD == 0) System.out.println(name + ": " + fieldRequestCount + " field requests");
+            if (fieldRequestCount % T_FIELD_MOD == 0) System.out.printf("%n%s: %d field requests", name, fieldRequestCount);
         }
 
         private void initWatchpointRequest(WatchpointRequest wReq) {
@@ -357,7 +359,7 @@ public class GlobalFieldWatcher {
                 toBeEnabled = new ArrayList<>(1024); // quicker than clear()
             }
             if (autoCounter > 0) {
-                System.out.printf("%s: auto-disable +%d: %d/%d%n", name, autoCounter, autoDisable.size(), total);
+                System.out.printf("%n%s: auto-disable +%d: %d/%d", name, autoCounter, autoDisable.size(), total);
 //                if (lastAutoDisableSize > 0) {
 //                    int stop = lastAutoDisableSize + Math.min(autoCounter, 5);
 //                    for (int i = lastAutoDisableSize; i < stop; i++) {
@@ -405,10 +407,10 @@ public class GlobalFieldWatcher {
 
         @Override
         public void ignore(WatchpointRequest req) {
-            if (ignoreEnabled) {
+            if (ignoreEnabled && req.isEnabled()) {
                 req.disable();
                 ignore.add(req);
-                if (ignore.size() % T_FIELD_MOD == 0) System.out.printf("%s: %d requests on ignore%n", name, ignore.size());
+                if (ignore.size() % T_I_FIELD_MOD == 0) System.out.printf("%n%s: %d requests on ignore", name, ignore.size());
             }
         }
 
@@ -449,7 +451,7 @@ public class GlobalFieldWatcher {
         @Override
         public void reset() {
             if (!enabled) throw new IllegalStateException("x");
-            System.out.printf("%s: auto-disable reset%n", name);
+            System.out.printf("%n%s: auto-disable reset", name);
             int min = lastAutoDisableSize;
             int size = 1024;
             while (size < min) size *= 2;

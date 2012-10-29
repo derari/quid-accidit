@@ -32,6 +32,7 @@ public class InvocationTrace extends ValueTrace {
         this.depth = depth;
         this.callLine = callLine;
         this.thisObject = thisObject;
+        if (thisObject != null) thisObject.ensureIsTraced();
     }
 
     void exit(long exit, boolean ret) {

@@ -12,6 +12,7 @@ public class CatchTrace extends LocationTrace {
     public CatchTrace(int step, ObjectTrace exception) {
         this.step = step;
         this.exception = exception;
+        exception.ensureIsTraced();
     }
 
     public int getStep() {

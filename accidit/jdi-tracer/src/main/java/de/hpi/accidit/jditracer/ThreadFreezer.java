@@ -164,7 +164,9 @@ public class ThreadFreezer {
                     watch(otherT);
                 }
             } else if (otherT == null) {
-                if (!waitingForAll.add(thisT)) throw new IllegalStateException(thisT.toString());
+                if (!waitingForAll.add(thisT)) {
+                    //throw new IllegalStateException(thisT.toString());
+                }
                 for (ThreadReference t: threads) {
                     incWaitCount(t);
                     if (frozen.remove(t)) {
@@ -187,7 +189,9 @@ public class ThreadFreezer {
                     unwatch(otherT);
                 }
             } else if (otherT == null) {
-                if (!waitingForAll.remove(thisT)) throw new IllegalStateException(thisT.toString());
+                if (!waitingForAll.remove(thisT)) {
+                    //throw new IllegalStateException(thisT.toString());
+                }
                 for (ThreadReference t: threads) {
                     int w = decWaitCount(t);
                     if (w == 0 && !active.contains(t) && frozen.add(t)) {

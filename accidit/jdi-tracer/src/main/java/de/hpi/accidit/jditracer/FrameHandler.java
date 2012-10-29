@@ -30,11 +30,12 @@ public class FrameHandler {
     private Location lastLocation;
     private int lastStepLine = -1;
     
+    private int stepCounter = 0;
+    
     public FrameHandler(LocatableEvent event, Method m, int depth, int callLine, TestTrace trace) throws IncompatibleThreadStateException {
         this.method = m;
         this.depth = depth;
         this.trace = trace;
-        entry(event, m, callLine);
     }
     
     private void indent() {
@@ -48,7 +49,17 @@ public class FrameHandler {
         lastPrintedLine = -1;
     }
     
-    private void entry(LocatableEvent event, Method m, int callLine) throws IncompatibleThreadStateException {        
+    private void checkEvent(LocatableEvent event) {
+        try {
+            if (!event.location().sourceName().equals(method.location().sourceName())) {
+                throw new IllegalArgumentException(
+                    method + " -- " + event.location().method() + " / " + event + " @ " + event.location());
+            }
+        } catch(AbsentInformationException e) {}
+    }
+    
+    public void entry(LocatableEvent event, Method m, int callLine) throws IncompatibleThreadStateException {        
+        //checkEvent(event);
         lastLocation = event.location();
         final StackFrame sf = event.thread().frame(0);
         
@@ -80,6 +91,10 @@ public class FrameHandler {
         return false;
     }
     
+    public void errorExit() {
+        trace.exit(invoke, null, lastLocation);
+    }
+    
     public void exit(MethodExitEvent mex) {
         if (PRINT_TRACE) {
             indent();
@@ -88,7 +103,34 @@ public class FrameHandler {
         trace.exit(invoke, mex.returnValue(), mex.location());
     }
 
+    public void printLastStep() {
+        System.out.print(" ");
+        try {
+            System.out.print(lastLocation.sourceName());
+//            System.out.print(method.name());
+        } catch (Exception ex) {
+            System.out.print("???");
+        }
+        System.out.print(":");
+        System.out.print(lastLocation.lineNumber());
+    }
+
+    public boolean isTraceVariables() {
+        return traceVariables;
+    }
+    
+    private int retry = 3;
+    
     public void step(StepEvent step) throws IncompatibleThreadStateException {
+        stepCounter++;
+        if (stepCounter >= 10000 && stepCounter % 1000 == 0) {
+            traceVariables = false;
+        }
+        if (!method.equals(step.location().method())) {
+            if (retry-- > 0) return;
+            throw new IllegalTracerStateException(
+                    method + " -- " + step.location().method() + " / " + step);
+        }
         if (PRINT_TRACE) {
             int line = step.location().lineNumber();
             if (line != lastPrintedLine) {
@@ -104,6 +146,7 @@ public class FrameHandler {
             }
             System.out.print(".");
         }
+        //checkEvent(step);
         Location loc = step.location();
         lastLocation = loc;
         if (lastStepLine > -2) {
@@ -115,36 +158,35 @@ public class FrameHandler {
     }
 
     private void traceVariables(LocatableEvent event, boolean continueStep) throws IncompatibleThreadStateException {
-        if (traceVariables) {
-            try {
-                StackFrame sf = event.thread().frame(0);
+        if (!traceVariables) return;
+        try {
+            StackFrame sf = event.thread().frame(0);
 //                for (LocalVariable lv: sf.visibleVariables()) {
 //                    Value newV = sf.getValue(lv);
-                Map<LocalVariable, Value> values = sf.getValues(sf.visibleVariables());
-                for (Map.Entry<LocalVariable, Value> e: values.entrySet()) {
-                    LocalVariable lv = e.getKey();
-                    Value newV = e.getValue();
-                    Value oldV = variableMap.get(lv.name());
-                    if (newV == null) newV = NullValue.NULL;
-                    if (!newV.equals(oldV)) {
-                        if (PRINT_TRACE) {
-                            lastPrintedLine = -1;
-                            indent();
-                            System.out.print("  - " + lv.name() + " = ");
-                            System.out.print(newV);
-                        }
-                        variableMap.put(lv.name(), newV);
-                        if (continueStep) trace.continueStep();
-                        else continueStep = true;
-                        trace.setLocal(invoke, lv, newV, event.location());
+            Map<LocalVariable, Value> values = sf.getValues(sf.visibleVariables());
+            for (Map.Entry<LocalVariable, Value> e: values.entrySet()) {
+                LocalVariable lv = e.getKey();
+                Value newV = e.getValue();
+                Value oldV = variableMap.get(lv.name());
+                if (newV == null) newV = NullValue.NULL;
+                if (!newV.equals(oldV)) {
+                    if (PRINT_TRACE) {
+                        lastPrintedLine = -1;
+                        indent();
+                        System.out.print("  - " + lv.name() + " = ");
+                        System.out.print(newV);
                     }
+                    variableMap.put(lv.name(), newV);
+                    if (continueStep) trace.continueStep();
+                    else continueStep = true;
+                    trace.setLocal(invoke, lv, newV, event.location());
                 }
-            } catch (AbsentInformationException ex) {
-                traceVariables = false;
+            }
+        } catch (AbsentInformationException ex) {
+            traceVariables = false;
 //                lastLine = -1;
 //                indent();
 //                System.out.print(ex);
-            }
         }
         
 //        try {
@@ -239,5 +281,5 @@ public class FrameHandler {
     public String toString() {
         return method + ":" + lastStepLine;
     }
-    
+
 }

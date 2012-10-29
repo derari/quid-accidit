@@ -10,7 +10,7 @@ public class ObjectTrace {
     private final TypeDescriptor type;
     private final long id;
     private Model model;
-
+    
     public ObjectTrace(Model model, TypeDescriptor type, int testId, long objectId) {
         this.type = type;
         this.id = objectId;
@@ -36,7 +36,7 @@ public class ObjectTrace {
             model = null;
         }
     }
-
+    
     @Override
     public String toString() {
         return type.getName() + "_" + id;

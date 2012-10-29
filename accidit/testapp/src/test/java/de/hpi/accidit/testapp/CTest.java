@@ -11,7 +11,11 @@ public class CTest {
 
     @Test
     public void test_get() {
-        String s = new C().get('h', 'e', 'l', 'l', 'o');
+        String s = c().get('h', 'e', 'l', 'l', 'o');
         assertThat(s, is("hello"));
+    }
+
+    public C c() {
+        return new C();
     }
 }

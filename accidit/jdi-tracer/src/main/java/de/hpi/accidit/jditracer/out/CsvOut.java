@@ -94,21 +94,23 @@ public class CsvOut implements Out {
         tCatches.flush();
     }
     
-    private synchronized void csv(PrintWriter pw, Object... values) {
-        boolean first = true;
-        for (Object v: values) {
-            if (first) first = false;
-            else pw.append(';');
-            if (v == null) {
-                pw.print("NULL");
-            } else {
-                String s = v.toString();
-                if (s.equals("NULL")) pw.print("'NULL'");
-                else pw.print(v);
-//                pw.print(v);
+    private void csv(final PrintWriter pw, Object... values) {
+        synchronized (pw) {
+            boolean first = true;
+            for (Object v: values) {
+                if (first) first = false;
+                else pw.append(';');
+                if (v == null) {
+                    pw.print("NULL");
+                } else {
+                    String s = v.toString();
+                    if (s.equals("NULL")) pw.print("'NULL'");
+                    else pw.print(v);
+    //                pw.print(v);
+                }
             }
+            pw.print('\n'); // unix line ends
         }
-        pw.print('\n'); // unix line ends
     }
     
     private String quote(Object o) {

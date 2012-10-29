@@ -11,7 +11,7 @@
     <name>Accidit TestApp</name>
     <profiles>
         <profile>
-            <id>dbg-for-tracer</id>
+            <id>jditracer-test</id>
             <build>
                 <plugins>
                     <plugin>

@@ -9,8 +9,8 @@
     <modules>
         <module>lib</module>
         <module>jdi-tracer</module>
-    <module>testapp</module>
-  </modules>
+        <module>testapp</module>
+    </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.dependencies.hamcrest.version>1.3.RC2</project.dependencies.hamcrest.version>
@@ -75,10 +75,10 @@
                     <version>2.12.4</version>
                 </plugin>
                 <plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>exec-maven-plugin</artifactId>
-					<version>1.2.1</version>
-				</plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>1.2.1</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>

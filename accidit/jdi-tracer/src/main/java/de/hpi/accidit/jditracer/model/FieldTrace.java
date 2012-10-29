@@ -12,6 +12,7 @@ public class FieldTrace extends ValueTrace {
     public FieldTrace(ObjectTrace o, FieldDescriptor field) {
         this.field = field;
         this.object = o;
+        if (o != null) o.ensureIsTraced();
     }
 
     public FieldDescriptor getField() {

@@ -14,6 +14,7 @@ public class FieldAccessTrace extends LocationTrace {
         this.step = step;
         this.field = field;
         this.object = o;
+        if (o != null) o.ensureIsTraced();
     }
 
     public long getStep() {
