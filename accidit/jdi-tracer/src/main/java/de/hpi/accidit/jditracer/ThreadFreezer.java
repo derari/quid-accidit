@@ -11,7 +11,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
+ * If one thread is traced, all others are frozen unless monitor locks
+ * require otherwise.
  * @author Arian Treffer
  */
 public class ThreadFreezer {

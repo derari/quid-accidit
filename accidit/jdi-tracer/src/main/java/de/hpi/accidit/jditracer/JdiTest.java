@@ -79,7 +79,7 @@ public class JdiTest {
             } catch (InterruptedException | VMDisconnectedException exc) {
             }
         } finally {
-            HandlerThread.stop();
+            
         }
     }
 

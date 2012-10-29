@@ -8,7 +8,11 @@ import com.sun.jdi.request.*;
 import java.util.*;
 
 /**
- *
+ * Manages field watch requests for all threads. If a field is disabled for
+ * one thread, it will be managed on a by-thread basis.
+ * 
+ * Field requests are disabled if they trigger outside of a trace.
+ * 
  * @author Arian Treffer
  */
 public class GlobalFieldWatcher {
@@ -65,7 +69,7 @@ public class GlobalFieldWatcher {
                 return;
             }
             if (type.name().endsWith("CharsetDecoder")) {
-                // dont watch at all
+                // for now, dont watch at all
 //                // a bug? not having this causes the target vm to crash sometimes...
 //                // charset decoder fields will always be disabled outside of tests
 //                for (Field field: fields) {
