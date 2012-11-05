@@ -9,6 +9,30 @@
     <artifactId>accidit-install-libs</artifactId>
     <packaging>pom</packaging>
     <name>Accidit Lib</name>
+    <profiles>
+        <profile>
+            <id>windows_profile</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <toolsjar>${java.home}/../lib/tools.jar</toolsjar>
+            </properties>
+        </profile>
+        <profile>
+            <id>osx_profile</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
+            </properties>
+        </profile>
+    </profiles>
     <build>
         <plugins>
             <plugin>
@@ -23,7 +47,7 @@
                         </goals>
                         <phase>install</phase>
                         <configuration>
-                            <file>${jdk.home}/lib/tools.jar</file>
+                            <file>${toolsjar}</file>
                             <groupId>com.sun</groupId>
                             <artifactId>tools</artifactId>
                             <version>${jdi.version}</version>
