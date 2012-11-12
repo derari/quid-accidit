@@ -51,7 +51,7 @@ public class ThreadFreezer {
     
     public void threadDeath(ThreadDeathEvent e) {
         ThreadReference t = e.thread();
-        if (!threads.remove(t)) throw new IllegalStateException(e.toString());
+        if (!threads.remove(t)) return; //throw new IllegalStateException(e.toString());
         active.remove(t);
         frozen.remove(t);
         MonitorWaitRequest mwr = waitRequests.remove(t);
@@ -61,7 +61,7 @@ public class ThreadFreezer {
     }
     
     public void makeActive(ThreadReference t) {
-        if (!active.add(t)) throw new IllegalStateException(t.toString());
+        if (!active.add(t)) return; //throw new IllegalStateException(t.toString());
         if (activationCount > 0) {
             watch(t);
             if (frozen.remove(t)) t.resume();
@@ -69,7 +69,7 @@ public class ThreadFreezer {
     }
     
     public void makeInactive(ThreadReference t) {
-        if (!active.remove(t)) throw new IllegalStateException(t.toString());
+        if (!active.remove(t)) return; //throw new IllegalStateException(t.toString());
         if (activationCount < 0) {
             unwatch(t);
             if (frozen.add(t)) t.suspend();
@@ -119,7 +119,7 @@ public class ThreadFreezer {
 
     private int decWaitCount(ThreadReference r) {
         int v = getWaitCount(r) - 1;
-        if (v < 0) throw new IllegalStateException(r.toString());
+        if (v < 0) v = 0; //throw new IllegalStateException(r.toString());
         waitCounter.put(r, v);
         return v;
     }
