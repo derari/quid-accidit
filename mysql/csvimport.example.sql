@@ -1,3 +1,7 @@
+-- Replace all "C:/trace" with the actual absolute path to the csv files
+
+USE accidit;
+
 DELETE FROM AccessTrace;
 DELETE FROM FieldTrace;
 DELETE FROM LocalTrace;
