@@ -1,16 +1,23 @@
 package de.hpi.accidit.asmtracer;
 
 import de.hpi.accidit.asmtracer.TracerTransformer;
-import de.hpi.accidit.trace.Tracer;
+import de.hpi.accidit.model.Model;
+import de.hpi.accidit.out.PrintStreamOut;
+import de.hpi.accidit.trace.*;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import org.junit.*;
 import static org.junit.Assume.*;
-import org.junit.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
 import static org.hamcrest.Matchers.*;
 
 public class AgentTest {
+    
+    static {
+        TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
+    }
     
     private static final String ACLASS = "de.hpi.accidit.asmtracer.AClass";
     
@@ -41,14 +48,32 @@ public class AgentTest {
     }
     
     protected Object runATest(String method) throws Exception {
+        return runATest(method, false);
+    }
+    
+    protected Object runATest(String method, boolean exceptionExpected) throws Exception {
         Class c = aClass();
         Object a = c.newInstance();
         Tracer.begin(0);
         try {
             return c.getMethod(method).invoke(a);
+        } catch (InvocationTargetException e) {
+            if (!exceptionExpected) throw e;
+            Tracer.caught(e.getCause(), 0);
+            return null;
         } finally {
-            Tracer.end();
+            if (!exceptionExpected) Tracer.end();
         }
+    }
+    
+    @Before
+    public void setUp() {
+        System.out.println();
+    }
+    
+    @After
+    public void tearDown() {
+        System.out.println();
     }
     
     @Test

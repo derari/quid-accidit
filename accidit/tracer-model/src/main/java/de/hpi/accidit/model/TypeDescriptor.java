@@ -1,5 +1,6 @@
 package de.hpi.accidit.model;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 /**
@@ -8,21 +9,41 @@ import java.util.*;
  */
 public class TypeDescriptor {
     
+    public static String descriptorToName(String desc) {
+        int dim = desc.lastIndexOf('[')+1;
+        desc = desc.substring(dim).replace('/', '.');
+        PrimitiveType pt = PrimitiveType.forDescriptor(desc);
+        if (pt != PrimitiveType.OBJECT) return arrayTypeName(pt.toString().toLowerCase(), dim);
+        return arrayTypeName(desc.substring(1, desc.length()-1), dim);
+    }
+    
+    private static String arrayTypeName(String name, int dim) {
+        if (dim == 0) return name;
+        StringBuilder sb = new StringBuilder(name.length() + dim*2);
+        sb.append(name);
+        for (int i = 0; i < dim; i++)
+            sb.append("[]");
+        return sb.toString();
+    }
+
     final Model model;
     private final String name;
     private final int codeId;
     private final List<TypeDescriptor> supers = new ArrayList<>();
     private final Map<String, MethodDescriptor> methodBySig = new HashMap<>();
     private final Map<String, FieldDescriptor> fieldByName = new HashMap<>();
+    private final PrimitiveType primType;
+    private TypeDescriptor component = null;
     
     private int modelId = -1;
-    private boolean supersInitialized = false;
+    private boolean initialized = false;
     private boolean persisted = false;
 
     public TypeDescriptor(Model model, String name, int codeId) {
         this.model = model;
         this.name = name;
         this.codeId = codeId;
+        this.primType = PrimitiveType.forClass(name);
     }
     
     public int getCodeId() {
@@ -31,6 +52,10 @@ public class TypeDescriptor {
 
     public String getName() {
         return name;
+    }
+
+    public TypeDescriptor getComponentType() {
+        return component;
     }
 
     public synchronized MethodDescriptor getMethod(String name, String desc) {
@@ -53,38 +78,49 @@ public class TypeDescriptor {
     }
     
     public void addSuper(String superName) {
-        if (supersInitialized) throw new IllegalStateException(
+        if (initialized) throw new IllegalStateException(
                 "Supers of " + this + " already initialized");
         supers.add(model.getType(superName));
     }
 
-    public void supersCompleted() {
-        supersInitialized = true;
-    }
-
-    public void ensureSupersInitialized() {
-        if (supersInitialized) return;
-        synchronized (this) {
-            if (supersInitialized) return;
+    public void ensureInitialized() {
+        if (initialized) return;
+        synchronized (model) {
+            if (initialized) return;
             try {
-                Class clazz = Class.forName(name);
-                Class sup = clazz.getSuperclass();
-                if (sup != null) addSuper(sup.getCanonicalName());
-                for (Class iface: clazz.getInterfaces())
-                    addSuper(iface.getCanonicalName());
-                supersCompleted();
+                init();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
+    private void init() throws ClassNotFoundException {
+        Class clazz = getClass(name);
+        
+        Class sup = clazz.getSuperclass();
+        if (sup != null) addSuper(sup.getCanonicalName());
+        for (Class iface: clazz.getInterfaces())
+            addSuper(iface.getCanonicalName());
+        
+        if (clazz.isArray()) {
+            Class comp = clazz.getComponentType();
+            component = model.getType(comp.getSimpleName());
+        }
+        
+        initCompleted();
+    }
+    
+    public void initCompleted() {
+        initialized = true;
+    }
+    
     public void ensurePersisted() {
         if (persisted) return;
-        synchronized (this) {
+        synchronized (model) {
             if (persisted) return;
             persisted = true;
-            ensureSupersInitialized();
+            ensureInitialized();
             for (TypeDescriptor td: supers)
                 td.ensurePersisted();
             modelId = model.nextTypeId();
@@ -101,4 +137,37 @@ public class TypeDescriptor {
         }
     }    
 
+    public PrimitiveType getPrimitiveType() {
+        return primType;
+    }
+
+    private static Class<?> getClass(String name) throws ClassNotFoundException {
+        if (name.endsWith("[]")) {
+            return getArrayClass(name);
+        }
+        switch (name) {
+            case "boolean": return boolean.class;
+            case "byte": return byte.class;
+            case "char": return char.class;
+            case "double": return double.class;
+            case "float": return float.class;
+            case "int": return int.class;
+            case "long": return long.class;
+            case "short": return short.class;
+            case "void": return void.class;
+            default: return Class.forName(name);
+        }
+    }
+
+    private static Class<?> getArrayClass(String name) throws ClassNotFoundException {
+        int i = name.indexOf('[');
+        Class comp = getClass(name.substring(0, i));
+        int dim = 0;
+        while (i > -1) {
+            dim++;
+            i = name.indexOf('[', i+1);
+        }
+        return Array.newInstance(comp, new int[dim]).getClass();
+    }
+    
 }

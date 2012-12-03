@@ -73,7 +73,7 @@ public class MethodDescriptor {
 
     public void ensurePersisted() {
         if (persisted) return;
-        synchronized (this) {
+        synchronized (model) {
             if (persisted) return;
             persisted = true;
             owner.ensurePersisted();

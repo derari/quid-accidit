@@ -6,6 +6,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.*;
+import java.util.concurrent.Callable;
 import org.objectweb.asm.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 
@@ -33,16 +34,36 @@ public class TracerTransformer implements ClassFileTransformer {
                         ProtectionDomain protectionDomain, 
                         byte[] classfileBuffer) 
                             throws IllegalClassFormatException {
-        boolean trace = Tracer.pauseTracing();
         try {
-            for (String e: excludes) {
-                if (className.startsWith(e))
-                    return classfileBuffer;
-            }
-            System.out.println(">> " + className + "     " + loader);
-            return transform(classfileBuffer);
-        } finally {
-            Tracer.resumeTracing(trace);
+            return Tracer.noTrace(new TransformCall(loader, className, classfileBuffer));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private byte[] transformUntraced(String className, byte[] classfileBuffer, ClassLoader loader) throws RuntimeException {
+        for (String e: excludes) {
+            if (className.startsWith(e))
+                return classfileBuffer;
+        }
+        System.out.println(">> " + className + "     " + loader);
+        return transform(classfileBuffer);
+    }
+    
+    private class TransformCall implements Callable<byte[]> {
+        private ClassLoader loader;
+        private String className;
+        private byte[] buffer;
+
+        public TransformCall(ClassLoader loader, String className, byte[] buffer) {
+            this.loader = loader;
+            this.className = className;
+            this.buffer = buffer;
+        }
+        
+        @Override
+        public byte[] call() throws Exception {
+            return transformUntraced(className, buffer, loader);
         }
     }
 
@@ -76,12 +97,12 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visit(version, access, name, signature, superName, interfaces);
             isTestClass = name.endsWith("Test");
             type = Tracer.model.getType(name.replace('/', '.'));
-            type.addSuper(superName);
+            type.addSuper(superName.replace('/', '.'));
             for (String iface: interfaces)
-                type.addSuper(iface);
-            type.supersCompleted();
+                type.addSuper(iface.replace('/', '.'));
+            type.initCompleted();
         }
-
+        
         @Override
         public void visitAttribute(Attribute attr) {
             super.visitAttribute(attr);
@@ -105,7 +126,7 @@ public class TracerTransformer implements ClassFileTransformer {
     
     static class MyMethodVisitor extends MethodVisitor implements Opcodes {
         
-        private static final boolean DEBUG = true;
+        private static final boolean DEBUG = false;
         
         private static final String TRACER = "de/hpi/accidit/trace/Tracer";
         private static final String LINE = "line";
@@ -193,14 +214,18 @@ public class TracerTransformer implements ClassFileTransformer {
                 traceCatch();
             }
         }
-
-        @Override
-        public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+        
+        private void ensureLineNumberIsTraced() {
             if (lastTracedLine != lastLine) {
                 super.visitLdcInsn(lastLine);
                 lastTracedLine = lastLine;
                 super.visitMethodInsn(INVOKESTATIC, TRACER, LINE, LINE_DESC);
             }
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+            ensureLineNumberIsTraced();
             super.visitMethodInsn(opcode, owner, name, desc);
         }
 
@@ -322,7 +347,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-            TypeDescriptor tOwner = Tracer.model.getType(owner);
+            TypeDescriptor tOwner = Tracer.model.getType(owner.replace('/', '.'));
             FieldDescriptor f = tOwner.getField(name, desc);
             ArgumentType t = ArgumentType.getByDescriptor(desc.charAt(0));
             switch (opcode) {
@@ -344,6 +369,7 @@ public class TracerTransformer implements ClassFileTransformer {
         }
         
         private void traceArgs() {
+            ensureLineNumberIsTraced();
             int var = 0;
             if (isInit) {
                 var++; // trace `this` later

@@ -12,15 +12,20 @@ public class FieldDescriptor {
     private final Model model;
     private final TypeDescriptor owner;
     private final String name;
-    private final String desc;
+    private final TypeDescriptor type;
     private final int codeId;
+    private int modelId = -1;
     
-    public FieldDescriptor(Model model, TypeDescriptor owner, String name, String desc, int codeId) {
+    public FieldDescriptor(Model model, TypeDescriptor owner, String name, TypeDescriptor type, int codeId) {
         this.model = model;
         this.owner = owner;
         this.name = name;
-        this.desc = desc;
+        this.type = type;
         this.codeId = codeId;
+    }
+    
+    public int getId() {
+        return modelId;
     }
 
     public int getCodeId() {
@@ -35,13 +40,24 @@ public class FieldDescriptor {
         return name;
     }
 
-    public String getDescriptor() {
-        return desc;
+    public TypeDescriptor getType() {
+        return type;
     }
-
+    
+    public void ensurePersisted() {
+        if (modelId >= 0) return;
+        synchronized (model) {
+            if (modelId >= 0) return;
+            owner.ensurePersisted();
+            type.ensurePersisted();
+            modelId = model.nextFieldId();
+            model.out.field(this);
+        }
+    }
+    
     @Override
     public String toString() {
-        return String.format("%05d)(%s#%s%s", codeId, getOwner(), getName(), getDescriptor());
+        return String.format("%05d)(%s#%s (%s", codeId, getOwner(), getName(), getType());
     }
 
 }

@@ -2,6 +2,10 @@ package de.hpi.accidit.trace.program;
 
 public class AClass extends Super implements Iface {
     
+    public double aDouble;
+    
+    public static char[] staticText = new char[]{'o', 'k'};
+    
     public void test1() {
     }
     

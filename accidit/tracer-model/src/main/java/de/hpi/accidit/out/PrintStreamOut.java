@@ -32,23 +32,23 @@ public class PrintStreamOut implements Out {
 
     @Override
     public void variable(VarDescriptor var) {
-        out.println(String.format("V %s %02d $s $s", 
-                var.getMethod(), var.getId(), var.getType(), var.getName()));
+        out.println(String.format("V %s %s", 
+                var.getMethod(), var));
+    }
+
+    @Override
+    public void field(FieldDescriptor field) {
+        out.println("F " + field);
     }
     
     @Override
-    public void traceHead(ThreadTrace trace) {
+    public void begin(ThreadTrace trace) {
         out.println(trace.getName() + " ------------------------------------");
     }
 
     @Override
-    public void traceObject(ObjectTrace object) {
-        out.println("O " + object);
-    }
-    
-    @Override
-    public void traceContent(ThreadTrace trace) {
-        invocation(trace.getRoot());
+    public void traceObject(ThreadTrace trace, ObjectTrace object) {
+        out.printf("%2d O %s\n", trace.getId(), object);
     }
     
     private void indent(int depth) {
@@ -56,12 +56,80 @@ public class PrintStreamOut implements Out {
             out.print("  ");
     }
 
-    protected void invocation(InvocationTrace invocation) {
-        indent(invocation.getDepth());
-        out.println(invocation);
-        for (InvocationTrace i: invocation.getInvocations()) {
-            invocation(i);
-        }
+    @Override
+    public void traceCall(CallTrace call) {
+        printStep(call.getTrace().getId(), call.getStep(), call.getLine());
+        indent(call.getDepth());
+        out.println(call);
+    }
+
+    @Override
+    public void traceExit(CallTrace call, ExitTrace exit) {
+        printStep(call.getTrace().getId(), exit.getStep(), exit.getLine());
+        indent(call.getDepth());
+        out.println(exit);
+    }
+
+    @Override
+    public void traceThrow(CallTrace call, ThrowableTrace exTrace) {
+        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine());
+        indent(call.getDepth());
+        out.println("!! " + exTrace);
+    }
+
+    @Override
+    public void traceCatch(CallTrace call, ThrowableTrace exTrace) {
+        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine());
+        indent(call.getDepth());
+        out.println("{{ " + exTrace);
+    }
+
+    @Override
+    public void traceVariable(CallTrace call, VariableTrace var) {
+        printStep(call.getTrace().getId(), var.getStep(), var.getLine());
+        indent(call.getDepth());
+        out.println(var);
+    }
+
+    @Override
+    public void traceGet(CallTrace call, FieldTrace field) {
+        printStep(call.getTrace().getId(), field.getStep(), field.getLine());
+        indent(call.getDepth());
+        out.println("GET " + field);
+    }
+
+    @Override
+    public void tracePut(CallTrace call, FieldTrace field) {
+        printStep(call.getTrace().getId(), field.getStep(), field.getLine());
+        indent(call.getDepth());
+        out.println("PUT " + field);
+    }
+
+    @Override
+    public void traceArrayGet(CallTrace call, ArrayItemTrace array) {
+        printStep(call.getTrace().getId(), array.getStep(), array.getLine());
+        indent(call.getDepth());
+        out.println("GET " + array);
+    }
+
+    @Override
+    public void traceArrayPut(CallTrace call, ArrayItemTrace array) {
+        printStep(call.getTrace().getId(), array.getStep(), array.getLine());
+        indent(call.getDepth());
+        out.println("PUT " + array);
+    }
+
+    @Override
+    public void end(ThreadTrace trace) {
+        out.println("------------------------------------");
     }
     
+    private void printStep(int traceId, long step, int line) {
+        if (line < 0) {
+            out.printf("%2d %6d:     ", traceId, step);
+        } else {
+            out.printf("%2d %6d:%3d  ", traceId, step, line);
+        }
+    }
+
 }

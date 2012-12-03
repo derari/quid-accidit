@@ -7,19 +7,20 @@ import de.hpi.accidit.model.VarDescriptor;
  *
  * @author Arian Treffer
  */
-public class VariableTrace {
+public class VariableTrace extends ValueTrace {
     
     private final VarDescriptor var;
-    private final long step;
-    private final PrimitiveType primType;
-    private final long value;
 
-    public VariableTrace(VarDescriptor var, long step, PrimitiveType primType, long value) {
+    public VariableTrace(VarDescriptor var, long step, int line, PrimitiveType primType, long value) {
+        super(line, step, primType, value);
         this.var = var;
         var.ensurePersisted();
-        this.step = step;
-        this.primType = primType;
-        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s <- %s%d", 
+                var, getPrimType().getKey(), getValueId());
     }
     
 }

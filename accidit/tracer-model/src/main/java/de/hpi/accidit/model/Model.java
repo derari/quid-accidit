@@ -16,6 +16,7 @@ public class Model {
     
     private int nextTypeModelId = 0;
     private int nextMethodModelId = 0;
+    private int nextFieldModelId = 0;
     
     public final Out out;
 
@@ -51,8 +52,10 @@ public class Model {
         return m;
     }
 
-    synchronized FieldDescriptor createField(TypeDescriptor type, String name, String desc) {
-        FieldDescriptor f = new FieldDescriptor(this, type, name, desc, fieldByCodeId.size());
+    synchronized FieldDescriptor createField(TypeDescriptor owner, String name, String desc) {
+        String typeName = TypeDescriptor.descriptorToName(desc);
+        TypeDescriptor type = getType(typeName);
+        FieldDescriptor f = new FieldDescriptor(this, owner, name, type, fieldByCodeId.size());
         fieldByCodeId.add(f);
         return f;
     }
@@ -63,6 +66,10 @@ public class Model {
     
     int nextMethodId() {
         return nextMethodModelId++;
+    }
+
+    int nextFieldId() {
+        return nextFieldModelId++;
     }
     
 }

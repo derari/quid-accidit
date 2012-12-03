@@ -1,6 +1,8 @@
 package de.hpi.accidit.asmtracer;
 
-import de.hpi.accidit.trace.Tracer;
+import de.hpi.accidit.model.Model;
+import de.hpi.accidit.out.PrintStreamOut;
+import de.hpi.accidit.trace.*;
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,8 @@ public class PreMain {
             inst.appendToBootstrapClassLoaderSearch(jarFile);
         }
         
+        TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
+        
         Tracer.setup(new Runnable() {
             @Override
             public void run() {
@@ -24,7 +28,7 @@ public class PreMain {
                     List<Class> classes = new ArrayList<>();
                     for (Class c: inst.getAllLoadedClasses()) {
                         if (inst.isModifiableClass(c)) classes.add(c);
-                        if (c.getName().equals("java.lang.ArrayList")) {
+                        if (c.getName().equals(">>>  java.lang.ArrayList")) {
                             System.out.println(c);
                         }
                     }
@@ -34,9 +38,5 @@ public class PreMain {
                 }
             }
         });
-
-//        File f = new File("../asm-tracer/target/accidit-asm-tracer-1.0-SNAPSHOT.jar");
-//        JarFile jf = new JarFile(f.getAbsoluteFile());
-//        inst.appendToBootstrapClassLoaderSearch(jf);        
     }
 }

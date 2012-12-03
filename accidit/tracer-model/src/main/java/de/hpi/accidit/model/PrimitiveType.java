@@ -12,7 +12,7 @@ public enum PrimitiveType {
     LONG,
     SHORT,
     VOID;
-    
+
     private final int id;
 
     private PrimitiveType() {
@@ -43,7 +43,23 @@ public enum PrimitiveType {
         int i = desc.indexOf(')');
         if (i < 0) throw new IllegalArgumentException(
                 "Expected method descriptor, got \"" + desc + "\"");
-        switch (desc.charAt(i+1)) {
+        return forDescriptor(desc, i+1);
+    }
+    
+    public static PrimitiveType forDescriptor(String desc) throws IllegalArgumentException {
+        return forDescriptor(desc, 0);
+    }
+    
+    public static PrimitiveType forDescriptor(String desc, int i) throws IllegalArgumentException {
+        PrimitiveType pt = forDescriptor(desc.charAt(i));
+        if (pt == null)
+            throw new IllegalArgumentException(
+                        "Unexpected descriptor: " + desc.substring(i));
+        return pt;
+    }
+    
+    public static PrimitiveType forDescriptor(char c) throws IllegalArgumentException {
+        switch (c) {
             case 'L': return OBJECT;
             case 'X': return BOOLEAN;
             case 'B': return BYTE;
@@ -54,9 +70,22 @@ public enum PrimitiveType {
             case 'J': return LONG;
             case 'S': return SHORT;
             case 'V': return VOID;
-            default:
-                throw new IllegalArgumentException(
-                        "Unexpected descriptor: " + desc.substring(i+1));
+            default: return null;
+        }
+    }
+    
+    public static PrimitiveType forClass(String name) {
+        switch (name) {
+            case "boolean": return BOOLEAN;
+            case "byte": return BYTE;
+            case "char": return CHAR;
+            case "double": return DOUBLE;
+            case "float": return FLOAT;
+            case "int": return INT;
+            case "long": return LONG;
+            case "short": return SHORT;
+            case "void": return VOID;
+            default: return OBJECT;
         }
     }
 
@@ -72,6 +101,8 @@ public enum PrimitiveType {
             case LONG:
             case SHORT:
                 return ((Number) value).longValue();
+            case CHAR:
+                return ((Character) value).charValue();
             case DOUBLE:
                 return Double.doubleToRawLongBits((Double) value);
             case FLOAT:
@@ -82,6 +113,14 @@ public enum PrimitiveType {
                 return 0;
         }
         throw new AssertionError();
+    }
+    
+    public String toString(long valueId) {
+        switch (this) {
+            case DOUBLE: return String.format("%s%f", getKey(), Double.longBitsToDouble(valueId));
+            case FLOAT: return String.format("%s%f", getKey(), Float.intBitsToFloat((int) valueId));
+        }
+        return String.format("%s%d", getKey(), valueId);
     }
     
 }

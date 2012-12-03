@@ -9,37 +9,28 @@ import de.hpi.accidit.model.TypeDescriptor;
  */
 public class ObjectTrace {
     
-    public static ObjectTrace voidTrace(ThreadTrace trace) {
-        return new ObjectTrace(trace, trace.getModel().getType("void"));
-    }
-    
     private static TypeDescriptor typeOf(Model model, Object object) {
         return model.getType(object.getClass().getCanonicalName());
     }
     
-    private final ThreadTrace trace;
     private final TypeDescriptor type;
-    private long id = -1;
+    private final long id;
 
-    public ObjectTrace(ThreadTrace trace, Object object) {
-        this(trace, typeOf(trace.getModel(), object));
+    public ObjectTrace(ThreadTrace trace, Object object, long id) {
+        this(typeOf(trace.getModel(), object), id);
     }
     
-    public ObjectTrace(ThreadTrace trace, TypeDescriptor type) {
-        this.trace = trace;
+    public ObjectTrace(TypeDescriptor type, long id) {
         this.type = type;
+        this.id = id;
     }
 
     public long getId() {
-        if (id < 0) ensurePersisted();
         return id;
     }
 
-    private void ensurePersisted() {
-        if (id >= 0) return;
-        id = trace.nextObjectId();
-        type.ensurePersisted();
-        trace.getModel().out.traceObject(this);
+    public TypeDescriptor getType() {
+        return type;
     }
 
     @Override
