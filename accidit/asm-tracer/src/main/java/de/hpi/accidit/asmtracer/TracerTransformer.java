@@ -69,65 +69,95 @@ public class TracerTransformer implements ClassFileTransformer {
 
     public static byte[] transform(byte[] classfileBuffer, ClassLoader cl) throws RuntimeException {
         try {
-            ClassReader cr = new ClassReader(classfileBuffer);
-            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
-            CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-            ClassVisitor transform = new MyClassVisitor(cca);
-            cr.accept(transform, 0);
-//            TracerTransformer2.tranform(cr, cw);
-            
-            return cw.toByteArray();
+            return transform(classfileBuffer, Tracer.model);
         } catch (Throwable e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
     
+    public static byte[] transform(byte[] classfile, Model model) throws Exception {
+        try {
+            ClassReader cr = new ClassReader(classfile);
+            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
+            CheckClassAdapter cca = new CheckClassAdapter(cw, false);
+            ClassVisitor transform = new MyClassVisitor(cca, model);
+            cr.accept(transform, 0);
+//            TracerTransformer2.tranform(cr, cw);
+            return cw.toByteArray();
+        } catch (Exception e) {
+            if ("IS-ALREADY-TRACED".equals(e.getMessage())) {
+                return classfile;
+            }
+            throw e;
+        }
+    }
+    
     static class MyClassVisitor extends ClassVisitor implements Opcodes {
 
+        private static final String AtTraced = "Lde/hpi/accidit/asmtracer/Traced;";
+        
+        boolean isAlreadyTraced = false;
+        boolean isTracedFlagSet = false;
         boolean isTestClass;
         TypeDescriptor type;
         final ClassLoader cl=null;
+        final Model model;
+        String superName;
+        String[] interfaces;
         
-        public MyClassVisitor(ClassVisitor cv) {
+        public MyClassVisitor(ClassVisitor cv, Model model) {
             super(ASM4, cv);
+            this.model = model;
         }
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+            System.out.println("+ " + name);
             super.visit(version, access, name, signature, superName, interfaces);
             isTestClass = name.endsWith("Test");
-            type = Tracer.model.getType(name.replace('/', '.'));
-            type.addSuper(superName.replace('/', '.'));
-            for (String iface: interfaces)
-                type.addSuper(iface.replace('/', '.'));
-            type.initCompleted();
+            type = model.getType(name.replace('/', '.'));
+            this.superName = superName;
+            this.interfaces = interfaces;
         }
         
         @Override
-        public void visitAttribute(Attribute attr) {
-            super.visitAttribute(attr);
+        public AnnotationVisitor visitAnnotation(String string, boolean bln) {
+            if (string.equals(AtTraced)) {
+                isAlreadyTraced = true;
+                throw new RuntimeException("IS-ALREADY-TRACED");
+            }
+            System.out.println("@ " + string + " " + bln);
+            return super.visitAnnotation(string, bln);
         }
 
-        private boolean init;
-        
         @Override
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
             MethodVisitor sup = super.visitMethod(access, name, desc, signature, exceptions);
+            if (isAlreadyTraced) return sup;
+            if (!isTracedFlagSet) {
+                isTracedFlagSet = true;
+                super.visitAnnotation(AtTraced, false).visitEnd();
+                
+                type.addSuper(superName.replace('/', '.'));
+                for (String iface: interfaces)
+                    type.addSuper(iface.replace('/', '.'));
+                type.initCompleted();
+            }
             if ((access & (ACC_NATIVE | ACC_BRIDGE | ACC_ABSTRACT | ACC_INTERFACE)) != 0) {
                 return sup;
             }
             if (name.equals("finalize") || name.equals("<clinit>")) {
                 return sup;
             }
-            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type);
+            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model);
         }
         
     }
     
     static class MyMethodVisitor extends MethodVisitor implements Opcodes {
         
-        private static final boolean DEBUG = true;
+        private static final boolean DEBUG = false;
         
         private static final String TRACER = "de/hpi/accidit/trace/Tracer";
         private static final String LINE = "line";
@@ -163,6 +193,7 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String END = "end";
         private static final String END_DESC = "()V";
         
+        private final Model model;
         private final String name;
         private final String descriptor;
         private final boolean isStatic;
@@ -176,10 +207,11 @@ public class TracerTransformer implements ClassFileTransformer {
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
 
-        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type) {
+        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model) {
             super(ASM4, mv);
             this.name = name;
             this.descriptor = desc;
+            this.model = model;
             test = testclass && name.startsWith("test");
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
@@ -247,8 +279,16 @@ public class TracerTransformer implements ClassFileTransformer {
                 String argType = argTypes.get(i);
                 if (argType != null) {
                     if (DEBUG) System.out.println(i + " " + argType + " ??");
-                    String argName = TypeDescriptor.descriptorToName(argType);
-                    me.addVariable(i, "$"+i, argName);
+                    String argTypeName;
+                    String varName;
+                    if (i == 0 && !isStatic) {
+                        argTypeName = me.getOwner().getName();
+                        varName = "this";
+                    } else {
+                        argTypeName = TypeDescriptor.descriptorToName(argType);
+                        varName = "$"+i;
+                    }
+                    me.addVariable(i, varName, argTypeName);
                 }
             }
             me.variablesCompleted();
@@ -417,7 +457,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-            TypeDescriptor tOwner = Tracer.model.getType(owner.replace('/', '.'));
+            TypeDescriptor tOwner = model.getType(owner.replace('/', '.'));
             FieldDescriptor f = tOwner.getField(name, desc);
             ArgumentType t = ArgumentType.getByDescriptor(desc);
             switch (opcode) {
@@ -441,12 +481,13 @@ public class TracerTransformer implements ClassFileTransformer {
         private void traceArgs() {
             ensureLineNumberIsTraced();
             int var = 0;
-            if (isInit) {
+//            if (isInit) {
 //                argTypes.add("--this--");
 //                var++; // trace `this` later
-            } else if (!isStatic) {
+//            } else 
+            if (!isStatic) {
                 argTypes.add("--this--");
-                traceArg(ArgumentType.OBJECT, var); 
+                traceArg(ArgumentType.OBJECT, var);
                 var++;
             }
             int d = 1;

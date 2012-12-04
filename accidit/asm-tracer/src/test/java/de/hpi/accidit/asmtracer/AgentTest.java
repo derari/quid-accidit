@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.*;
 import static org.junit.Assume.*;
+import static org.junit.Assert.*;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
@@ -35,7 +36,7 @@ public class AgentTest {
         ClassReader cr = new ClassReader(name);
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-        cr.accept(new TracerTransformer.MyClassVisitor(cca), 0);
+        cr.accept(new TracerTransformer.MyClassVisitor(cca, Tracer.model), 0);
         cl.setData(name, cw.toByteArray());
     }
     
@@ -116,6 +117,30 @@ public class AgentTest {
     public void test_nested() throws Exception {
         Object result = runATest("nestedTest");
         System.out.println(result);
+    }
+    
+    @Test
+    public void test_traced_flag() throws Exception {
+        test_traced_flag(ACLASS);
+        test_traced_flag(ACLASS+"$Access");
+    }
+    
+    public void test_traced_flag(String clazz) throws Exception {
+        Model model = new Model(new PrintStreamOut());
+        
+        ClassReader cr = new ClassReader(clazz);        
+        byte[] data1 = transform(cr, model);
+        
+        byte[] data2 = TracerTransformer.transform(data1, model);
+        
+        assertArrayEquals(data1, data2);
+    }
+
+    private byte[] transform(ClassReader cr, Model model) {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
+        CheckClassAdapter cca = new CheckClassAdapter(cw, false);
+        cr.accept(new TracerTransformer.MyClassVisitor(cca, model), 0);
+        return cw.toByteArray();
     }
 
     private static class AClassLoader extends ClassLoader {

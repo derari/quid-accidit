@@ -119,7 +119,8 @@ public class ASimpleTest {
     public Object nestedTest() {
         return getLong();
     }
-    
+
+    @TestAt
     class Access {
 
         public Access() {
