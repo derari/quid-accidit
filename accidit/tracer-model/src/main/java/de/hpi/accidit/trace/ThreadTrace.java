@@ -170,17 +170,17 @@ public class ThreadTrace {
         cflow = false;
     }
     
-    public void aryPut(Object instance, Object value, int index, int line) {
+    public void arrayStore(Object instance, Object value, int index, int line) {
         if (cflow) return;
         cflow = true;
-        invocation.aryPut(line, instance, index, value);
+        invocation.arrayStore(line, instance, index, value);
         cflow = false;
     }
     
-    public void aryGet(Object instance, Object value, int index, int line) {
+    public void arrayLoad(Object instance, Object value, int index, int line) {
         if (cflow) return;
         cflow = true;
-        invocation.aryGet(line, instance, index, value);
+        invocation.arrayLoad(line, instance, index, value);
         cflow = false;
     }
     

@@ -17,7 +17,7 @@ public class ATest {
         l.add(1);
         l.add(2);
         l.add(3);
-        assertThat(l, hasSize(3));
+        assertThat(l, hasSize(3));     
     }
 
     public <T> List<T> newList() {

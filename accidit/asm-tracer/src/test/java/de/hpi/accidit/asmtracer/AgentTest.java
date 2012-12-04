@@ -1,11 +1,12 @@
 package de.hpi.accidit.asmtracer;
 
-import de.hpi.accidit.asmtracer.TracerTransformer;
 import de.hpi.accidit.model.Model;
 import de.hpi.accidit.out.PrintStreamOut;
 import de.hpi.accidit.trace.*;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.*;
 import static org.junit.Assume.*;
 import org.objectweb.asm.ClassReader;
@@ -19,25 +20,30 @@ public class AgentTest {
         TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
     }
     
-    private static final String ACLASS = "de.hpi.accidit.asmtracer.AClass";
+    private static final String ACLASS = ASimpleTest.class.getCanonicalName();
     
     private static Class<?> aClass = null;
     
     private static Class loadAClass() throws IOException, ClassNotFoundException {
-        ClassReader cr = new ClassReader(AClass.class.getCanonicalName());
+        AClassLoader cl = new AClassLoader(AgentTest.class.getClassLoader());
+        loadClass(cl, ACLASS);
+        loadClass(cl, ACLASS + "$Access");
+        return Class.forName(ACLASS, true, cl);
+    }
+    
+    private static void loadClass(AClassLoader cl, String name) throws IOException, ClassNotFoundException {
+        ClassReader cr = new ClassReader(name);
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
         cr.accept(new TracerTransformer.MyClassVisitor(cca), 0);
-        byte[] data = cw.toByteArray();
-        AClassLoader cl = new AClassLoader(data, AgentTest.class.getClassLoader());
-        return Class.forName(ACLASS, true, cl);
+        cl.setData(name, cw.toByteArray());
     }
     
     static Class aClass() throws Exception {
         if (aClass == null) {
             try {
                 aClass = loadAClass();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 aClass = Exception.class;
                 throw e;
             }
@@ -54,7 +60,7 @@ public class AgentTest {
     protected Object runATest(String method, boolean exceptionExpected) throws Exception {
         Class c = aClass();
         Object a = c.newInstance();
-        Tracer.begin(0);
+        Tracer.begin();
         try {
             return c.getMethod(method).invoke(a);
         } catch (InvocationTargetException e) {
@@ -94,21 +100,51 @@ public class AgentTest {
         System.out.println(result);
     }
 
+    @Test
+    public void test_array() throws Exception {
+        Object result = runATest("arrayTest");
+        System.out.println(result);
+    }
+
+    @Test
+    public void test_test() throws Exception {
+        Object result = runATest("testTest");
+        System.out.println(result);
+    }
+
+    @Test
+    public void test_nested() throws Exception {
+        Object result = runATest("nestedTest");
+        System.out.println(result);
+    }
+
     private static class AClassLoader extends ClassLoader {
         
-        private final byte[] aclass;
+        private final Map<String, byte[]> classes = new HashMap<>();
 
-        public AClassLoader(byte[] aclass, ClassLoader parent) {
+        public AClassLoader(ClassLoader parent) {
             super(parent);
-            this.aclass = aclass;
         }
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (name.equals(ACLASS)) {
-                return defineClass(ACLASS, aclass, 0, aclass.length);
+            byte[] data = classes.remove(name);
+            if (data != null) {
+                try {
+                    File f = new File("./target/test/"+name+".class");
+                    f.getParentFile().mkdirs();
+                    f.createNewFile();
+                    FileOutputStream fos = new FileOutputStream(f);
+                    fos.write(data);
+                    fos.flush();
+                } catch (IOException e) { e.printStackTrace(); }
+                return defineClass(name, data, 0, data.length);
             }
             return super.loadClass(name);
+        }
+
+        private void setData(String name, byte[] data) {
+            classes.put(name, data);
         }
         
     }

@@ -11,32 +11,41 @@ import java.util.jar.JarFile;
 public class PreMain {
 
     public static void premain(String args, final Instrumentation inst) throws Exception {
-        TracerTransformer trans = new TracerTransformer();
-        inst.addTransformer(trans, true);
-        
+
         for (String jar: args.split(";")) {
             JarFile jarFile = new JarFile(jar);
             inst.appendToBootstrapClassLoaderSearch(jarFile);
         }
         
-        TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
-        
-        Tracer.setup(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    List<Class> classes = new ArrayList<>();
-                    for (Class c: inst.getAllLoadedClasses()) {
-                        if (inst.isModifiableClass(c)) classes.add(c);
-                        if (c.getName().equals(">>>  java.lang.ArrayList")) {
-                            System.out.println(c);
+        Init.init(inst);
+    }
+    
+    private static class Init {
+
+        private static void init(final Instrumentation inst) {
+            TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
+
+            Tracer.setup(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        List<Class> classes = new ArrayList<>();
+                        for (Class c: inst.getAllLoadedClasses()) {
+                            if (inst.isModifiableClass(c)) classes.add(c);
+                            if (c.getName().equals(">>>  java.lang.ArrayList")) {
+                                System.out.println(c);
+                            }
                         }
+                        inst.retransformClasses(classes.toArray(new Class[0]));
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                    inst.retransformClasses(classes.toArray(new Class[0]));
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
-            }
-        });
+            });
+
+            TracerTransformer trans = new TracerTransformer();
+            inst.addTransformer(trans, true);
+
+        }
     }
 }

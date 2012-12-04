@@ -18,7 +18,7 @@ public class TraceSet {
         this.model = model;
     }
     
-    public ThreadTrace begin(int methodCode) {
+    public ThreadTrace begin() {
         ThreadTrace trace = traces.get();
         if (trace == null) {
             synchronized (this) {

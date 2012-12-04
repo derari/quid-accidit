@@ -68,7 +68,7 @@ public class ThreadTraceTest {
     
     @Test
     public void test_begin() {
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
         t.returned(-1, null);
         t.end();
@@ -78,7 +78,7 @@ public class ThreadTraceTest {
 
     @Test
     public void test_enter_exit() {
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
         t.line(0);
         t.enter(m("super1", desc("V")));
@@ -96,7 +96,7 @@ public class ThreadTraceTest {
     
     @Test
     public void test_return_float() {
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         float result = 3.1415f;
         long resultBits = Float.floatToIntBits(result);
         
@@ -114,7 +114,7 @@ public class ThreadTraceTest {
         test1.addVariable(0, "anInt", "int");
         test1.addVariable(1, "anArray", "java.lang.Object[]");
         
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
         t.argument(0, 17);
         t.argument(1, new Object[]{1});
@@ -128,7 +128,7 @@ public class ThreadTraceTest {
         test1.addVariable(0, "anInt", "int");
         test1.addVariable(1, "anArray", "java.lang.Object[]");
         
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
         t.variable(6, 0, 17);
         t.variable(7, 1, new Object[]{1});
@@ -139,7 +139,7 @@ public class ThreadTraceTest {
     @Test
     public void test_fields() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
         t.put(a, 1.0d, fADouble, 6);
         t.get(a, 1.0d, fADouble, 7);
@@ -151,17 +151,17 @@ public class ThreadTraceTest {
     @Test
     public void test_arrays() {
         char[] array = AClass.staticText;
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")));
-        t.aryPut(array, 'x', 0, 6);
-        t.aryGet(array, 'x', 0, 7);
+        t.arrayStore(array, 'x', 0, 6);
+        t.arrayLoad(array, 'x', 0, 7);
         t.returned(9, null);
         t.end();
     }
     
     @Test
     public void test_simple_ex() {
-        ThreadTrace t = ts.begin(mTest1); 
+        ThreadTrace t = ts.begin(); 
         Throwable ex = new RuntimeException();
         
         t.enter(m("test1", desc("V")));
@@ -174,7 +174,7 @@ public class ThreadTraceTest {
     @Test
     public void test_fallthrough_ex() {
         Throwable ex = new RuntimeException();
-        ThreadTrace t = ts.begin(mTest1);
+        ThreadTrace t = ts.begin();
         t.enter( m("test1", desc("V")));
         nested1(t, ex, true);
         t.caught(9, ex);
@@ -188,7 +188,7 @@ public class ThreadTraceTest {
     @Test
     public void test_fall_out_ex() {
         Throwable ex = new RuntimeException();
-        ThreadTrace t = ts.begin(mTest1);        
+        ThreadTrace t = ts.begin();        
         nested1(t, ex, false);
         t.caught(9, ex);
         

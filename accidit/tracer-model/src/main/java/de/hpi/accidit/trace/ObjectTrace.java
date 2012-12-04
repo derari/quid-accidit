@@ -10,7 +10,9 @@ import de.hpi.accidit.model.TypeDescriptor;
 public class ObjectTrace {
     
     private static TypeDescriptor typeOf(Model model, Object object) {
-        return model.getType(object.getClass().getCanonicalName());
+        String clazz = object.getClass().getName();
+        if (clazz.startsWith("[")) clazz = TypeDescriptor.descriptorToName(clazz);
+        return model.getType(clazz);
     }
     
     private final TypeDescriptor type;

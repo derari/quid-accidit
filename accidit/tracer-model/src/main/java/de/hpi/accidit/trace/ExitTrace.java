@@ -31,7 +31,7 @@ public class ExitTrace extends ValueTrace {
     @Override
     public String toString() {
         return String.format("%s %s", 
-                returned ? 'R' : 'E', getPrimType().toString(getValueId()));
+                returned ? "RETURN" : "THROW", getPrimType().toString(getValueId()));
     }
     
 }

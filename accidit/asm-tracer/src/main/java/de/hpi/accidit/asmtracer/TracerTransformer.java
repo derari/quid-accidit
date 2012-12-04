@@ -47,7 +47,7 @@ public class TracerTransformer implements ClassFileTransformer {
                 return classfileBuffer;
         }
         System.out.println(">> " + className + "     " + loader);
-        return transform(classfileBuffer);
+        return transform(classfileBuffer, loader);
     }
     
     private class TransformCall implements Callable<byte[]> {
@@ -67,7 +67,7 @@ public class TracerTransformer implements ClassFileTransformer {
         }
     }
 
-    public static byte[] transform(byte[] classfileBuffer) throws RuntimeException {
+    public static byte[] transform(byte[] classfileBuffer, ClassLoader cl) throws RuntimeException {
         try {
             ClassReader cr = new ClassReader(classfileBuffer);
             ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
@@ -87,6 +87,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         boolean isTestClass;
         TypeDescriptor type;
+        final ClassLoader cl=null;
         
         public MyClassVisitor(ClassVisitor cv) {
             super(ASM4, cv);
@@ -126,7 +127,7 @@ public class TracerTransformer implements ClassFileTransformer {
     
     static class MyMethodVisitor extends MethodVisitor implements Opcodes {
         
-        private static final boolean DEBUG = false;
+        private static final boolean DEBUG = true;
         
         private static final String TRACER = "de/hpi/accidit/trace/Tracer";
         private static final String LINE = "line";
@@ -145,6 +146,12 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String GET_ = "get";
         private static final String GET_DESC_1 = "(Ljava/lang/Object;";
         private static final String GET_DESC_2 = "II)V";
+        private static final String ASTORE_ = "aStore";
+        private static final String ASTORE_DESC_1 = "(Ljava/lang/Object;I";
+        private static final String ASTORE_DESC_2 = "I)V";
+        private static final String ALOAD_ = "aStore";
+        private static final String ALOAD_DESC_1 = "(Ljava/lang/Object;I";
+        private static final String ALOAD_DESC_2 = "I)V";
         private static final String THROW = "thrown";
         private static final String THROW_DESC = "(Ljava/lang/Object;I)V";
         private static final String CATCH = "caught";
@@ -152,7 +159,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         
         private static final String BEGIN = "begin";
-        private static final String BEGIN_DESC = "(I)V";
+        private static final String BEGIN_DESC = "()V";
         private static final String END = "end";
         private static final String END_DESC = "()V";
         
@@ -167,6 +174,7 @@ public class TracerTransformer implements ClassFileTransformer {
         private int lastTracedLine = -2;
         
         private final Set<Label> exHandlers = new HashSet<>();
+        private final List<String> argTypes = new ArrayList<>();
 
         public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type) {
             super(ASM4, mv);
@@ -176,7 +184,7 @@ public class TracerTransformer implements ClassFileTransformer {
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
             this.me = type.getMethod(name, desc);
-            if (DEBUG) System.out.println("\n" + name);
+            if (DEBUG) System.out.println("\n" + name + desc);
             isStatic = (access & ACC_STATIC) != 0;
             isInit = name.equals("<init>");
         }
@@ -198,6 +206,7 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLocalVariable(name, desc, signature, start, end, index);
             String type = org.objectweb.asm.Type.getType(desc).getClassName();
             me.addVariable(index, name, type);
+            if (index < argTypes.size()) argTypes.set(index, null);
         }
 
         @Override
@@ -208,6 +217,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitLineNumber(int line, Label start) {
+            if (DEBUG) System.out.println("# " + line);
             lastLine = line;
             super.visitLineNumber(line, start);
             if (exHandlers.remove(start)) {
@@ -232,6 +242,15 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public void visitEnd() {
             super.visitEnd();
+            
+            for (int i = 0; i < argTypes.size(); i++) {
+                String argType = argTypes.get(i);
+                if (argType != null) {
+                    if (DEBUG) System.out.println(i + " " + argType + " ??");
+                    String argName = TypeDescriptor.descriptorToName(argType);
+                    me.addVariable(i, "$"+i, argName);
+                }
+            }
             me.variablesCompleted();
         }
 
@@ -242,7 +261,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (type == ArgumentType.VOID) {
                 desc = "(" + RETURN_DESC_2;
             } else {
-                super.visitInsn(type.DUP());
+                super.visitInsn(type.DUPw());
                 desc = "(" + type.getDescriptor() + RETURN_DESC_2;
             }
             super.visitLdcInsn(me.getCodeId());
@@ -257,7 +276,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (DEBUG) System.out.println("S " + type + " " + var);
             String desc;
             String method = STORE_ + type.getKey();
-            super.visitInsn(type.DUP());
+            super.visitInsn(type.DUPw());
             desc = "(" + type.getDescriptor() + STORE_DESC_2;
             super.visitLdcInsn(var);
             super.visitLdcInsn(lastLine);
@@ -278,7 +297,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         private void tracePutStatic(FieldDescriptor f, ArgumentType type) {
             if (DEBUG) System.out.println("F " + f + " static");
-            super.visitInsn(type.DUP());
+            super.visitInsn(type.DUPw());
             String method = PUT_ + type.getKey();
             String desc = "(" + type.getDescriptor() + PUT_DESC_2;
             super.visitLdcInsn(f.getCodeId());
@@ -288,6 +307,9 @@ public class TracerTransformer implements ClassFileTransformer {
 
         private void tracePutField(FieldDescriptor f, ArgumentType type) {
             if (DEBUG) System.out.println("F " + f);
+//            if (isInit) {
+//                return;
+//            }
             if (type.getWidth() == 1) {
                 // obj, val
                 super.visitInsn(DUP2); // obj, val, obj, val
@@ -309,11 +331,38 @@ public class TracerTransformer implements ClassFileTransformer {
         
         private void traceGet(FieldDescriptor f, ArgumentType type, boolean inst) {
             if (DEBUG) System.out.println("G " + f + (inst?"":" static"));
-            super.visitInsn(inst ? type.DUP_X1() : type.DUP());
+            super.visitInsn(inst ? type.DUPw_X1() : type.DUPw());
             String method = GET_ + type.getKey();
             String desc = inst ? GET_DESC_1 : "(" ;
             desc += type.getDescriptor() + GET_DESC_2;
             super.visitLdcInsn(f.getCodeId());
+            super.visitLdcInsn(lastLine);
+            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+        }
+        
+        private void traceAStore(ArgumentType type) {
+            if (DEBUG) System.out.println("[<- " + type);
+            // array, index, value
+            super.visitInsn(type.DUPw_X2()); // value, array, index, value
+            super.visitInsn(type.POPw());    // value, array, index
+            super.visitInsn(type.DUP2_Xw()); // array, index, value, array, index
+            super.visitInsn(type.DUP2_Xw()); // array, index, array, index, value, array, index
+            super.visitInsn(POP2);           // array, index, array, index, value
+            super.visitInsn(type.DUPw_X2()); // array, index, value, array, index, value
+            
+            String method = ASTORE_ + type.getKey();
+            String desc = ASTORE_DESC_1 + type.getDescriptor() + ASTORE_DESC_2;
+            super.visitLdcInsn(lastLine);
+            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+        }
+        
+        private void traceALoad(ArgumentType type) {
+            if (DEBUG) System.out.println("[-> " + type);
+            // (array, index,) value
+            super.visitInsn(type.DUPw_X2()); // value, array, index, value
+            
+            String method = ALOAD_ + type.getKey();
+            String desc = ALOAD_DESC_1 + type.getDescriptor() + ALOAD_DESC_2;
             super.visitLdcInsn(lastLine);
             super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
@@ -327,10 +376,31 @@ public class TracerTransformer implements ClassFileTransformer {
                 case FRETURN: traceReturn(ArgumentType.FLOAT); break;
                 case DRETURN: traceReturn(ArgumentType.DOUBLE); break;
                 case ARETURN: traceReturn(ArgumentType.OBJECT); break;
-                case ATHROW: traceThrow();
-                    
+                case ATHROW: traceThrow(); break;
+                case BASTORE: traceAStore(ArgumentType.BYTE); break;
+                case IASTORE: traceAStore(ArgumentType.INT); break;
+                case LASTORE: traceAStore(ArgumentType.LONG); break;
+                case FASTORE: traceAStore(ArgumentType.FLOAT); break;
+                case DASTORE: traceAStore(ArgumentType.DOUBLE); break;
+                case AASTORE: traceAStore(ArgumentType.OBJECT); break;
+                case BALOAD:
+                case IALOAD:
+                case LALOAD:
+                case FALOAD:
+                case DALOAD:
+                case AALOAD:
+                    super.visitInsn(DUP2); // dup array and index
+                    break;
             }
             super.visitInsn(opcode);
+            switch (opcode) {
+                case BALOAD: traceALoad(ArgumentType.BYTE); break;
+                case IALOAD: traceALoad(ArgumentType.INT); break;
+                case LALOAD: traceALoad(ArgumentType.LONG); break;
+                case FALOAD: traceALoad(ArgumentType.FLOAT); break;
+                case DALOAD: traceALoad(ArgumentType.DOUBLE); break;
+                case AALOAD: traceALoad(ArgumentType.OBJECT); break;
+            }
         }
 
         @Override
@@ -349,7 +419,7 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
             TypeDescriptor tOwner = Tracer.model.getType(owner.replace('/', '.'));
             FieldDescriptor f = tOwner.getField(name, desc);
-            ArgumentType t = ArgumentType.getByDescriptor(desc.charAt(0));
+            ArgumentType t = ArgumentType.getByDescriptor(desc);
             switch (opcode) {
                 case PUTFIELD: tracePutField(f, t); break;
                 case PUTSTATIC: tracePutStatic(f, t); break;
@@ -372,19 +442,32 @@ public class TracerTransformer implements ClassFileTransformer {
             ensureLineNumberIsTraced();
             int var = 0;
             if (isInit) {
-                var++; // trace `this` later
+//                argTypes.add("--this--");
+//                var++; // trace `this` later
             } else if (!isStatic) {
+                argTypes.add("--this--");
                 traceArg(ArgumentType.OBJECT, var); 
                 var++;
             }
             int d = 1;
             while (descriptor.charAt(d) != ')') {
                 ArgumentType t = ArgumentType.getByDescriptor(descriptor.charAt(d));
-                if (t == ArgumentType.OBJECT) d = descriptor.indexOf(';', d);
+                if (t == null) 
+                    throw new IllegalArgumentException(descriptor.substring(d));
+                int dEnd;
+                if (t == ArgumentType.OBJECT) dEnd = endOfObjectDescriptor(descriptor, d);
+                else dEnd = d+1;
+                argTypes.add(descriptor.substring(d, dEnd));
                 traceArg(t, var);
-                d++;
+                d = dEnd;
                 var++;
             }
+        }
+        
+        private int endOfObjectDescriptor(String descriptor, int d) {
+            while (descriptor.charAt(d) == '[') d++;
+            if (descriptor.charAt(d) == 'L') d = descriptor.indexOf(';', d);
+            return d+1;
         }
 
         private void traceThrow() {
@@ -409,7 +492,8 @@ public class TracerTransformer implements ClassFileTransformer {
         FLOAT('F'),
         DOUBLE('D'),
         OBJECT('A'),
-        VOID('V');
+        VOID('V'),
+        BYTE('B');
         
         private final char key;
         private final String descriptor;
@@ -438,15 +522,32 @@ public class TracerTransformer implements ClassFileTransformer {
             return width;
         }
         
-        public int DUP() {
+        public int POPw() {
+            return width == 1 ? Opcodes.POP : Opcodes.POP2;
+        }
+        
+        public int DUPw() {
             return width == 1 ? Opcodes.DUP : Opcodes.DUP2;
         }
         
-        public int DUP_X1() {
+        public int DUPw_Xw() {
             return width == 1 ? Opcodes.DUP_X1 : Opcodes.DUP2_X2;
         }
         
+        public int DUPw_X1() {
+            return width == 1 ? Opcodes.DUP_X1 : Opcodes.DUP2_X1;
+        }
+        
+        public int DUPw_X2() {
+            return width == 1 ? Opcodes.DUP_X2 : Opcodes.DUP2_X2;
+        }
+        
+        public int DUP2_Xw() {
+            return width == 1 ? Opcodes.DUP2_X1 : Opcodes.DUP2_X2;
+        }
+        
         public int LOAD() {
+            if (this == BYTE) return INT.LOAD();
             return Opcodes.ILOAD + ordinal();
         }
         
@@ -459,9 +560,28 @@ public class TracerTransformer implements ClassFileTransformer {
             return null;
         }
         
+        public static ArgumentType getByDescriptor(String desc) {
+            ArgumentType t = getByDescriptor(desc.charAt(0), false);
+            if (t == null) throw new IllegalArgumentException(desc);
+            return t;
+        }
+        
         public static ArgumentType getByDescriptor(char key) {
-            for (ArgumentType t: VALUES) {
-                if (t.getDescriptor().charAt(0) == key) return t;
+            return getByDescriptor(key, false);
+        }
+        
+        public static ArgumentType getByDescriptor(char key, boolean explicitByteBoolean) {
+            switch (key) {
+                case 'B':
+                case 'Z': if (explicitByteBoolean) return BYTE;
+                case 'C':
+                case 'I':
+                case 'S': return INT;
+                case 'J': return LONG;
+                case 'F': return FLOAT;
+                case 'D': return DOUBLE;
+                case '[':
+                case 'L': return OBJECT;
             }
             return null;
         }

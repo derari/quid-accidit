@@ -26,13 +26,13 @@ public enum PrimitiveType {
     public char getKey() {
         switch (this) {
             case OBJECT: return 'L';
-            case BOOLEAN: return 'X';
+            case BOOLEAN: return 'Z';
             case BYTE: return 'B';
             case CHAR: return 'C';
             case DOUBLE: return 'D';
             case FLOAT: return 'F';
             case INT: return 'I';
-            case LONG: return 'L';
+            case LONG: return 'J';
             case SHORT: return 'S';
             case VOID: return 'V';
         }
@@ -60,8 +60,9 @@ public enum PrimitiveType {
     
     public static PrimitiveType forDescriptor(char c) throws IllegalArgumentException {
         switch (c) {
+            case '[':
             case 'L': return OBJECT;
-            case 'X': return BOOLEAN;
+            case 'Z': return BOOLEAN;
             case 'B': return BYTE;
             case 'C': return CHAR;
             case 'D': return DOUBLE;
@@ -93,16 +94,20 @@ public enum PrimitiveType {
         switch (this) {
             case OBJECT: 
                 throw new UnsupportedOperationException("No IDs for objects");
+            case CHAR:
+                if (value instanceof Character) {
+                    return ((Character) value).charValue();
+                }
             case BOOLEAN:
-                boolean b = (Boolean) value;
-                return b ? 1 : 0;
+                if (value instanceof Boolean) {
+                    boolean b = (Boolean) value;
+                    return b ? 1 : 0;
+                }
             case BYTE:
             case INT:
             case LONG:
             case SHORT:
                 return ((Number) value).longValue();
-            case CHAR:
-                return ((Character) value).charValue();
             case DOUBLE:
                 return Double.doubleToRawLongBits((Double) value);
             case FLOAT:

@@ -52,9 +52,9 @@ public class Tracer {
     }
     
 
-    public static void begin(int methodCode) {
+    public static void begin() {
         init();
-        traceSet.begin(methodCode);
+        traceSet.begin();
         incTraceCount();
     }
     
@@ -267,6 +267,68 @@ public class Tracer {
         }
     };
     
+    public static void aStoreB(Object array, int index, byte value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreI(Object array, int index, int value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreL(Object array, int index, long value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreF(Object array, int index, float value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreD(Object array, int index, double value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreA(Object array, int index, Object value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    private static final EventIIAA ASTORE = new EventIIAA() {
+        @Override
+        protected void run(ThreadTrace t, int index, int line, Object array, Object value) {
+            t.arrayStore(array, value, index, line);
+        }
+    };
+    
+    public static void aLoadB(Object array, int index, byte value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadI(Object array, int index, int value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadL(Object array, int index, long value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadF(Object array, int index, float value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadD(Object array, int index, double value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadA(Object array, int index, Object value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    private static final EventIIAA ALOAD = new EventIIAA() {
+        @Override
+        protected void run(ThreadTrace t, int index, int line, Object array, Object value) {
+            t.arrayLoad(array, value, index, line);
+        }
+    };
+    
     public static void thrown(Object ex, int line) {
         THROW.trace(line, ex);
     }
@@ -305,6 +367,10 @@ public class Tracer {
         ThreadTrace tt = traceSet.get();
         trace = true;
         return tt;
+    }
+    
+    public static void dummyA(Object o) {
+        System.out.println(o);
     }
     
     static abstract class EventI {

@@ -129,13 +129,13 @@ public class CallTrace {
         return new FieldTrace(ot, field, line, stepCounter.next(), primType, valueId);
     }
 
-    public void aryPut(int line, Object instance, int index, Object value) {
+    public void arrayStore(int line, Object instance, int index, Object value) {
         lastLine = line;
         ArrayItemTrace arrayTrace = arrayTrace(index, value, instance, line);
         trace.getModel().out.traceArrayPut(this, arrayTrace);
     }
 
-    public void aryGet(int line, Object instance, int index, Object value) {
+    public void arrayLoad(int line, Object instance, int index, Object value) {
         lastLine = line;
         ArrayItemTrace arrayTrace = arrayTrace(index, value, instance, line);
         trace.getModel().out.traceArrayGet(this, arrayTrace);
