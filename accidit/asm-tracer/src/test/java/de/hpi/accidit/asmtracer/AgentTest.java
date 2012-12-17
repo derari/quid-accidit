@@ -1,5 +1,6 @@
 package de.hpi.accidit.asmtracer;
 
+import de.hpi.accidit.testapp.ASimpleTest;
 import de.hpi.accidit.model.Model;
 import de.hpi.accidit.out.PrintStreamOut;
 import de.hpi.accidit.trace.*;
@@ -25,6 +26,10 @@ public class AgentTest {
     
     private static Class<?> aClass = null;
     
+    private static ClassLoader cl() {
+        return aClass.getClassLoader();
+    }
+    
     private static Class loadAClass() throws IOException, ClassNotFoundException {
         AClassLoader cl = new AClassLoader(AgentTest.class.getClassLoader());
         loadClass(cl, ACLASS);
@@ -36,7 +41,7 @@ public class AgentTest {
         ClassReader cr = new ClassReader(name);
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-        cr.accept(new TracerTransformer.MyClassVisitor(cca, Tracer.model), 0);
+        cr.accept(new TracerTransformer.MyClassVisitor(cca, Tracer.model, cl), 0);
         cl.setData(name, cw.toByteArray());
     }
     
@@ -63,14 +68,18 @@ public class AgentTest {
         Object a = c.newInstance();
         Tracer.begin();
         try {
-            return c.getMethod(method).invoke(a);
+            return runMethod(a, method, exceptionExpected);
         } catch (InvocationTargetException e) {
             if (!exceptionExpected) throw e;
             Tracer.caught(e.getCause(), 0);
             return null;
         } finally {
-            if (!exceptionExpected) Tracer.end();
+            Tracer.end();
         }
+    }
+    
+    protected Object runMethod(Object o, String method, boolean exceptionExpected) throws Exception {
+        return o.getClass().getMethod(method).invoke(o);
     }
     
     @Before
@@ -86,6 +95,12 @@ public class AgentTest {
     @Test
     public void test_basic() throws Exception {
         Object result = runATest("basicTest");
+        System.out.println(result);
+    }
+
+    @Test
+    public void test_no_trace() throws Exception {
+        Object result = runMethod(aClass().newInstance(), "basicTest", false);
         System.out.println(result);
     }
 
@@ -120,6 +135,12 @@ public class AgentTest {
     }
     
     @Test
+    public void test_nested2() throws Exception {
+        Object result = runATest("nested2Test");
+        System.out.println(result);
+    }
+    
+    @Test
     public void test_traced_flag() throws Exception {
         test_traced_flag(ACLASS);
         test_traced_flag(ACLASS+"$Access");
@@ -131,7 +152,7 @@ public class AgentTest {
         ClassReader cr = new ClassReader(clazz);        
         byte[] data1 = transform(cr, model);
         
-        byte[] data2 = TracerTransformer.transform(data1, model);
+        byte[] data2 = TracerTransformer.transform(data1, model, getClass().getClassLoader());
         
         assertArrayEquals(data1, data2);
     }
@@ -139,7 +160,7 @@ public class AgentTest {
     private byte[] transform(ClassReader cr, Model model) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-        cr.accept(new TracerTransformer.MyClassVisitor(cca, model), 0);
+        cr.accept(new TracerTransformer.MyClassVisitor(cca, model, getClass().getClassLoader()), 0);
         return cw.toByteArray();
     }
 

@@ -14,6 +14,8 @@ public class Model {
     private final List<MethodDescriptor> methodByCodeId = new ArrayList<>();
     private final List<FieldDescriptor> fieldByCodeId = new ArrayList<>();
     
+//    private final MethodDescriptor nullMethod;
+    
     private int nextTypeModelId = 0;
     private int nextMethodModelId = 0;
     private int nextFieldModelId = 0;
@@ -22,6 +24,9 @@ public class Model {
 
     public Model(Out out) {
         this.out = out;
+//        nullMethod = new MethodDescriptor(this, getType("java.lang.Object"), "unknown", "()V", -1){
+//            { variablesCompleted(); }
+//        };
     }
 
     public TypeDescriptor getType(int codeId) {
@@ -36,10 +41,10 @@ public class Model {
         return fieldByCodeId.get(codeId);
     }
     
-    public synchronized TypeDescriptor getType(String name) {
+    public synchronized TypeDescriptor getType(String name, ClassLoader cl) {
         TypeDescriptor t = typeByName.get(name);
         if (t == null) {
-            t = new TypeDescriptor(this, name, typeByCodeId.size());
+            t = new TypeDescriptor(cl, this, name, typeByCodeId.size());
             typeByName.put(name, t);
             typeByCodeId.add(t);
         }
@@ -54,7 +59,7 @@ public class Model {
 
     synchronized FieldDescriptor createField(TypeDescriptor owner, String name, String desc) {
         String typeName = TypeDescriptor.descriptorToName(desc);
-        TypeDescriptor type = getType(typeName);
+        TypeDescriptor type = getType(typeName, owner.cl);
         FieldDescriptor f = new FieldDescriptor(this, owner, name, type, fieldByCodeId.size());
         fieldByCodeId.add(f);
         return f;
@@ -71,5 +76,9 @@ public class Model {
     int nextFieldId() {
         return nextFieldModelId++;
     }
-    
+
+//    public MethodDescriptor nullMethod() {
+//        return nullMethod;
+//    }
+//    
 }

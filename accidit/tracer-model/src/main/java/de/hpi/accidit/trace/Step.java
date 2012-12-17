@@ -11,5 +11,9 @@ public class Step {
     public final long next() {
         return ++step;
     }
+
+    public long current() {
+        return step;
+    }
     
 }

@@ -22,6 +22,14 @@ public class FieldTrace extends ValueTrace {
         field.ensurePersisted();
     }
 
+    public ObjectTrace getInstance() {
+        return instance;
+    }
+
+    public FieldDescriptor getField() {
+        return field;
+    }
+
     @Override
     public String toString() {
         if (instance == null) {

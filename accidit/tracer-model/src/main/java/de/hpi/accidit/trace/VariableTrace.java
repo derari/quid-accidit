@@ -17,6 +17,10 @@ public class VariableTrace extends ValueTrace {
         var.ensurePersisted();
     }
 
+    public VarDescriptor getVaribale() {
+        return var;
+    }
+
     @Override
     public String toString() {
         return String.format("%s <- %s%d", 

@@ -4,7 +4,11 @@ import java.lang.ref.*;
 
 public class WeakIdentityMap<K, V> {
     
-    private static final MappedWeakReference GUARD = new MappedWeakReference();
+    private static final MappedWeakReference GUARD = new MappedWeakReference() {
+        @Override
+        public String toString() {
+            return "GUARD";
+        } };
     
     private static final int INITIAL_CAPICITY = 64;
     private static final float LOAD_FACTOR = 3/4f;
@@ -34,19 +38,23 @@ public class WeakIdentityMap<K, V> {
     }
     
     public synchronized V put(K key, V value) {
-        cleanUp();
-        if (value == null) return remove(key);
-        final int hash = hash(key);
-        int index = find(hash, key);
-        if (index < 0) {
-            size++; 
-            ensureCapacity();
-            index = insertAt(hash);
-            keys[index] = new MappedWeakReference(hash, key, refQueue);
+        try {
+            cleanUp();
+            if (value == null) return remove(key);
+            final int hash = hash(key);
+            int index = find(hash, key);
+            if (index < 0) {
+                size++; 
+                ensureCapacity();
+                index = insertAt(hash);
+                keys[index] = new MappedWeakReference(hash, key, refQueue);
+            }
+            V oldValue = (V) values[index];
+            values[index] = value;
+            return oldValue;
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException(String.valueOf(key), e);
         }
-        V oldValue = (V) values[index];
-        values[index] = value;
-        return oldValue;
     }
     
     public synchronized V get(Object key) {
@@ -94,7 +102,7 @@ public class WeakIdentityMap<K, V> {
         final int maxTry = capacity;
         for (int i = 0; i < maxTry; i++) {
             MappedWeakReference keyRef = keys[index];
-            if (keyRef == null) {
+            if (keyRef == null || keyRef == GUARD) {
                 return -1;
             }
             Object obj = keyRef.get();
@@ -113,7 +121,7 @@ public class WeakIdentityMap<K, V> {
         final int maxTry = capacity;
         for (int i = 0; i < maxTry; i++) {
             MappedWeakReference keyRef = keys[index];
-            if (keyRef == null) {
+            if (keyRef == null || keyRef == GUARD) {
                 return -1;
             } else if (keyRef == key) {
                 return index;
@@ -124,6 +132,10 @@ public class WeakIdentityMap<K, V> {
     }
     
     private int insertAt(int hash) {
+        return insertAt(hash, true);
+    }
+    
+    private int insertAt(int hash, boolean first) {
         int index = index(hash);
         final int maxTry = capacity;
         for (int i = 0; i < maxTry; i++) {
@@ -134,8 +146,12 @@ public class WeakIdentityMap<K, V> {
                 index = nextIndex(index);
             }
         }
-        // there *has* to be capacity left, find it!
-        return insertAt(hash+1);
+        if (first) {
+            // there *has* to be capacity left, find it!
+            return insertAt(hash+1, false);
+        } else {
+            throw new IllegalStateException();
+        }
     }
     
     private void cleanUp() {
@@ -160,6 +176,9 @@ public class WeakIdentityMap<K, V> {
 
     private V removeAt(int index) {
         size--; 
+        if (size < 0) {
+            throw new IllegalStateException("empty");
+        }
         V oldValue = (V) values[index];
         keys[index] = GUARD;
         values[index] = null;

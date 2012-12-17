@@ -21,6 +21,14 @@ public class ArrayItemTrace extends ValueTrace {
         this.index = index;
     }
 
+    public int getIndex() {
+        return index;
+    }
+
+    public ObjectTrace getInstance() {
+        return instance;
+    }
+
     @Override
     public String toString() {
         return String.format("%03d:%s[%d] == %s", 

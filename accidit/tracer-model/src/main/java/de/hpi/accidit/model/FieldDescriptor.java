@@ -24,7 +24,7 @@ public class FieldDescriptor {
         this.codeId = codeId;
     }
     
-    public int getId() {
+    public int getModelId() {
         return modelId;
     }
 

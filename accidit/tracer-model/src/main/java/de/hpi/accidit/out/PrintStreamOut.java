@@ -48,6 +48,7 @@ public class PrintStreamOut implements Out {
 
     @Override
     public void traceObject(ThreadTrace trace, ObjectTrace object) {
+        object.getId();
         out.printf("%2d O %s\n", trace.getId(), object);
     }
     
@@ -58,64 +59,64 @@ public class PrintStreamOut implements Out {
 
     @Override
     public void traceCall(CallTrace call) {
-        printStep(call.getTrace().getId(), call.getStep(), call.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), call.getStep(), call.getLine(), call.getDepth()-1);
+//        indent(call.getDepth());
         out.println(call);
     }
 
     @Override
     public void traceExit(CallTrace call, ExitTrace exit) {
-        printStep(call.getTrace().getId(), exit.getStep(), exit.getLine());
-        indent(call.getDepth());
-        out.println(exit);
+        printStep(call.getTrace().getId(), exit.getStep(), exit.getLine(), call.getDepth());
+//        indent(call.getDepth());
+        out.println(exit + "    " + call);
     }
 
     @Override
     public void traceThrow(CallTrace call, ThrowableTrace exTrace) {
-        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("!! " + exTrace);
     }
 
     @Override
     public void traceCatch(CallTrace call, ThrowableTrace exTrace) {
-        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), exTrace.getStep(), exTrace.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("{{ " + exTrace);
     }
 
     @Override
     public void traceVariable(CallTrace call, VariableTrace var) {
-        printStep(call.getTrace().getId(), var.getStep(), var.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), var.getStep(), var.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println(var);
     }
 
     @Override
     public void traceGet(CallTrace call, FieldTrace field) {
-        printStep(call.getTrace().getId(), field.getStep(), field.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), field.getStep(), field.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("GET " + field);
     }
 
     @Override
     public void tracePut(CallTrace call, FieldTrace field) {
-        printStep(call.getTrace().getId(), field.getStep(), field.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), field.getStep(), field.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("PUT " + field);
     }
 
     @Override
     public void traceArrayGet(CallTrace call, ArrayItemTrace array) {
-        printStep(call.getTrace().getId(), array.getStep(), array.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), array.getStep(), array.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("GET " + array);
     }
 
     @Override
     public void traceArrayPut(CallTrace call, ArrayItemTrace array) {
-        printStep(call.getTrace().getId(), array.getStep(), array.getLine());
-        indent(call.getDepth());
+        printStep(call.getTrace().getId(), array.getStep(), array.getLine(), call.getDepth());
+//        indent(call.getDepth());
         out.println("PUT " + array);
     }
 
@@ -124,12 +125,10 @@ public class PrintStreamOut implements Out {
         out.println("------------------------------------");
     }
     
-    private void printStep(int traceId, long step, int line) {
-        if (line < 0) {
-            out.printf("%2d %6d:     ", traceId, step);
-        } else {
-            out.printf("%2d %6d:%3d  ", traceId, step, line);
-        }
+    private void printStep(int traceId, long step, int line, int indent) {
+        indent = indent*2+5;
+        String s = line < 0 ? " " : line + " ";
+        out.printf("%2d %6d:%-"+indent+"s", traceId, step, s);
     }
 
 }

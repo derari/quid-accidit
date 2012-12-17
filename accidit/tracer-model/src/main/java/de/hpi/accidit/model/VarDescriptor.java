@@ -10,6 +10,7 @@ public class VarDescriptor {
     private final String name;
     private final MethodDescriptor method;
     private final TypeDescriptor type;
+    private boolean argument = false;
     private boolean persisted = false;
 
     public VarDescriptor(int id, String name, MethodDescriptor method, TypeDescriptor type) {
@@ -37,6 +38,14 @@ public class VarDescriptor {
 
     public PrimitiveType getPrimitiveType() {
         return type.getPrimitiveType();
+    }
+
+    public void setArgument(boolean argument) {
+        this.argument = argument;
+    }
+
+    public boolean isArgument() {
+        return argument;
     }
     
     public void ensurePersisted() {

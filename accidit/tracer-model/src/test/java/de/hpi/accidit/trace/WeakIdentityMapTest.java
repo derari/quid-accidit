@@ -62,4 +62,16 @@ public class WeakIdentityMapTest {
         assertThat(instance.get(key37), is(37));
     }
     
+    @Test
+    public void test_reinsert() {
+        final WeakIdentityMap<Object, Integer> instance = new WeakIdentityMap<>();
+        final Object key = new Object();
+        instance.put(key, 1);
+        instance.put(key, null);
+        assertThat(instance.size(), is(0));
+        instance.put(key, 1);
+        instance.put(key, null);
+        assertThat(instance.size(), is(0));
+    }
+    
  }

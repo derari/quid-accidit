@@ -91,6 +91,10 @@ public enum PrimitiveType {
     }
 
     public long toValueId(Object value) {
+        if (value == null) {
+            if (this == VOID) return 0;
+            throw new NullPointerException(this.toString());
+        }
         switch (this) {
             case OBJECT: 
                 throw new UnsupportedOperationException("No IDs for objects");

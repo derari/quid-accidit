@@ -30,6 +30,10 @@ public class MethodDescriptor {
         this.resultType = PrimitiveType.resultOfMethod(desc);
     }
 
+    public int getModelId() {
+        return modelId;
+    }
+
     public int getCodeId() {
         return codeId;
     }
@@ -57,12 +61,24 @@ public class MethodDescriptor {
     public void addVariable(int id, String name, String type) {
         if (varsInitialized) throw new IllegalStateException("Variables already initialized");
         while (id >= variables.size()) variables.add(null);
-        TypeDescriptor t = model.getType(type);
+        TypeDescriptor t = model.getType(type, owner.cl);
         VarDescriptor var = new VarDescriptor(id, name, this, t);
         variables.set(id, var);
     }
     
+    private boolean varsWarned = false;
+    
     public VarDescriptor getVariable(int id) {
+        if (id >= variables.size()) {
+//            if (!varsWarned) {
+//                System.out.println(this + ": " + variables.size() + " variables");
+//                for (VarDescriptor v: variables) {
+//                    System.out.println("  " + v);
+//                }
+//                varsWarned = true;
+//            }
+            return null;
+        }
         return variables.get(id);
     }
     
@@ -89,6 +105,18 @@ public class MethodDescriptor {
         } else {
             return String.format("%05d/%05d)(%s#%s%s", codeId, modelId, getOwner(), getName(), getDescriptor());
         }
+    }
+
+    public boolean variablesAreInitialized() {
+        return varsInitialized;
+    }
+
+    public boolean implementsMethod(int codeId) {
+        if (codeId == -1) return false;
+        if (codeId == this.codeId) return true;
+        MethodDescriptor m = model.getMethod(codeId);
+        // this is an approximation...
+        return m.getName().equals(name);
     }
 
 }

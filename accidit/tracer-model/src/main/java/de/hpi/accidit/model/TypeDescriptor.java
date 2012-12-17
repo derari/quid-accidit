@@ -8,6 +8,12 @@ import java.util.*;
  * @author Arian Treffer
  */
 public class TypeDescriptor {
+
+    public static String className(Class clazz) {
+        String name = clazz.getName();
+        if (name.startsWith("[")) name = descriptorToName(name);
+        return name;
+    }
     
     public static String descriptorToName(String desc) {
         int dim = desc.lastIndexOf('[')+1;
@@ -27,6 +33,7 @@ public class TypeDescriptor {
     }
 
     final Model model;
+    final ClassLoader cl;
     private final String name;
     private final int codeId;
     private final List<TypeDescriptor> supers = new ArrayList<>();
@@ -34,16 +41,21 @@ public class TypeDescriptor {
     private final Map<String, FieldDescriptor> fieldByName = new HashMap<>();
     private final PrimitiveType primType;
     private TypeDescriptor component = null;
+    private String source = null;
     
     private int modelId = -1;
-    private boolean initialized = false;
-    private boolean persisted = false;
+    private State state = State.NEW;
 
-    public TypeDescriptor(Model model, String name, int codeId) {
+    public TypeDescriptor(ClassLoader cl, Model model, String name, int codeId) {
+        this.cl = cl;
         this.model = model;
         this.name = name;
         this.codeId = codeId;
         this.primType = PrimitiveType.forClass(name);
+    }
+
+    public int getModelId() {
+        return modelId;
     }
     
     public int getCodeId() {
@@ -56,6 +68,14 @@ public class TypeDescriptor {
 
     public TypeDescriptor getComponentType() {
         return component;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public List<TypeDescriptor> getSupers() {
+        return supers;
     }
 
     public synchronized MethodDescriptor getMethod(String name, String desc) {
@@ -76,51 +96,63 @@ public class TypeDescriptor {
         }
         return f;
     }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
     
     public void addSuper(String superName) {
-        if (initialized) throw new IllegalStateException(
+        if (state.isInitialized()) 
+            throw new IllegalStateException(
                 "Supers of " + this + " already initialized");
-        supers.add(model.getType(superName));
+        supers.add(model.getType(superName, cl));
     }
 
     public void ensureInitialized() {
-        if (initialized) return;
+        if (state.isInitialized()) return;
         synchronized (model) {
-            if (initialized) return;
+            if (state.isInitializing()) return;
             try {
                 init();
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException(name, e);
             }
         }
     }
 
     private void init() throws ClassNotFoundException {
-        Class clazz = getClass(name);
+        state = State.INITIALIZING;
+        Class clazz = getClass(cl, name);
+        if (state.isInitialized()) {
+            // loading with `getClass` might trigger initialization
+            return;
+        }
         
         Class sup = clazz.getSuperclass();
-        if (sup != null) addSuper(sup.getCanonicalName());
-        for (Class iface: clazz.getInterfaces())
-            addSuper(iface.getCanonicalName());
+        if (sup != null) addSuper(className(sup));
+        for (Class iface: clazz.getInterfaces()) {
+            addSuper(className(iface));
+        }
         
         if (clazz.isArray()) {
             Class comp = clazz.getComponentType();
-            component = model.getType(comp.getSimpleName());
+            component = model.getType(className(comp), cl);
         }
         
         initCompleted();
     }
     
     public void initCompleted() {
-        initialized = true;
+        state = state.makeInitialized();
     }
     
     public void ensurePersisted() {
-        if (persisted) return;
+        if (state.isPersisted()) return;
         synchronized (model) {
-            if (persisted) return;
-            persisted = true;
+            if (state.isPersisting()) return;
             ensureInitialized();
+            state = state.makePersisted();
+            if (component != null) component.ensurePersisted();
             for (TypeDescriptor td: supers)
                 td.ensurePersisted();
             modelId = model.nextTypeId();
@@ -141,9 +173,9 @@ public class TypeDescriptor {
         return primType;
     }
 
-    private static Class<?> getClass(String name) throws ClassNotFoundException {
+    private static Class<?> getClass(ClassLoader cl, String name) throws ClassNotFoundException {
         if (name.endsWith("[]")) {
-            return getArrayClass(name);
+            return getArrayClass(cl, name);
         }
         switch (name) {
             case "boolean": return boolean.class;
@@ -155,19 +187,23 @@ public class TypeDescriptor {
             case "long": return long.class;
             case "short": return short.class;
             case "void": return void.class;
-            default: return Class.forName(name);
+            default: return Class.forName(name, false, cl);
         }
     }
 
-    private static Class<?> getArrayClass(String name) throws ClassNotFoundException {
+    private static Class<?> getArrayClass(ClassLoader cl, String name) throws ClassNotFoundException {
         int i = name.indexOf('[');
-        Class comp = getClass(name.substring(0, i));
+        Class comp = getClass(cl, name.substring(0, i));
         int dim = 0;
         while (i > -1) {
             dim++;
             i = name.indexOf('[', i+1);
         }
         return Array.newInstance(comp, new int[dim]).getClass();
+    }
+
+    public boolean isInitialized() {
+        return state.isInitialized();
     }
     
 }

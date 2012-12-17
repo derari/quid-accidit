@@ -49,17 +49,20 @@ public class Tracer {
     private static synchronized void decTraceCount() {
         traceCount--;
         trace = traceCount > 0;
+        if (traceCount < 0) traceCount = 0;
     }
     
 
-    public static void begin() {
+    public synchronized static void begin() {
         init();
+        trace = false;
         traceSet.begin();
         incTraceCount();
     }
     
-    public static void end() {
+    public synchronized static void end() {
         if (!trace) return;
+        trace = false;
         ThreadTrace t = threadTrace();
         if (t == null) return;
         decTraceCount();
@@ -77,45 +80,56 @@ public class Tracer {
         }
     };
     
-    public static void enter(int methodCode) {
-        ENTER.trace(methodCode);
+    public static void call(int methodId) {
+        CALL.trace(methodId);
     }
     
-    private static final EventI ENTER = new EventI() {
+    private static final EventI CALL = new EventI() {
         @Override
-        protected void run(ThreadTrace t, int methodCode) {
-            t.enter(methodCode);
+        protected void run(ThreadTrace t, int methodId) {
+            t.call(methodId);
         }
     };
     
-    public static void returnA(Object result, int methodCode) {
-        RETURN.trace(methodCode, result);
+    public static void enter(int methodCode, Object inst) {
+        ENTER.trace(methodCode, inst);
     }
     
-    public static void returnV(int line) {
-        RETURN.trace(line, null);
-    }
-    
-    public static void returnI(int result, int line) {
-        RETURN.trace(line, result);
-    }
-    
-    public static void returnL(long result, int line) {
-        RETURN.trace(line, result);
-    }
-    
-    public static void returnF(float result, int line) {
-        RETURN.trace(line, result);
-    }
-    
-    public static void returnD(double result, int line) {
-        RETURN.trace(line, result);
-    }
-    
-    private static final EventIA RETURN = new EventIA() {
+    private static final EventIA ENTER = new EventIA() {
         @Override
-        protected void run(ThreadTrace t, int line, Object result) {
-            t.returned(line, result);
+        protected void run(ThreadTrace t, int methodCode, Object inst) {
+            t.enter(methodCode, inst);
+        }
+    };
+    
+    public static void returnA(Object result, int methodCode, int line) {
+        RETURN.trace(methodCode, line, result);
+    }
+    
+    public static void returnV(int methodCode, int line) {
+        RETURN.trace(methodCode, line, null);
+    }
+    
+    public static void returnI(int result, int methodCode, int line) {
+        RETURN.trace(methodCode, line, result);
+    }
+    
+    public static void returnL(long result, int methodCode, int line) {
+        RETURN.trace(methodCode, line, result);
+    }
+    
+    public static void returnF(float result, int methodCode, int line) {
+        RETURN.trace(methodCode, line, result);
+    }
+    
+    public static void returnD(double result, int methodCode, int line) {
+        RETURN.trace(methodCode, line, result);
+    }
+    
+    private static final EventIIA RETURN = new EventIIA() {
+        @Override
+        protected void run(ThreadTrace t, int methodCode, int line, Object result) {
+            t.returned(methodCode, line, result);
         }
     };
     
@@ -351,21 +365,25 @@ public class Tracer {
         }
     };
     
-    public static synchronized <T> T noTrace(Callable<T> call) throws Exception {
-        if (!trace) return call.call();
+    /**
+     * Synchronize on Tracer.class before calling this!
+     * @return Should be passed to resumeTrace
+     */
+    public static boolean pauseTrace() {
+        boolean old = trace;
         trace = false;
-        try {
-            return call.call();
-        } finally {
-            trace = true;
-        }
+        return old;
     }
     
-    private synchronized static ThreadTrace threadTrace() {
-        assert trace : "should only be called when tracing";
-        trace = false;
+    public static void resumeTrace(boolean t) {
+        trace = t;
+    }
+    
+    private static ThreadTrace threadTrace() {
+        assert !trace : "disable tracing before calling thread trace";
+        //trace = false;
         ThreadTrace tt = traceSet.get();
-        trace = true;
+        //trace = true;
         return tt;
     }
     
@@ -376,10 +394,17 @@ public class Tracer {
     static abstract class EventI {
         
         public final void trace(int i) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         protected abstract void run(ThreadTrace t, int i);
@@ -388,38 +413,73 @@ public class Tracer {
     static abstract class EventIA {
         
         public final void trace(int i, Object a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, long a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, float a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, double a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, a);
+                } finally {
+                    trace = true;
+                }
+            };
         }
         
         protected abstract void run(ThreadTrace t, int i, Object a);
@@ -428,38 +488,73 @@ public class Tracer {
     static abstract class EventIIA {
         
         public final void trace(int i, int j, Object a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, int a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, long a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, float a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, double a) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         protected abstract void run(ThreadTrace t, int i, int j, Object a);
@@ -468,38 +563,73 @@ public class Tracer {
     static abstract class EventIIAA {
         
         public final void trace(int i, int j, Object a, Object b) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a, b);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, Object a, int b) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a, b);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, Object a, long b) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a, b);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, Object a, float b) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a, b);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         public final void trace(int i, int j, Object a, double b) {
-            if (!trace) return;
-            ThreadTrace t = threadTrace();
-            if (t == null) return;
-            run(t, i, j, a, b);
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
         }
         
         protected abstract void run(ThreadTrace t, int i, int j, Object a, Object b);

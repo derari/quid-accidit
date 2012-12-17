@@ -1,11 +1,16 @@
-package de.hpi.accidit.asmtracer;
+package de.hpi.accidit.testapp;
 
+import de.hpi.accidit.asmtracer.TestAt;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.Test;
 
 public class ASimpleTest {
     
     public static long globalStrCount = 0;
+
     public String last;
     private long aLong = 1337;
 
@@ -104,6 +109,7 @@ public class ASimpleTest {
         l.add(2);
         l.add(3);
         assertThat(l, hasSize(3));
+        assertEquals("my pi", Math.PI, 3.1415, 0.01);
     }
 
     public <T> List<T> newList() {
@@ -118,6 +124,28 @@ public class ASimpleTest {
     
     public Object nestedTest() {
         return getLong();
+    }
+    
+    public long nested2Test() {
+        new PrintStream(new ByteArrayOutputStream(1024)).println(this);
+        return aLong;
+    }
+
+    @Override
+    public String toString() {
+        return "" + aLong++;
+    }
+    
+    static public void assertEquals(String message, double expected,
+                    double actual, double delta) {
+            if (Double.compare(expected, actual) == 0)
+                    return;
+            if (!(Math.abs(expected - actual) <= delta))
+                    failNotEquals(message, new Double(expected), new Double(actual));
+    }
+
+    private static void failNotEquals(String message, Double aDouble, Double aDouble0) {
+        throw new UnsupportedOperationException();
     }
 
     @TestAt

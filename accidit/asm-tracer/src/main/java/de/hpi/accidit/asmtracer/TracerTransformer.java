@@ -6,27 +6,45 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.*;
-import java.util.concurrent.Callable;
 import org.objectweb.asm.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 
 public class TracerTransformer implements ClassFileTransformer {
     
-    private static String[] excludes = new ArrayList<String>(){{
-        add("de/hpi/accidit/asm");
-        add("de/hpi/accidit/model");
-        add("de/hpi/accidit/trace");
-        add("de/hpi/accidit/out");
-        add("org/objectweb/asm");
-        add("$");
-        add("sun");
-        add("java/lang");
-        add("java/util/regex");
-//        add("java/lang/Enum");
-//        add("java/lang/Shut");
-//        add("java/lang/Shut");
-    }}.toArray(new String[0]);
+    private static class DoNotInstrumentException extends RuntimeException { }
+    
+    private static String[] excludes = {
+        // tracing infrastructure
+        "de/hpi/accidit/asm",
+        "de/hpi/accidit/model",
+        "de/hpi/accidit/trace",
+        "de/hpi/accidit/out",
+        "org/objectweb/asm",
+
+        // excluded for technical reasons
+        "$",
+        "java/lang/Class",
+        "java/lang/Enum",
+        "java/lang/ref",
+        "java/util/concurrent",
+        "java/util/security",
+        "java/security",
+        "sun",
+        
+        // excluded for performance reasons
+//        "java.io",
+        
+        // excluded libraries
+//        "com/sun",
+        "org/eclipse",
+    };
+    
+    private static String[] no_details = {
+        "java",
+        "sun",
+        "com/sun",
+    };
 
     @Override
     public byte[] transform(ClassLoader loader, String className, 
@@ -34,14 +52,17 @@ public class TracerTransformer implements ClassFileTransformer {
                         ProtectionDomain protectionDomain, 
                         byte[] classfileBuffer) 
                             throws IllegalClassFormatException {
-        try {
-            return Tracer.noTrace(new TransformCall(loader, className, classfileBuffer));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        synchronized (Tracer.class) {
+            boolean t = Tracer.pauseTrace();
+            try {
+                return transformUntraced(className, classfileBuffer, loader);
+            } finally {
+                Tracer.resumeTrace(t);
+            }
         }
     }
 
-    private byte[] transformUntraced(String className, byte[] classfileBuffer, ClassLoader loader) throws RuntimeException {
+    private byte[] transformUntraced(String className, byte[] classfileBuffer, ClassLoader loader) {
         for (String e: excludes) {
             if (className.startsWith(e))
                 return classfileBuffer;
@@ -49,46 +70,29 @@ public class TracerTransformer implements ClassFileTransformer {
         System.out.println(">> " + className + "     " + loader);
         return transform(classfileBuffer, loader);
     }
-    
-    private class TransformCall implements Callable<byte[]> {
-        private ClassLoader loader;
-        private String className;
-        private byte[] buffer;
 
-        public TransformCall(ClassLoader loader, String className, byte[] buffer) {
-            this.loader = loader;
-            this.className = className;
-            this.buffer = buffer;
-        }
-        
-        @Override
-        public byte[] call() throws Exception {
-            return transformUntraced(className, buffer, loader);
-        }
-    }
-
-    public static byte[] transform(byte[] classfileBuffer, ClassLoader cl) throws RuntimeException {
+    public static byte[] transform(byte[] classfileBuffer, ClassLoader cl) {
         try {
-            return transform(classfileBuffer, Tracer.model);
+            return transform(classfileBuffer, Tracer.model, cl);
         } catch (Throwable e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
     
-    public static byte[] transform(byte[] classfile, Model model) throws Exception {
+    public static byte[] transform(byte[] classfile, Model model, ClassLoader cl) throws Exception {
         try {
+            if (cl instanceof NoTraceClassLoader) return classfile;
             ClassReader cr = new ClassReader(classfile);
-            ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
+            ClassWriter cw = new MyClassWriter(cl, ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
             CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-            ClassVisitor transform = new MyClassVisitor(cca, model);
+            ClassVisitor transform = new MyClassVisitor(cca, model, cl);
             cr.accept(transform, 0);
 //            TracerTransformer2.tranform(cr, cw);
             return cw.toByteArray();
+        } catch (DoNotInstrumentException e) {
+            return classfile;
         } catch (Exception e) {
-            if ("IS-ALREADY-TRACED".equals(e.getMessage())) {
-                return classfile;
-            }
             throw e;
         }
     }
@@ -100,34 +104,50 @@ public class TracerTransformer implements ClassFileTransformer {
         boolean isAlreadyTraced = false;
         boolean isTracedFlagSet = false;
         boolean isTestClass;
+        boolean noDetails;
+        
         TypeDescriptor type;
-        final ClassLoader cl=null;
+        final ClassLoader cl;
         final Model model;
         String superName;
         String[] interfaces;
         
-        public MyClassVisitor(ClassVisitor cv, Model model) {
+        
+        public MyClassVisitor(ClassVisitor cv, Model model, ClassLoader cl) {
             super(ASM4, cv);
             this.model = model;
+            this.cl = cl;
+        }
+
+        @Override
+        public void visitSource(String source, String debug) {
+            super.visitSource(source, debug);
+            type.setSource(source);
         }
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-            System.out.println("+ " + name);
+//            System.out.println("+ " + name);
             super.visit(version, access, name, signature, superName, interfaces);
             isTestClass = name.endsWith("Test");
-            type = model.getType(name.replace('/', '.'));
+            type = model.getType(name.replace('/', '.'), cl);
             this.superName = superName;
             this.interfaces = interfaces;
+            for (String s: no_details) {
+                if (name.startsWith(s)) {
+                    noDetails = true;
+                    break;
+                }
+            }
         }
         
         @Override
         public AnnotationVisitor visitAnnotation(String string, boolean bln) {
             if (string.equals(AtTraced)) {
                 isAlreadyTraced = true;
-                throw new RuntimeException("IS-ALREADY-TRACED");
+                throw new DoNotInstrumentException();
             }
-            System.out.println("@ " + string + " " + bln);
+//            System.out.println("@ " + string + " " + bln);
             return super.visitAnnotation(string, bln);
         }
 
@@ -139,18 +159,24 @@ public class TracerTransformer implements ClassFileTransformer {
                 isTracedFlagSet = true;
                 super.visitAnnotation(AtTraced, false).visitEnd();
                 
-                type.addSuper(superName.replace('/', '.'));
-                for (String iface: interfaces)
-                    type.addSuper(iface.replace('/', '.'));
-                type.initCompleted();
+                if (!type.isInitialized()) {
+                    if (superName != null)
+                        type.addSuper(superName.replace('/', '.'));
+                    for (String iface: interfaces)
+                        type.addSuper(iface.replace('/', '.'));
+                    type.initCompleted();
+                }
             }
             if ((access & (ACC_NATIVE | ACC_BRIDGE | ACC_ABSTRACT | ACC_INTERFACE)) != 0) {
                 return sup;
             }
-            if (name.equals("finalize") || name.equals("<clinit>")) {
+            if (name.equals("finalize") || name.equals("<clinit>")) { //  || name.equals("uncaughtException")
                 return sup;
             }
-            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model);
+            if (noDetails && (access & ACC_PUBLIC) == 0) {
+                return sup;
+            }
+            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model, cl, noDetails);
         }
         
     }
@@ -162,10 +188,12 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String TRACER = "de/hpi/accidit/trace/Tracer";
         private static final String LINE = "line";
         private static final String LINE_DESC = "(I)V";
+        private static final String CALL = "call";
+        private static final String CALL_DESC = "(I)V";
         private static final String ENTER = "enter";
-        private static final String ENTER_DESC = "(I)V";
+        private static final String ENTER_DESC = "(ILjava/lang/Object;)V";
         private static final String RETURN_ = "return";
-        private static final String RETURN_DESC_2 = "I)V";
+        private static final String RETURN_DESC_2 = "II)V";
         private static final String STORE_ = "store";
         private static final String STORE_DESC_2 = "II)V";
         private static final String ARG_ = "arg";
@@ -179,7 +207,7 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String ASTORE_ = "aStore";
         private static final String ASTORE_DESC_1 = "(Ljava/lang/Object;I";
         private static final String ASTORE_DESC_2 = "I)V";
-        private static final String ALOAD_ = "aStore";
+        private static final String ALOAD_ = "aLoad";
         private static final String ALOAD_DESC_1 = "(Ljava/lang/Object;I";
         private static final String ALOAD_DESC_2 = "I)V";
         private static final String THROW = "thrown";
@@ -193,11 +221,13 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String END = "end";
         private static final String END_DESC = "()V";
         
+        private final ClassLoader cl;
         private final Model model;
         private final String name;
         private final String descriptor;
         private final boolean isStatic;
         private final boolean isInit;
+        private final boolean traceDetails;
         private boolean test;
         private final TypeDescriptor type;
         private final MethodDescriptor me;
@@ -207,11 +237,13 @@ public class TracerTransformer implements ClassFileTransformer {
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
 
-        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model) {
+        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails) {
             super(ASM4, mv);
             this.name = name;
             this.descriptor = desc;
             this.model = model;
+            this.cl = cl;
+            this.traceDetails = !noDetails;
             test = testclass && name.startsWith("test");
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
@@ -220,14 +252,26 @@ public class TracerTransformer implements ClassFileTransformer {
             isStatic = (access & ACC_STATIC) != 0;
             isInit = name.equals("<init>");
         }
+
+        @Override
+        public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+            test = test || desc.endsWith("/Test;");
+            return super.visitAnnotation(desc, visible);
+        }
         
         @Override
         public void visitCode() {
             super.visitCode();
             if (test) {
+                System.out.println("- " + name);
                 super.visitMethodInsn(INVOKESTATIC, TRACER, BEGIN, BEGIN_DESC);
             }
             super.visitLdcInsn(me.getCodeId());
+            if (isStatic) {
+                super.visitInsn(ACONST_NULL);
+            } else {
+                super.visitVarInsn(ALOAD, 0);
+            }
             super.visitMethodInsn(INVOKESTATIC, TRACER, ENTER, ENTER_DESC);
             traceArgs();
         }
@@ -236,6 +280,7 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {
             if (DEBUG) System.out.println(index + " " + desc + "/" + signature + " " + name + " " + start.getOffset() + "-" + end.getOffset());
             super.visitLocalVariable(name, desc, signature, start, end, index);
+            if (me.variablesAreInitialized()) return;
             String type = org.objectweb.asm.Type.getType(desc).getClassName();
             me.addVariable(index, name, type);
             if (index < argTypes.size()) argTypes.set(index, null);
@@ -267,13 +312,25 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-            ensureLineNumberIsTraced();
+            if (owner.equals(TRACER)) {
+                throw new DoNotInstrumentException();
+            }
+            if (traceDetails) {
+                ensureLineNumberIsTraced();
+
+                MethodDescriptor md = model.getType(owner.replace('/', '.'), cl).getMethod(name, desc);
+                super.visitLdcInsn(md.getCodeId());
+                super.visitMethodInsn(INVOKESTATIC, TRACER, CALL, CALL_DESC);
+            }
+            
             super.visitMethodInsn(opcode, owner, name, desc);
         }
 
         @Override
         public void visitEnd() {
             super.visitEnd();
+            
+            if (me.variablesAreInitialized()) return;
             
             for (int i = 0; i < argTypes.size(); i++) {
                 String argType = argTypes.get(i);
@@ -290,6 +347,8 @@ public class TracerTransformer implements ClassFileTransformer {
                     }
                     me.addVariable(i, varName, argTypeName);
                 }
+                VarDescriptor var =  me.getVariable(i);
+                if (var != null) var.setArgument(true);
             }
             me.variablesCompleted();
         }
@@ -305,6 +364,7 @@ public class TracerTransformer implements ClassFileTransformer {
                 desc = "(" + type.getDescriptor() + RETURN_DESC_2;
             }
             super.visitLdcInsn(me.getCodeId());
+            super.visitLdcInsn(lastLine);
             super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
 
             if (test) {
@@ -313,6 +373,7 @@ public class TracerTransformer implements ClassFileTransformer {
         }
 
         private void traceStore(ArgumentType type, int var) {
+            if (!traceDetails) return;
             if (DEBUG) System.out.println("S " + type + " " + var);
             String desc;
             String method = STORE_ + type.getKey();
@@ -457,7 +518,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
-            TypeDescriptor tOwner = model.getType(owner.replace('/', '.'));
+            TypeDescriptor tOwner = model.getType(owner.replace('/', '.'), cl);
             FieldDescriptor f = tOwner.getField(name, desc);
             ArgumentType t = ArgumentType.getByDescriptor(desc);
             switch (opcode) {
@@ -481,14 +542,9 @@ public class TracerTransformer implements ClassFileTransformer {
         private void traceArgs() {
             ensureLineNumberIsTraced();
             int var = 0;
-//            if (isInit) {
-//                argTypes.add("--this--");
-//                var++; // trace `this` later
-//            } else 
             if (!isStatic) {
-                argTypes.add("--this--");
-                traceArg(ArgumentType.OBJECT, var);
-                var++;
+                argTypes.add(null);
+                var++; // dont trace `this`
             }
             int d = 1;
             while (descriptor.charAt(d) != ')') {
@@ -501,7 +557,7 @@ public class TracerTransformer implements ClassFileTransformer {
                 argTypes.add(descriptor.substring(d, dEnd));
                 traceArg(t, var);
                 d = dEnd;
-                var++;
+                var += t.getWidth();
             }
         }
         
@@ -628,4 +684,51 @@ public class TracerTransformer implements ClassFileTransformer {
         }
         
     }
+    
+    public static class MyClassWriter extends ClassWriter {
+        
+        final ClassLoader cl;
+
+        public MyClassWriter(ClassLoader cl, int flags) {
+            super(flags);
+            this.cl = cl;
+        }
+
+        @Override
+        protected String getCommonSuperClass(String type1, String type2) {
+            try {
+                return superGetCommonSuperClass(type1, type2);
+            } catch (RuntimeException re) {
+                throw new RuntimeException(type1 + " " + type2, re);
+            }
+        }
+        
+        protected String superGetCommonSuperClass(final String type1, final String type2)
+        {
+            Class<?> c, d;
+            ClassLoader classLoader = cl;
+            try {
+                c = Class.forName(type1.replace('/', '.'), false, classLoader);
+                d = Class.forName(type2.replace('/', '.'), false, classLoader);
+            } catch (Exception e) {
+                throw new RuntimeException(e.toString());
+            }
+            if (c.isAssignableFrom(d)) {
+                return type1;
+            }
+            if (d.isAssignableFrom(c)) {
+                return type2;
+            }
+            if (c.isInterface() || d.isInterface()) {
+                return "java/lang/Object";
+            } else {
+                do {
+                    c = c.getSuperclass();
+                } while (!c.isAssignableFrom(d));
+                return c.getName().replace('.', '/');
+            }
+        }
+        
+    }
+    
 }
