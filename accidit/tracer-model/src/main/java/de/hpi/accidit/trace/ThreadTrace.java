@@ -52,7 +52,7 @@ public class ThreadTrace {
             msg += " trace canceled";
         } else if (invocation == null && root != null) {
             endTrace();
-            msg += " trace canceled (ended)";
+            msg += " trace ended";
         }
         new RuntimeException(msg, t).printStackTrace();
     }

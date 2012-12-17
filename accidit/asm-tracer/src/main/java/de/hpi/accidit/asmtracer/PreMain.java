@@ -52,7 +52,7 @@ public class PreMain {
         }
 
         public static Out createOut() throws Exception {
-            return new CsvOut(new File("trace"));
+            return new CsvOut(new File("target/trace"));
 //            try {
 //                NoTraceClassLoader cl = new NoTraceClassLoader(PreMain.class.getClassLoader());
 //                cl.addClasses(CsvOut.class, CsvOut.Csv.class);
