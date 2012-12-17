@@ -4,3 +4,5 @@
 /accidit/bcel-tracer/target/
 /accidit/asm-tracer/target/
 /accidit/tracer-model/target/
+.DS_Store
+mysql/csvimport_sten.sql

@@ -1,9 +1,12 @@
 package de.hpi.accidit.eclipse.preferences;
 
-import org.eclipse.jface.preference.*;
-import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchPreferencePage;
+
 import de.hpi.accidit.eclipse.Activator;
+import de.hpi.accidit.eclipse.DatabaseConnector;
 
 /**
  * This class represents a preference page that
@@ -19,15 +22,24 @@ import de.hpi.accidit.eclipse.Activator;
  * be accessed directly via the preference store.
  */
 
-public class MainPreferencePage
-	extends FieldEditorPreferencePage
-	implements IWorkbenchPreferencePage {
-
+public class MainPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+	
+	// TODO Add test connection button.
+	// TODO Use dedicated password field for the password preference.
+	
+	private StringFieldEditor dbAddressField;
+	private StringFieldEditor dbSchemaField;
+	private StringFieldEditor dbUserField;
+	private StringFieldEditor dbPasswordField;
+	
 	public MainPreferencePage() {
 		super(GRID);
 		setPreferenceStore(Activator.getDefault().getPreferenceStore());
-		setDescription("A demonstration of a preference page implementation");
+		setDescription("The preference page to specify the database connection parameters.");
 	}
+
+	@Override
+	public void init(IWorkbench workbench) { }
 	
 	/**
 	 * Creates the field editors. Field editors are abstractions of
@@ -36,29 +48,29 @@ public class MainPreferencePage
 	 * restore itself.
 	 */
 	public void createFieldEditors() {
-		addField(new DirectoryFieldEditor(PreferenceConstants.P_PATH, 
-				"&Directory preference:", getFieldEditorParent()));
-		addField(
-			new BooleanFieldEditor(
-				PreferenceConstants.P_BOOLEAN,
-				"&An example of a boolean preference",
-				getFieldEditorParent()));
-
-		addField(new RadioGroupFieldEditor(
-				PreferenceConstants.P_CHOICE,
-			"An example of a multiple-choice preference",
-			1,
-			new String[][] { { "&Choice 1", "choice1" }, {
-				"C&hoice 2", "choice2" }
-		}, getFieldEditorParent()));
-		addField(
-			new StringFieldEditor(PreferenceConstants.P_STRING, "A &text preference:", getFieldEditorParent()));
+		dbAddressField	= new StringFieldEditor(PreferenceConstants.CONNECTION_ADDRESS,		"Address: ",	getFieldEditorParent());
+		dbSchemaField	= new StringFieldEditor(PreferenceConstants.CONNECTION_SCHEMA,		"Schema: ",		getFieldEditorParent());
+		dbUserField		= new StringFieldEditor(PreferenceConstants.CONNECTION_USER,		"User: ",		getFieldEditorParent());
+		dbPasswordField	= new StringFieldEditor(PreferenceConstants.CONNECTION_PASSWORD,	"Password: ",	getFieldEditorParent());
+		
+		addField(dbAddressField);
+		addField(dbSchemaField);
+		addField(dbUserField);
+		addField(dbPasswordField);
 	}
-
-	/* (non-Javadoc)
-	 * @see org.eclipse.ui.IWorkbenchPreferencePage#init(org.eclipse.ui.IWorkbench)
-	 */
-	public void init(IWorkbench workbench) {
+	
+	public boolean performOk() {
+		boolean connectionIsWorking = DatabaseConnector.testConnection(
+				dbAddressField.getStringValue(), 
+				dbSchemaField.getStringValue(), 
+				dbUserField.getStringValue(), 
+				dbPasswordField.getStringValue());
+		
+		String errorMessage = connectionIsWorking ? null : "This database does not exist or is not available.";
+		setErrorMessage(errorMessage);
+		return super.performOk() && connectionIsWorking;
 	}
+	
+	
 	
 }

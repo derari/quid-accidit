@@ -1,17 +1,44 @@
 package de.hpi.accidit.eclipse.views;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.part.*;
-import org.eclipse.jface.viewers.*;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.jface.action.*;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.ui.*;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.SWT;
 import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ViewerSorter;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.ISharedImages;
+import org.eclipse.ui.IWorkbenchActionConstants;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.part.DrillDownAdapter;
+import org.eclipse.ui.part.ViewPart;
+
+import de.hpi.accidit.eclipse.Activator;
+import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
 
 
 /**
@@ -56,92 +83,114 @@ public class MainView extends ViewPart {
 	 */
 	 
 	class TreeObject implements IAdaptable {
+		
 		private String name;
 		private TreeParent parent;
 		
 		public TreeObject(String name) {
 			this.name = name;
 		}
+		
 		public String getName() {
 			return name;
 		}
+		
 		public void setParent(TreeParent parent) {
 			this.parent = parent;
 		}
+		
 		public TreeParent getParent() {
 			return parent;
 		}
+		
 		public String toString() {
 			return getName();
 		}
+		
 		public Object getAdapter(Class key) {
 			return null;
 		}
 	}
 	
 	class TreeParent extends TreeObject {
-		private ArrayList children;
+		
+		private ArrayList<TreeObject> children;
+		
 		public TreeParent(String name) {
 			super(name);
-			children = new ArrayList();
+			children = new ArrayList<TreeObject>();
 		}
+		
 		public void addChild(TreeObject child) {
 			children.add(child);
 			child.setParent(this);
 		}
+		
 		public void removeChild(TreeObject child) {
 			children.remove(child);
 			child.setParent(null);
 		}
-		public TreeObject [] getChildren() {
-			return (TreeObject [])children.toArray(new TreeObject[children.size()]);
+		
+		public TreeObject[] getChildren() {
+			return children.toArray(new TreeObject[children.size()]);
 		}
+		
 		public boolean hasChildren() {
-			return children.size()>0;
+			return !children.isEmpty();
 		}
 	}
 
-	class ViewContentProvider implements IStructuredContentProvider, 
-										   ITreeContentProvider {
+	class ViewContentProvider 
+		implements IStructuredContentProvider, ITreeContentProvider {
+		
 		private TreeParent invisibleRoot;
 
 		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
 		}
+		
 		public void dispose() {
 		}
+		
 		public Object[] getElements(Object parent) {
 			if (parent.equals(getViewSite())) {
-				if (invisibleRoot==null) initialize();
+				if (invisibleRoot == null) initialize();
 				return getChildren(invisibleRoot);
 			}
 			return getChildren(parent);
 		}
+		
 		public Object getParent(Object child) {
 			if (child instanceof TreeObject) {
-				return ((TreeObject)child).getParent();
+				return ((TreeObject) child).getParent();
 			}
 			return null;
 		}
-		public Object [] getChildren(Object parent) {
+		
+		public Object[] getChildren(Object parent) {
 			if (parent instanceof TreeParent) {
-				return ((TreeParent)parent).getChildren();
+				return ((TreeParent) parent).getChildren();
 			}
 			return new Object[0];
 		}
+		
 		public boolean hasChildren(Object parent) {
 			if (parent instanceof TreeParent)
 				return ((TreeParent)parent).hasChildren();
 			return false;
 		}
 /*
- * We will set up a dummy model to initialize tree heararchy.
+ * We will set up a dummy model to initialize tree hierarchy.
  * In a real code, you will connect to a real model and
  * expose its hierarchy.
  */
 		private void initialize() {
+//			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+//	        String folderName = store.getString(PreferenceConstants.FOLDER_NAME);
+			
 			TreeObject to1 = new TreeObject("Leaf 1");
 			TreeObject to2 = new TreeObject("Leaf 2");
 			TreeObject to3 = new TreeObject("Leaf 3");
+			
 			TreeParent p1 = new TreeParent("Parent 1");
 			p1.addChild(to1);
 			p1.addChild(to2);
@@ -157,13 +206,33 @@ public class MainView extends ViewPart {
 			
 			invisibleRoot = new TreeParent("");
 			invisibleRoot.addChild(root);
+			
+			// connection parameter output
+			TreeObject toAddress = createTreeObject("Address", PreferenceConstants.CONNECTION_ADDRESS);
+			TreeObject toUser = createTreeObject("User", PreferenceConstants.CONNECTION_USER);
+			TreeObject toPassword = createTreeObject("Password", PreferenceConstants.CONNECTION_PASSWORD);
+			
+			TreeParent p3 = new TreeParent("Connection Parameters");
+			p3.addChild(toAddress);
+			p3.addChild(toUser);
+			p3.addChild(toPassword);
+			
+			invisibleRoot.addChild(p3);
+		}
+		
+		private TreeObject createTreeObject(String name, String preferenceConstant) {
+			IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+			String treeObjectName = name + ": " + store.getString(preferenceConstant);
+			return new TreeObject(treeObjectName);
 		}
 	}
+	
 	class ViewLabelProvider extends LabelProvider {
 
 		public String getText(Object obj) {
 			return obj.toString();
 		}
+		
 		public Image getImage(Object obj) {
 			String imageKey = ISharedImages.IMG_OBJ_ELEMENT;
 			if (obj instanceof TreeParent)
@@ -171,6 +240,7 @@ public class MainView extends ViewPart {
 			return PlatformUI.getWorkbench().getSharedImages().getImage(imageKey);
 		}
 	}
+	
 	class NameSorter extends ViewerSorter {
 	}
 
@@ -254,11 +324,30 @@ public class MainView extends ViewPart {
 		
 		action2 = new Action() {
 			public void run() {
-				showMessage("Action 2 executed");
+				int methodsCount = 0;
+				IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+				try {
+					Connection connection = DatabaseConnector.getConnection(
+							store.getString(PreferenceConstants.CONNECTION_ADDRESS), 
+							store.getString(PreferenceConstants.CONNECTION_SCHEMA), 
+							store.getString(PreferenceConstants.CONNECTION_USER), 
+							store.getString(PreferenceConstants.CONNECTION_PASSWORD));
+					Statement statement = connection.createStatement();
+					statement.executeQuery("Select count(*) from method");
+					ResultSet result = statement.getResultSet();
+					result.next();
+					methodsCount = result.getInt(1);
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+				
+				String testResult = (583 == methodsCount) ? "succeeded" : "failed";
+				String message = String.format("Database query test %s. %d rows counted in the method table.", testResult, methodsCount);
+				MessageDialog.openInformation(viewer.getControl().getShell(), "Accidit Database Check", message);
 			}
 		};
-		action2.setText("Action 2");
-		action2.setToolTipText("Action 2 tooltip");
+		action2.setText("DatabaseTest");
+		action2.setToolTipText("Test the database");
 		action2.setImageDescriptor(PlatformUI.getWorkbench().getSharedImages().
 				getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
 		doubleClickAction = new Action() {
@@ -277,11 +366,9 @@ public class MainView extends ViewPart {
 			}
 		});
 	}
+	
 	private void showMessage(String message) {
-		MessageDialog.openInformation(
-			viewer.getControl().getShell(),
-			"Accidit View",
-			message);
+		MessageDialog.openInformation(viewer.getControl().getShell(), "Accidit View", message);
 	}
 
 	/**
