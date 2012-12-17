@@ -8,7 +8,9 @@
     <name>Accidit POM</name>
     <modules>
         <module>lib</module>
+        <module>tracer-model</module>
         <module>jdi-tracer</module>
+        <module>asm-tracer</module>
         <module>testapp</module>
     </modules>
     <properties>

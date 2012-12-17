@@ -1,12 +1,12 @@
 -- list tests
 SELECT *
-FROM accidit.testtrace
+FROM trace.testtrace
 ORDER BY id;
 
 -- which methods were invoked
 SELECT * 
-FROM accidit.vinvocationtrace 
-ORDER BY testId, callStep;
+FROM trace.vinvocationtrace 
+ORDER BY testId, entry;
 
 -- which objects are used in a test
 SELECT o.*
@@ -17,9 +17,9 @@ ORDER BY testId, o.id;
 
 -- which values appear for a field
 SELECT f.*, o.type AS valueType 
-FROM vputtrace f
-LEFT JOIN vObjectTrace o ON o.testId = f.testId AND f.primType = 'L' AND f.valueId = o.id
--- WHERE f.type LIKE 'games.%'
+FROM trace.vfieldtrace f
+LEFT JOIN vObjectTrace o ON o.testId = f.testId AND f.primType = 0 AND f.value = o.id
+WHERE f.type LIKE 'games.%'
 ORDER BY f.testId, f.thisId, f.step;
 
 -- where are exceptions thrown and caught
@@ -27,9 +27,9 @@ SELECT th.*, o.type as exception, thi.method as thrownIn, cai.method as caughtIn
 FROM ThrowTrace th
 JOIN TestTrace tt ON th.testId = tt.id
 JOIN vObjectTrace o ON o.testId = th.testId AND o.id = th.exceptionId
-JOIN vInvocationTrace thi ON thi.testId = th.testId AND thi.callStep = th.callStep
-LEFT JOIN CatchTrace ca ON th.testId = ca.testId AND th.exceptionId = ca.exceptionId AND ca.step > th.step
-LEFT JOIN vInvocationTrace cai ON th.testId = cai.testId AND ca.callStep = cai.callStep
+JOIN vInvocationTrace thi ON thi.testId = th.testId AND thi.entry = th.invEntry
+JOIN CatchTrace ca ON th.testId = ca.testId AND th.exceptionId = ca.exceptionId AND ca.step > th.step
+JOIN vInvocationTrace cai ON th.testId = cai.testId AND ca.invEntry = cai.entry
 GROUP BY th.testId, th.step
 ORDER BY th.testId, th.step;
 
@@ -37,7 +37,7 @@ ORDER BY th.testId, th.step;
 SELECT f.type, f.field, MAX(f.valueCount) as maxValueCount
 FROM 
 	(SELECT f.*, COUNT(*) as valueCount
-	 FROM vputtrace f
+	 FROM vfieldtrace f
 	 GROUP BY testId, thisId, fieldId) f
 GROUP BY fieldId
 ORDER BY maxValueCount DESC, type, field;
@@ -46,7 +46,15 @@ ORDER BY maxValueCount DESC, type, field;
 SELECT l.type, method, variable, MAX(l.valueCount) as maxValueCount
 FROM 
 	(SELECT l.*, COUNT(*) as valueCount
-	 FROM vvariabletrace l
-	 GROUP BY testId, callStep, variableId) l
-GROUP BY variableId
+	 FROM vlocaltrace l
+	 GROUP BY testId, invEntry, localId) l
+GROUP BY localId
 ORDER BY maxValueCount DESC, type, method, variable;
+
+SELECT f.type, f.field, MAX(f.valueCount) as maxValueCount
+FROM 
+	(SELECT f.*, COUNT(*) as valueCount
+	 FROM vfieldtrace f
+	 GROUP BY testId, thisId, fieldId) f
+GROUP BY fieldId
+ORDER BY maxValueCount DESC, type, field;
