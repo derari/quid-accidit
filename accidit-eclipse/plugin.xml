@@ -29,6 +29,22 @@
             class="de.hpi.accidit.eclipse.views.MainView"
             id="de.hpi.accidit.eclipse.views.MainView">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.MethodExplorerView"
+            icon="icons/sample.gif"
+            id="de.hpi.accidit.eclipse.views.MethodExplorerView"
+            name="Method Explorer View"
+            restorable="true">
+      </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.LocalsExplorerView"
+            icon="icons/sample.gif"
+            id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
+            name="Locals Explorer View"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
@@ -47,6 +63,74 @@
       <contexts
             file="contexts.xml">
       </contexts>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="de.hpi.accidit.eclipse.commands.openViewsCategory"
+            name="Open Views">
+      </category>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
+            id="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+            name="Open Method Explorer">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
+            id="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
+            name="Open Locals Explorer ">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.OpenMethodExplorerViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.OpenLocalsExplorerViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+6">
+      </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+         <menu
+               id="de.hpi.accidit.eclipse.menus.menu"
+               label="Accidit"
+               mnemonic="M">
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+                  id="de.hpi.accidit.eclipse.menus.openMethodExplorerView">
+            </command>
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
+                  id="de.hpi.accidit.eclipse.menus.openLocalsExplorerView">
+            </command>
+         </menu>
+      </menuContribution>
+      <menuContribution
+            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
+         <toolbar
+               id="de.hpi.accidit.eclipse.toolbars.toolbar">
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+                  icon="icons/sample.gif"
+                  id="de.hpi.accidit.eclipse.toolbars.openMethodExplorerView"
+                  tooltip="Open the Method Explorer View">
+            </command>
+         </toolbar>
+      </menuContribution>
    </extension>
 
 </plugin>

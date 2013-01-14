@@ -4,11 +4,15 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
+
 public class DatabaseConnector {
 	
 	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
 	
-	private volatile static boolean uninitialized = true;
+	private volatile static boolean initialized = false;
 	
 	/**
 	 * The function to create a database connection.
@@ -19,8 +23,19 @@ public class DatabaseConnector {
 	 * @return The database connection.
 	 */
 	public static Connection getConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
-		if (uninitialized)
+		if (!initialized)
 			initializeDriver();
+		
+		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s", dbAddress, dbSchema, dbUser, dbPassword);
+		return DriverManager.getConnection(dbString);
+	}
+	
+	public static Connection getValidConnection() throws SQLException {
+		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
+		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
+		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
+		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
 		
 		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s", dbAddress, dbSchema, dbUser, dbPassword);
 		return DriverManager.getConnection(dbString);
@@ -51,6 +66,6 @@ public class DatabaseConnector {
 			e.printStackTrace();
 			System.exit(0);
 		}
-		uninitialized = false;
+		initialized = true;
 	}
 }
