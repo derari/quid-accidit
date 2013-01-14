@@ -1,61 +1,70 @@
 
 == Type ==
-id;name;source;compType?
+id; name; file; componentTypeId?
+- componentTypeId:
+  if type is an array, the id of the component type, otherwise NULL
 
 == Extends ==
-sub;super
+subId; superId
 
 == Method ==
-id;declaringTypeId;name;sig
+id; declaringTypeId; name; signature
 
 == Variable ==
-methodId;id;name;typeId;argument
+methodId; id; name; typeId; arg
 
 == Field ==
-id;declaringTypeId;name;typeId
+id; declaringTypeId; name; typeId
 
-== Trace ==
-id;name
+== TestTrace ==
+id; name
 
 == ObjectTrace ==
-tId;id;typeId;arrayLength
+testestId; id; typeId; arrayLength?
 
 == CallTrace ==
-tId;step;methodId;thisId;depth;line
+testId; step; methodId; thisId?; depth; line
 
 == ExitTrace ==
-tId;call;step;ret;valPType;valId;line
+testId; callStep; step; returned; primtType; valueId; line
+- returned: 
+  if true, primType/valueId encode the return value;
+  if false, valueId references an exception object
+
+== View: InvocationTrace ==
+testId; callStep; exitStep; methodId; thisId?; depth; callLine; returned; exitPrimType; exitValueId; exitLine
 
 == ThrowTrace ==
-tId;call;step;exId;line
+testId; callStep; step; exceptionId; line
 
 == CatchTrace ==
-tId;call;step;exId;line
+testId; callStep; step; exceptionId; line
 
 == VariableTrace ==
-tId;call;step;methId;varId;valPType;valId;line
+testId; callStep; step; methodId; variableId; primType; valueId; line
 
 == GetTrace ==
-tId;call;step;thisId;fieldId;valPType;valId;line
+testId; callStep; step; thisId?; fieldId; primType; valueId; line
 
 == PutTrace ==
-tId;call;step;thisId;fieldId;valPType;valId;line
+testId; callStep; step; thisId?; fieldId; primType; valueId; line
 
 == ArrayGetTrace ==
-tId;call;step;thisId;index;valPType;valId;line
+testId; callStep; step; thisId; index; primType; valueId; line
 
 == ArrayPutTrace ==
-tId;call;step;thisId;index;;valPType;valId;line
+testId; callStep; step; thisId; index; primType; valueId; line
 
 -- primType/valueId --
-PrimType	Value
-L			Object	ObjectTrace.id
-Z			boolean	(valueId == 1)
-B			byte	(byte) valueId
-C			char	(char) valueId
-D			double	Double.longBitsToDouble(valueId)
-F			float	Float.intBitsToFloat((int)valueId)
-I			int		(int) valueId
-J			long	valueId
-S			short	(short) valueId
-V			void	
+PrimType  Value		long-to-value
+
+L	  Object	ObjectTrace.id == valueId
+Z	  boolean	(valueId == 1)
+B	  byte		(byte) valueId
+C	  char		(char) valueId
+D	  double	Double.longBitsToDouble(valueId)
+F	  float		Float.intBitsToFloat((int)valueId)
+I	  int		(int) valueId
+J	  long		valueId
+S	  short		(short) valueId
+V	  void	
