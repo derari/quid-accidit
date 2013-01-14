@@ -24,6 +24,32 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>asmtracer-test</id>
+            <properties>
+                <agentjar>${basedir}/../asm-tracer/target/accidit-asm-tracer-${project.version}.jar</agentjar>
+                <modeljar>${basedir}/../tracer-model/target/accidit-tracer-model-${project.version}.jar</modeljar>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>-noverify "-javaagent:${agentjar}=${modeljar}"</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <dependency>
+                    <groupId>de.hpi.accidit</groupId>
+                    <artifactId>accidit-asm-tracer</artifactId>
+                    <version>1.0-SNAPSHOT</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
     </profiles>
     <dependencies>
         <dependency>

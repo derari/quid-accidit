@@ -1,5 +1,6 @@
 package de.hpi.accidit.testapp;
 
+import org.junit.Assert;
 import org.junit.Test;
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
@@ -10,6 +11,11 @@ public class ETest {
     private boolean re = false;
     
     public ETest() {
+    }
+    
+    @Test
+    public void dummy() {
+        assertThat("somethin is", true);
     }
     
     public void e() throws Exception {
