@@ -2,94 +2,118 @@
 
 USE accidit;
 
-DELETE FROM AccessTrace;
-DELETE FROM FieldTrace;
-DELETE FROM LocalTrace;
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM GetTrace;
+DELETE FROM PutTrace;
+DELETE FROM ArrayGetTrace;
+DELETE FROM ArrayPutTrace;
+DELETE FROM VariableTrace;
 DELETE FROM ThrowTrace;
 DELETE FROM CatchTrace;
-DELETE FROM InvocationTrace;
+DELETE FROM ExitTrace;
+DELETE FROM CallTrace;
 DELETE FROM ObjectTrace;
 DELETE FROM TestTrace;
-DELETE FROM Local;
+DELETE FROM Variable;
 DELETE FROM Field;
 DELETE FROM Method;
 DELETE FROM Extends;
 DELETE FROM Type;
+SET FOREIGN_KEY_CHECKS = 1;
 
-LOAD DATA LOCAL INFILE "C:/trace/mTypes.csv"
+LOAD DATA LOCAL INFILE "C:/trace/mType.csv"
 INTO TABLE Type
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(id, name, file);
+(id, name, file, componentTypeId);
 
 LOAD DATA LOCAL INFILE "C:/trace/mExtends.csv"
 INTO TABLE Extends
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"'  
 LINES TERMINATED BY '\n'
 (subId, superId);
 
-LOAD DATA LOCAL INFILE "C:/trace/mMethods.csv"
+LOAD DATA LOCAL INFILE "C:/trace/mMethod.csv"
 INTO TABLE Method
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
 (id, declaringTypeId, name, signature);
 
-LOAD DATA LOCAL INFILE "C:/trace/mFields.csv"
+LOAD DATA LOCAL INFILE "C:/trace/mField.csv"
 INTO TABLE Field
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(id, declaringTypeId, name);
+(id, declaringTypeId, name, typeId);
 
-LOAD DATA LOCAL INFILE "C:/trace/mLocals.csv"
-INTO TABLE Local
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+LOAD DATA LOCAL INFILE "C:/trace/mVariable.csv"
+INTO TABLE Variable
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(methodId, id, name, arg);
+(methodId, id, name, typeId, arg);
 
-LOAD DATA LOCAL INFILE "C:/trace/tTests.csv"
+LOAD DATA LOCAL INFILE "C:/trace/tTrace.csv"
 INTO TABLE TestTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
 (id, name);
 
-LOAD DATA LOCAL INFILE "C:/trace/tObjects.csv"
+LOAD DATA LOCAL INFILE "C:/trace/tObject.csv"
 INTO TABLE ObjectTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(testId, id, typeId);
+(testId, id, typeId, arrayLength);
 
-LOAD DATA LOCAL INFILE "C:/trace/tInvocations.csv"
-INTO TABLE InvocationTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+LOAD DATA LOCAL INFILE "C:/trace/tCall.csv"
+INTO TABLE CallTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(testId, entry, `exit`, depth, callLine, methodId, thisId, returned, retPrimType, retValue, retLine);
+(testId, step, methodId, thisId, depth, line);
 
-LOAD DATA LOCAL INFILE "C:/trace/tLocals.csv"
-INTO TABLE LocalTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+LOAD DATA LOCAL INFILE "C:/trace/tExit.csv"
+INTO TABLE ExitTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(testId, invEntry, step, methodId, localId, primType, value, line);
+(testId, callStep, step, returned, primType, valueId, line);
 
-LOAD DATA LOCAL INFILE "C:/trace/tFields.csv"
-INTO TABLE FieldTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
-LINES TERMINATED BY '\n'
-(testId, invEntry, step, thisId, fieldId, primType, value, line);
-
-LOAD DATA LOCAL INFILE "C:/trace/tAccesses.csv"
-INTO TABLE AccessTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
-LINES TERMINATED BY '\n'
-(testId, invEntry, step, thisId, fieldId, line);
-
-LOAD DATA LOCAL INFILE "C:/trace/tThrows.csv"
+LOAD DATA LOCAL INFILE "C:/trace/tThrow.csv"
 INTO TABLE ThrowTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(testId, invEntry, step, exceptionId, line);
+(testId, callStep, step, exceptionId, line);
 
-LOAD DATA LOCAL INFILE "C:/trace/tCatches.csv"
+LOAD DATA LOCAL INFILE "C:/trace/tCatch.csv"
 INTO TABLE CatchTrace
-FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\'' 
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(testId, invEntry, step, exceptionId, line);
+(testId, callStep, step, exceptionId, line);
+
+LOAD DATA LOCAL INFILE "C:/trace/tVariable.csv"
+INTO TABLE VariableTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+(testId, callStep, step, methodId, variableId, primType, valueId, line);
+
+LOAD DATA LOCAL INFILE "C:/trace/tPut.csv"
+INTO TABLE PutTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+(testId, callStep, step, thisId, fieldId, primType, valueId, line);
+
+LOAD DATA LOCAL INFILE "C:/trace/tGet.csv"
+INTO TABLE GetTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+(testId, callStep, step, thisId, fieldId, primType, valueId, line);
+
+LOAD DATA LOCAL INFILE "C:/trace/tArrayPut.csv"
+INTO TABLE ArrayPutTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+(testId, callStep, step, thisId, `index`, primType, valueId, line);
+
+LOAD DATA LOCAL INFILE "C:/trace/tArrayGet.csv"
+INTO TABLE ArrayGetTrace
+FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+(testId, callStep, step, thisId, `index`, primType, valueId, line);
+
