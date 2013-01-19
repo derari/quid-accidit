@@ -9,7 +9,6 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 
 	@Override
 	public Image getColumnImage(Object element, int columnIndex) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -23,10 +22,23 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 		CalledMethod method = (CalledMethod) element;
 		
 		switch(columnIndex) {
-		case 0: return method.methodName;
-		case 1: return String.valueOf(method.callLine); 
+		case 0: return String.format("%s.%s", method.type, method.method);
+		case 1: return getFileName(method);
 		default: return null;
 		}
+	}
+	
+	/**
+	 * Returns the name of the file the method is called in: example.java:lineNumber
+	 * 
+	 * @return the file name and the line number
+	 */
+	public String getFileName(CalledMethod method) {
+		if (method.callLine < 1)
+			return "";
+		
+		String typeName = method.type.substring(method.type.lastIndexOf(".") + 1);
+		return String.format("%s.java:%d", typeName, method.callLine);
 	}
 
 }

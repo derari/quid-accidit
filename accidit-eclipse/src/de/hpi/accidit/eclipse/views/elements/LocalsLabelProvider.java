@@ -27,7 +27,7 @@ public class LocalsLabelProvider extends LabelProvider implements
 		
 		switch(columnIndex) {
 			case 0: return local.name;
-			case 1: return String.valueOf(local.value);
+			case 1: return String.valueOf(local.valueId);
 			case 2: return String.valueOf(local.step);
 			case 3: return String.valueOf(local.arg);
 			default: return null;

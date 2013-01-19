@@ -46,10 +46,10 @@ public class MethodExplorerView extends ViewPart {
 		viewer.getTree().setHeaderVisible(true);
 		
 		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column0.setText("Method Name");
+		column0.setText("Method");
 		column0.setWidth(300);
 		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column1.setText("Call line");
+		column1.setText("File");
 		column1.setWidth(100);
 		
 		viewer.setContentProvider(new CalledMethodContentProvider());
@@ -76,7 +76,7 @@ public class MethodExplorerView extends ViewPart {
 					return;
 				}else {
 					CalledMethod method = (CalledMethod) obj;
-					String filePath = method.methodName.split("#")[0];
+					String filePath = method.type;
 										
 					// TODO put in own class to avoid multiple instances etc and use it outside of the ui thread
 					IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
@@ -126,10 +126,6 @@ public class MethodExplorerView extends ViewPart {
 				}
 			};
 		});
-	}
-	
-	private void notifyLocalsExplorer(CalledMethod method) {
-		int methodId = method.methodId;
 	}
 	
 	private void highlightLine(IEditorPart editorPart, int lineNumber) {

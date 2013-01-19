@@ -35,10 +35,10 @@ public class LocalsContentProvider implements ITreeContentProvider {
 	@Override
 	public Object[] getElements(Object inputElement) {
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT methodId, localId, variable, arg, value, step ");
-		query.append("FROM vlocaltrace ");
-		query.append("WHERE testId = 1 ");
-		query.append("AND methodId = 388 ");
+		query.append("SELECT methodId, variableId, variable, arg, valueId, step ");
+		query.append("FROM vvariabletrace ");
+		query.append("WHERE testId = 0 ");
+		query.append("AND methodId = 16 ");
 		query.append("ORDER BY variable");
 		
 		return queryForLocals(query.toString()).toArray();
@@ -96,7 +96,7 @@ public class LocalsContentProvider implements ITreeContentProvider {
 		local.id		= result.getInt(2);
 		local.name		= result.getString(3);
 		local.arg		= result.getInt(4);
-		local.value		= result.getLong(5);
+		local.valueId	= result.getLong(5);
 		local.step		= result.getInt(6);
 		return local;
 	}

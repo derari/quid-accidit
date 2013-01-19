@@ -35,11 +35,11 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 	@Override
 	public Object[] getElements(Object inputElement) {
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT testId, entry, `exit`, depth, callLine, methodId, method ");
+		query.append("SELECT testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 1 ");
+		query.append("WHERE testId = 0 ");
 		query.append("AND depth = 0 ");
-		query.append("ORDER BY entry");
+		query.append("ORDER BY callStep");
 		
 		return queryForCalledMethods(query.toString()).toArray();
 	}
@@ -50,13 +50,13 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT ");
-		query.append("testId, entry, `exit`, depth, callLine, methodId, method ");
+		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 1 ");
+		query.append("WHERE testId = 0 ");
 		query.append("AND depth = " + (calledMethod.depth + 1) + " ");
-		query.append("AND entry > " + calledMethod.entry + " ");
-		query.append("AND `exit` < " + calledMethod.exit + " ");
-		query.append("ORDER BY entry");
+		query.append("AND callStep > " + calledMethod.callStep + " ");
+		query.append("AND exitStep < " + calledMethod.exitStep + " ");
+		query.append("ORDER BY callStep");
 		
 		return queryForCalledMethods(query.toString()).toArray();
 	}
@@ -70,13 +70,13 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT ");
-		query.append("testId, entry, `exit`, depth, callLine, methodId, method ");
+		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 1 ");
+		query.append("WHERE testId = 0 ");
 		query.append("AND depth = " + (calledMethod.depth - 1) + " ");
-		query.append("AND entry < " + calledMethod.entry + " ");
-		query.append("AND `exit` > " + calledMethod.exit + " ");
-		query.append("ORDER BY entry");
+		query.append("AND callStep < " + calledMethod.callStep + " ");
+		query.append("AND exitStep > " + calledMethod.exitStep + " ");
+		query.append("ORDER BY callStep");
 		
 		return queryForCalledMethods(query.toString()).toArray();
 	}
@@ -87,12 +87,12 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT ");
-		query.append("testId, entry, `exit`, depth, callLine, methodId, method ");
+		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 1 ");
+		query.append("WHERE testId = 0 ");
 		query.append("AND depth = " + (calledMethod.depth + 1) + " ");
-		query.append("AND entry > " + calledMethod.entry + " ");
-		query.append("AND `exit` < " + calledMethod.exit + " ");
+		query.append("AND callStep > " + calledMethod.callStep + " ");
+		query.append("AND exitStep < " + calledMethod.exitStep + " ");
 		query.append("LIMIT 1");
 		
 		List<CalledMethod> result = queryForCalledMethods(query.toString());
@@ -132,12 +132,13 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 	private CalledMethod buildCalledMethod(ResultSet result) throws SQLException {
 		CalledMethod method = new CalledMethod();
 		method.testId		= result.getInt(1);
-		method.entry		= result.getLong(2);
-		method.exit			= result.getLong(3);
+		method.callStep		= result.getLong(2);
+		method.exitStep		= result.getInt(3);
 		method.depth		= result.getInt(4);
 		method.callLine		= result.getInt(5);
 		method.methodId		= result.getInt(6);
-		method.methodName	= result.getString(7);
+		method.type			= result.getString(7);
+		method.method		= result.getString(8);
 		return method;
 	}
 }

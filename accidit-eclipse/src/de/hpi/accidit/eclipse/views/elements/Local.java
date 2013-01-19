@@ -6,7 +6,7 @@ public class Local {
 	public int id;
 	public String name;
 	public int arg;
-	public long value;
+	public long valueId;
 	public int step;
 	
 	public String toString() {
