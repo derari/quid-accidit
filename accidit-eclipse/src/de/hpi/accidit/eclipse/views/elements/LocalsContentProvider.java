@@ -16,6 +16,12 @@ public class LocalsContentProvider implements ITreeContentProvider {
 	
 	private Connection dbConnection;
 	
+	private static int currentTestId = 2;
+	
+	private boolean nothingSelected = true;
+	private int currentMethodId;
+	private long currentMethodStep;
+	
 	public LocalsContentProvider() {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
@@ -31,14 +37,24 @@ public class LocalsContentProvider implements ITreeContentProvider {
 
 	@Override
 	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
+	
+	public void calledMethodSelected(CalledMethod method) {
+		nothingSelected = false;
+		currentMethodId = method.methodId;
+		currentMethodStep = method.callStep;
+	}
 
 	@Override
 	public Object[] getElements(Object inputElement) {
+		if(nothingSelected) {
+			return new Object[0];
+		}
+		
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT methodId, variableId, variable, arg, valueId, step ");
+		query.append("SELECT methodId, variableId, variable, arg, primType, valueId, step ");
 		query.append("FROM vvariabletrace ");
-		query.append("WHERE testId = 0 ");
-		query.append("AND methodId = 16 ");
+		query.append("WHERE testId = " + currentTestId + " ");
+		query.append("AND methodId = " + currentMethodId + " ");
 		query.append("ORDER BY variable");
 		
 		return queryForLocals(query.toString()).toArray();
@@ -56,14 +72,11 @@ public class LocalsContentProvider implements ITreeContentProvider {
 
 	@Override
 	public boolean hasChildren(Object element) {
-		return false;
+		Local local = (Local) element;
+		return local.isObject();
 	}
 	
 	private List<Local> queryForLocals(String query) {
-		
-		// TODO remove debug print
-		System.out.println("Querying: " + query);
-		
 		List<Local> locals = new LinkedList<Local>();
 		
 		ResultSet result = null;
@@ -71,19 +84,16 @@ public class LocalsContentProvider implements ITreeContentProvider {
 			Statement statement = dbConnection.createStatement();
 			result = statement.executeQuery(query);
 		} catch (SQLException e) {
-			e.printStackTrace();
 			System.err.println("Locals not retrievable. Exiting.");
+			e.printStackTrace();
 			System.exit(0);
 		}
 		
 		try {
-
-			while(result.next()) {
-				locals.add(buildLocal(result));
-			}
+			while(result.next()) locals.add(buildLocal(result));
 		} catch (SQLException e) {
-			e.printStackTrace();
 			System.err.println("Failed to process result set. Exiting.");
+			e.printStackTrace();
 			System.exit(0);
 		}
 		
@@ -96,8 +106,9 @@ public class LocalsContentProvider implements ITreeContentProvider {
 		local.id		= result.getInt(2);
 		local.name		= result.getString(3);
 		local.arg		= result.getInt(4);
-		local.valueId	= result.getLong(5);
-		local.step		= result.getInt(6);
+		local.primType	= result.getString(5).charAt(0);
+		local.valueId	= result.getLong(6);
+		local.step		= result.getInt(7);
 		return local;
 	}
 }

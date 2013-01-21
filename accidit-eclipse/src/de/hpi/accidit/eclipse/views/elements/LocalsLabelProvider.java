@@ -15,9 +15,6 @@ public class LocalsLabelProvider extends LabelProvider implements
 
 	@Override
 	public String getColumnText(Object element, int columnIndex) {
-		// TODO rm debug
-		System.out.println("Querying for the column label in column " + columnIndex + " and element: " + element);
-		
 		if(!(element instanceof Local)) {
 			System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
 			return null;
@@ -27,7 +24,7 @@ public class LocalsLabelProvider extends LabelProvider implements
 		
 		switch(columnIndex) {
 			case 0: return local.name;
-			case 1: return String.valueOf(local.valueId);
+			case 1: return local.getValue();
 			case 2: return String.valueOf(local.step);
 			case 3: return String.valueOf(local.arg);
 			default: return null;

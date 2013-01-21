@@ -56,6 +56,8 @@ public class MethodExplorerView extends ViewPart {
 		viewer.setLabelProvider(new CalledMethodLabelProvider());
 		viewer.setInput(getViewSite());
 		
+		getSite().setSelectionProvider(viewer);
+		
 		hookDoubleCLickAction();
 	}
 

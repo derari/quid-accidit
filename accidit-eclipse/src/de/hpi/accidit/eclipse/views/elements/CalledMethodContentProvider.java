@@ -16,6 +16,8 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 	
 	private Connection dbConnection;
 	
+	private static int currentTestId = 2;
+	
 	public CalledMethodContentProvider() {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
@@ -37,7 +39,7 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 0 ");
+		query.append("WHERE testId = " + currentTestId + " ");
 		query.append("AND depth = 0 ");
 		query.append("ORDER BY callStep");
 		
@@ -52,7 +54,7 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		query.append("SELECT ");
 		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 0 ");
+		query.append("WHERE testId = " + currentTestId + " ");
 		query.append("AND depth = " + (calledMethod.depth + 1) + " ");
 		query.append("AND callStep > " + calledMethod.callStep + " ");
 		query.append("AND exitStep < " + calledMethod.exitStep + " ");
@@ -72,7 +74,7 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		query.append("SELECT ");
 		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 0 ");
+		query.append("WHERE testId = " + currentTestId + " ");
 		query.append("AND depth = " + (calledMethod.depth - 1) + " ");
 		query.append("AND callStep < " + calledMethod.callStep + " ");
 		query.append("AND exitStep > " + calledMethod.exitStep + " ");
@@ -89,7 +91,7 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		query.append("SELECT ");
 		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = 0 ");
+		query.append("WHERE testId = " + currentTestId + " ");
 		query.append("AND depth = " + (calledMethod.depth + 1) + " ");
 		query.append("AND callStep > " + calledMethod.callStep + " ");
 		query.append("AND exitStep < " + calledMethod.exitStep + " ");
@@ -131,14 +133,14 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 	
 	private CalledMethod buildCalledMethod(ResultSet result) throws SQLException {
 		CalledMethod method = new CalledMethod();
-		method.testId		= result.getInt(1);
-		method.callStep		= result.getLong(2);
-		method.exitStep		= result.getInt(3);
-		method.depth		= result.getInt(4);
-		method.callLine		= result.getInt(5);
-		method.methodId		= result.getInt(6);
-		method.type			= result.getString(7);
-		method.method		= result.getString(8);
+		method.testId	= result.getInt(1);
+		method.callStep	= result.getLong(2);
+		method.exitStep	= result.getInt(3);
+		method.depth	= result.getInt(4);
+		method.callLine	= result.getInt(5);
+		method.methodId	= result.getInt(6);
+		method.type		= result.getString(7);
+		method.method	= result.getString(8);
 		return method;
 	}
 }
