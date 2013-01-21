@@ -52,7 +52,9 @@ public class ThreadTrace {
             msg += " trace canceled";
         } else if (invocation == null && root != null) {
             endTrace();
-            msg += " trace ended";
+            errorCount = 1000 + MAX_ERROR;
+            return;
+//            msg += " trace ended";
         }
         new RuntimeException(msg, t).printStackTrace();
     }
@@ -115,6 +117,12 @@ public class ThreadTrace {
     }
     
     private void endTrace() {
+//        System.out.println("Ending trace " + id + " (" + invocation);
+        if (invocation != null) {
+            Error e = new Error("Trace canceled");
+            ObjectTrace ot = getObjectTrace(e);
+            invocation.cancel(ot);
+        }
         model.out.end(this);
         endCallback.ended(this);
     }
@@ -195,6 +203,8 @@ public class ThreadTrace {
 //        }
 //    }
 
+    private static final Error NO_RETURN = new Error("NO RETURN");
+    
     public void returned(int methodCode, int line, Object result) {
         if (cflow) return;
         cflow = true;
@@ -202,8 +212,10 @@ public class ThreadTrace {
             if (invocation.returned(methodCode, line, result)) {
                 stack.pop();
             } else {
+                final ObjectTrace otNoReturn = getObjectTrace(NO_RETURN);
                 int depth = getCurrentDepth(1);
                 while (invocation.getDepth() > depth) {
+                    invocation.failed(otNoReturn);
                     stack.pop();
                     if (stack.isEmpty()) {
                         endTrace();
@@ -213,12 +225,17 @@ public class ThreadTrace {
                 }
                 if (depth == invocation.getDepth()) {
                     if (!invocation.returned(methodCode, line, result)) {
+                        invocation.failed(otNoReturn);
                         //throw new IllegalStateException(invocation.toString());
                     }
                     stack.pop();
                 }
             }
-            invocation = stack.isEmpty() ? null : stack.peek();
+            if (stack.isEmpty()) {
+                invocation = null;
+            } else {
+                invocation = stack.peek();
+            }
         } catch (RuntimeException | Error e) {
             report(line + ": return " + invocation + " (" + methodCode + "): " + result, e);
         } finally {

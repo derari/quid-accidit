@@ -20,6 +20,8 @@ public class CallTrace {
     private final boolean ignore;
     private final ObjectTrace instance;
     
+    private ExitTrace exit;
+    
     private final long step;
     private final int line;
     private final int depth;
@@ -131,6 +133,13 @@ public class CallTrace {
         return clazzName != null && !clazzName.startsWith("java.lang");
     }
 
+    public void cancel(ObjectTrace throwable) {
+        if (exit == null) failed(throwable);
+        if (caller != null) {
+            caller.cancel(throwable);
+        }
+    }
+
     public boolean returned(int methodCode, int line, Object result) {
         if (methodCode >= 0 && methodCode != method.getCodeId()) return false;
         if (ignore && !traced) return true;
@@ -138,7 +147,7 @@ public class CallTrace {
         try {
             PrimitiveType pt = method.getResultType();
             long valueId = trace.getValueId(pt, result);
-            ExitTrace exit = new ExitTrace(step, true, line, stepCounter.next(), pt, valueId);
+            exit = new ExitTrace(step, true, line, stepCounter.next(), pt, valueId);
             out.traceExit(this, exit);
         } catch (RuntimeException re) {
             throw new RuntimeException(toString(), re);
@@ -150,7 +159,7 @@ public class CallTrace {
         if (ignore && !traced) return;
         throwable.ensurePersisted();
         PrimitiveType pt = PrimitiveType.OBJECT;
-        ExitTrace exit = new ExitTrace(step, false, lastLine, stepCounter.next(), pt, throwable.getId());
+        exit = new ExitTrace(step, false, lastLine, stepCounter.next(), pt, throwable.getId());
         out.traceExit(this, exit);
     }
     
@@ -318,5 +327,5 @@ public class CallTrace {
         System.out.print(' ');
         return true;
     }
-    
+
 }

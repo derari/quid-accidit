@@ -47,6 +47,15 @@ public class CsvOut implements Out {
             p(value ? 1 : 0);
         }
         
+        public void pUnsigned(int value) {
+            sep();
+            if (value < 0) {
+                ps.print("NULL");
+            } else {
+                ps.print(value);
+            }
+        }
+        
         public void p(int value) {
             sep();
             ps.print(value);
@@ -165,6 +174,7 @@ public class CsvOut implements Out {
         mMethod.p(method.getOwner().getModelId());
         mMethod.p(method.getName());
         mMethod.px(method.getDescriptor());
+        mMethod.pUnsigned(method.getLine());
         mMethod.nl();
     }
 

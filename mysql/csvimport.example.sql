@@ -37,7 +37,7 @@ LOAD DATA LOCAL INFILE "C:/trace/mMethod.csv"
 INTO TABLE Method
 FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(id, declaringTypeId, name, signature);
+(id, declaringTypeId, name, signature, line);
 
 LOAD DATA LOCAL INFILE "C:/trace/mField.csv"
 INTO TABLE Field
@@ -49,7 +49,7 @@ LOAD DATA LOCAL INFILE "C:/trace/mVariable.csv"
 INTO TABLE Variable
 FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
-(methodId, id, name, typeId, arg);
+(methodId, id, name, typeId, parameter);
 
 LOAD DATA LOCAL INFILE "C:/trace/tTrace.csv"
 INTO TABLE TestTrace
@@ -116,4 +116,3 @@ INTO TABLE ArrayGetTrace
 FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
 (testId, callStep, step, thisId, `index`, primType, valueId, line);
-

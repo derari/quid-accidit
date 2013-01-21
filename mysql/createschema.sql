@@ -47,6 +47,7 @@ CREATE  TABLE IF NOT EXISTS `accidit`.`Method` (
   `declaringTypeId` INT NOT NULL ,
   `name` VARCHAR(255) NOT NULL ,
   `signature` VARCHAR(2048) NOT NULL ,
+  `line` INT NULL ,
   PRIMARY KEY (`id`) ,
   CONSTRAINT `fk_Method_Type`
     FOREIGN KEY (`declaringTypeId` )
@@ -179,7 +180,7 @@ CREATE  TABLE IF NOT EXISTS `accidit`.`Variable` (
   `id` INT NOT NULL ,
   `name` VARCHAR(255) NOT NULL ,
   `typeId` INT NOT NULL ,
-  `arg` TINYINT(1) NOT NULL ,
+  `parameter` TINYINT(1) NOT NULL ,
   PRIMARY KEY (`methodId`, `id`) ,
   CONSTRAINT `fk_Variable_Method`
     FOREIGN KEY (`methodId` )
@@ -325,7 +326,7 @@ CREATE INDEX `fk_CatchTrace_InvocationTrace_idx` ON `accidit`.`CatchTrace` (`tes
 CREATE  TABLE IF NOT EXISTS `accidit`.`ExitTrace` (
   `testId` INT NOT NULL ,
   `callStep` BIGINT NOT NULL ,
-  `step` INT NOT NULL ,
+  `step` BIGINT NOT NULL ,
   `returned` TINYINT(1) NOT NULL ,
   `primType` CHAR NOT NULL ,
   `valueId` BIGINT NOT NULL ,
@@ -446,7 +447,7 @@ CREATE TABLE IF NOT EXISTS `accidit`.`vInvocationTrace` (`testId` INT, `callStep
 -- -----------------------------------------------------
 -- Placeholder table for view `accidit`.`vVariableTrace`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `accidit`.`vVariableTrace` (`testId` INT, `callStep` INT, `step` INT, `methodId` INT, `variableId` INT, `type` INT, `method` INT, `variable` INT, `arg` INT, `primType` INT, `valueId` INT, `line` INT);
+CREATE TABLE IF NOT EXISTS `accidit`.`vVariableTrace` (`testId` INT, `callStep` INT, `step` INT, `methodId` INT, `variableId` INT, `type` INT, `method` INT, `variable` INT, `parameter` INT, `primType` INT, `valueId` INT, `line` INT);
 
 -- -----------------------------------------------------
 -- Placeholder table for view `accidit`.`vPutTrace`
@@ -480,7 +481,7 @@ JOIN Type t ON m.declaringTypeId = t.id;
 DROP TABLE IF EXISTS `accidit`.`vVariableTrace`;
 USE `accidit`;
 CREATE  OR REPLACE VIEW `accidit`.`vVariableTrace` AS
-SELECT vt.testId, vt.callStep, vt.step, vt.methodId, vt.variableId, t.name as type, m.name as method, v.name as variable, v.arg as arg, vt.primType, vt.valueId, vt.line
+SELECT vt.testId, vt.callStep, vt.step, vt.methodId, vt.variableId, t.name as type, m.name as method, v.name as variable, v.parameter as parameter, vt.primType, vt.valueId, vt.line
 FROM VariableTrace vt
 JOIN Variable v ON vt.methodId = v.methodId AND vt.variableId = v.id
 JOIN Method m ON v.methodId = m.id
@@ -518,22 +519,7 @@ SELECT c.testId, c.step AS callStep, e.step AS exitStep,
        e.returned, e.primType AS exitPrimType, 
        e.valueId AS exitValueId, e.line AS exitLine
 FROM CallTrace c
-LEFT JOIN ExitTrace e ON c.testId = e.testId AND c.step = e.callStep;
-
--- CREATE USER `accidit` IDENTIFIED BY 'accidit';
-
-grant SELECT on TABLE `accidit`.`CatchTrace` to accidit;
-grant SELECT on TABLE `accidit`.`Extends` to accidit;
-grant SELECT on TABLE `accidit`.`Field` to accidit;
-grant SELECT on TABLE `accidit`.`PutTrace` to accidit;
-grant SELECT on TABLE `accidit`.`CallTrace` to accidit;
-grant SELECT on TABLE `accidit`.`Variable` to accidit;
-grant SELECT on TABLE `accidit`.`VariableTrace` to accidit;
-grant SELECT on TABLE `accidit`.`Method` to accidit;
-grant SELECT on TABLE `accidit`.`ObjectTrace` to accidit;
-grant SELECT on TABLE `accidit`.`TestTrace` to accidit;
-grant SELECT on TABLE `accidit`.`ThrowTrace` to accidit;
-grant SELECT on TABLE `accidit`.`Type` to accidit;
+JOIN ExitTrace e ON c.testId = e.testId AND c.step = e.callStep;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

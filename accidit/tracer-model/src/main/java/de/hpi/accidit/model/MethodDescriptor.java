@@ -16,6 +16,7 @@ public class MethodDescriptor {
     private final int codeId;
     private final List<VarDescriptor> variables = new ArrayList<>(5);
     private final PrimitiveType resultType;
+    private int line = -1;
     
     private int modelId = -1;
     private boolean varsInitialized = false;
@@ -56,6 +57,14 @@ public class MethodDescriptor {
 
     public PrimitiveType getResultType() {
         return resultType;
+    }
+
+    public void setLine(int line) {
+        this.line = line;
+    }
+
+    public int getLine() {
+        return line;
     }
 
     public void addVariable(int id, String name, String type) {

@@ -176,7 +176,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (noDetails && (access & ACC_PUBLIC) == 0) {
                 return sup;
             }
-            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model, cl, noDetails);
+            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model, cl, noDetails, exceptions);
         }
         
     }
@@ -228,16 +228,18 @@ public class TracerTransformer implements ClassFileTransformer {
         private final boolean isStatic;
         private final boolean isInit;
         private final boolean traceDetails;
+        private String[] exceptions;
         private boolean test;
         private final TypeDescriptor type;
         private final MethodDescriptor me;
+        private boolean methodLineSet = false;
         private int lastLine = -1;
         private int lastTracedLine = -2;
         
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
 
-        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails) {
+        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
             this.name = name;
             this.descriptor = desc;
@@ -251,6 +253,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (DEBUG) System.out.println("\n" + name + desc);
             isStatic = (access & ACC_STATIC) != 0;
             isInit = name.equals("<init>");
+            this.exceptions = exceptions;
         }
 
         @Override
@@ -290,16 +293,20 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitLabel(Label label) {
             super.visitLabel(label);
             if (DEBUG) System.out.println("L " + label.getOffset());
+            if (exHandlers.remove(label)) {
+                traceCatch();
+            }
         }
 
         @Override
         public void visitLineNumber(int line, Label start) {
             if (DEBUG) System.out.println("# " + line);
+            if (!methodLineSet) {
+                methodLineSet = true;
+                me.setLine(line);
+            }
             lastLine = line;
             super.visitLineNumber(line, start);
-            if (exHandlers.remove(start)) {
-                traceCatch();
-            }
         }
         
         private void ensureLineNumberIsTraced() {
@@ -331,6 +338,11 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitEnd();
             
             if (me.variablesAreInitialized()) return;
+            
+            if (!exHandlers.isEmpty()) {
+                System.out.println(name + " " + exHandlers);
+                System.out.println("\n------------------");
+            }
             
             for (int i = 0; i < argTypes.size(); i++) {
                 String argType = argTypes.get(i);
