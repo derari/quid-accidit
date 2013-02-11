@@ -38,4 +38,16 @@ public class ATest {
             if (o == null) return;
         }
     }
+    
+    @Test
+    public void test_shared_slots() {
+        {
+            int i = Math.abs(3);
+            if (i < 0) return;
+        }
+        {
+            List<Integer> l = newList();
+            if (l != null) l.clear();
+        }
+    }
 }

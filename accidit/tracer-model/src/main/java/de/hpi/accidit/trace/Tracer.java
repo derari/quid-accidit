@@ -133,30 +133,30 @@ public class Tracer {
         }
     };
     
-    public static void storeI(int value, int var, int line) {
-        STORE.trace(var, line, value);
+    public static void storeI(int value, int var, int line, int offset) {
+        STORE.trace(line, offset, var, value);
     }
     
-    public static void storeL(long value, int var, int line) {
-        STORE.trace(var, line, value);
+    public static void storeL(long value, int var, int line, int offset) {
+        STORE.trace(line, offset, var, value);
     }
     
-    public static void storeF(float value, int var, int line) {
-        STORE.trace(var, line, value);
+    public static void storeF(float value, int var, int line, int offset) {
+        STORE.trace(line, offset, var, value);
     }
     
-    public static void storeD(double value, int var, int line) {
-        STORE.trace(var, line, value);
+    public static void storeD(double value, int var, int line, int offset) {
+        STORE.trace(line, offset, var, value);
     }
     
-    public static void storeA(Object value, int var, int line) {
-        STORE.trace(var, line, value);
+    public static void storeA(Object value, int var, int line, int offset) {
+        STORE.trace(line, offset, var, value);
     }
     
-    private static final EventIIA STORE = new EventIIA() {
+    private static final EventIIIA STORE = new EventIIIA() {
         @Override
-        protected void run(ThreadTrace t, int var, int line, Object value) {
-            t.variable(line, var, value);
+        protected void run(ThreadTrace t, int line, int offset, int var, Object value) {
+            t.variable(line, offset, var, value);
         }
     };
     
@@ -285,6 +285,14 @@ public class Tracer {
         ASTORE.trace(index, line, array, value);
     }
     
+    public static void aStoreC(Object array, int index, char value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
+    public static void aStoreS(Object array, int index, short value, int line) {
+        ASTORE.trace(index, line, array, value);
+    }
+    
     public static void aStoreI(Object array, int index, int value, int line) {
         ASTORE.trace(index, line, array, value);
     }
@@ -313,6 +321,14 @@ public class Tracer {
     };
     
     public static void aLoadB(Object array, int index, byte value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadC(Object array, int index, char value, int line) {
+        ALOAD.trace(index, line, array, value);
+    }
+    
+    public static void aLoadS(Object array, int index, short value, int line) {
         ALOAD.trace(index, line, array, value);
     }
     
@@ -633,6 +649,81 @@ public class Tracer {
         }
         
         protected abstract void run(ThreadTrace t, int i, int j, Object a, Object b);
+    }
+    
+        static abstract class EventIIIA {
+        
+        public final void trace(int i, int j, int a, Object b) {
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
+        }
+        
+        public final void trace(int i, int j, int a, int b) {
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
+        }
+        
+        public final void trace(int i, int j, int a, long b) {
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
+        }
+        
+        public final void trace(int i, int j, int a, float b) {
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
+        }
+        
+        public final void trace(int i, int j, int a, double b) {
+            synchronized (Tracer.class) {
+                if (!trace) return;
+                trace = false;
+                try {
+                    ThreadTrace t = threadTrace();
+                    if (t == null) return;
+                    run(t, i, j, a, b);
+                } finally {
+                    trace = true;
+                }
+            }
+        }
+        
+        protected abstract void run(ThreadTrace t, int i, int j, int a, Object b);
     }
     
 }

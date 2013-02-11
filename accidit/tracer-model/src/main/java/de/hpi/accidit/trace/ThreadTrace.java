@@ -1,6 +1,8 @@
 package de.hpi.accidit.trace;
 
-import de.hpi.accidit.model.*;
+import de.hpi.accidit.model.MethodDescriptor;
+import de.hpi.accidit.model.Model;
+import de.hpi.accidit.model.PrimitiveType;
 import java.util.Stack;
 
 /**
@@ -50,13 +52,20 @@ public class ThreadTrace {
         if (errorCount >= MAX_ERROR) {
             endTrace();
             msg += " trace canceled";
+            System.out.println(msg);
         } else if (invocation == null && root != null) {
             endTrace();
             errorCount = 1000 + MAX_ERROR;
             return;
 //            msg += " trace ended";
         }
-        new RuntimeException(msg, t).printStackTrace();
+        StackTraceElement[] errorStack = t.getStackTrace();
+        if (errorStack != null && errorStack.length > 0) {
+            System.out.println(t.getMessage() + " " + errorStack[0]);
+        } else {
+            System.out.println(t.getMessage());
+        }
+        //new RuntimeException(msg, t).printStackTrace();
     }
 
     public int getId() {
@@ -290,11 +299,11 @@ public class ThreadTrace {
         }
     }
     
-    public void variable(int line, int varId, Object value) {
+    public void variable(int line, int offset, int varId, Object value) {
         if (cflow) return;
         cflow = true;
         try {
-            invocation.variable(line, varId, value);
+            invocation.variable(line, offset, varId, value);
         } catch (RuntimeException | Error e) {
             report(line + ": var " + varId + " = " + value, e);
         } finally {

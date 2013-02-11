@@ -18,6 +18,7 @@ public class MethodDescriptor {
     private final PrimitiveType resultType;
     private int line = -1;
     
+    private int nextVarId = 0;
     private int modelId = -1;
     private boolean varsInitialized = false;
     private boolean persisted = false;
@@ -67,17 +68,24 @@ public class MethodDescriptor {
         return line;
     }
 
-    public void addVariable(int id, String name, String type) {
+    public VarDescriptor addVariable(int index, int startOffset, String name, String type) {
         if (varsInitialized) throw new IllegalStateException("Variables already initialized");
-        while (id >= variables.size()) variables.add(null);
         TypeDescriptor t = model.getType(type, owner.cl);
-        VarDescriptor var = new VarDescriptor(id, name, this, t);
-        variables.set(id, var);
+        int id = nextVarId++;
+        VarDescriptor var = new VarDescriptor(id, index, startOffset, name, this, t);
+        for (int i = index-variables.size(); i >= 0; i--) variables.add(null);
+        VarDescriptor old = variables.get(index);
+        if (old == null) {
+            variables.set(index, var);
+        } else {
+            variables.set(index, old.insert(var));
+        }
+        return var;
     }
     
     private boolean varsWarned = false;
     
-    public VarDescriptor getVariable(int id) {
+    public VarDescriptor getVariable(int id, int offset) {
         if (id >= variables.size()) {
 //            if (!varsWarned) {
 //                System.out.println(this + ": " + variables.size() + " variables");
@@ -88,7 +96,7 @@ public class MethodDescriptor {
 //            }
             return null;
         }
-        return variables.get(id);
+        return variables.get(id).get(offset);
     }
     
     public void variablesCompleted() {

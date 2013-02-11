@@ -118,8 +118,8 @@ public class ThreadTraceTest {
     public void test_args() {
         AClass a = new AClass();
         MethodDescriptor test1 = model.getMethod(mTest1);
-        test1.addVariable(0, "anInt", "int");
-        test1.addVariable(1, "anArray", "java.lang.Object[]");
+        test1.addVariable(0, 0, "anInt", "int");
+        test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
         ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")), a);
@@ -133,13 +133,13 @@ public class ThreadTraceTest {
     public void test_vars() {
         AClass a = new AClass();
         MethodDescriptor test1 = model.getMethod(mTest1);
-        test1.addVariable(0, "anInt", "int");
-        test1.addVariable(1, "anArray", "java.lang.Object[]");
+        test1.addVariable(0, 0, "anInt", "int");
+        test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
         ThreadTrace t = ts.begin();
         t.enter(m("test1", desc("V")), a);
-        t.variable(6, 0, 17);
-        t.variable(7, 1, new Object[]{1});
+        t.variable(6, 0, 0, 17);
+        t.variable(7, 0, 1, new Object[]{1});
         t.returned(-1, 8, null);
         t.end();
     }

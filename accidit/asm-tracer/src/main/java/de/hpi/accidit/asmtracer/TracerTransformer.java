@@ -38,13 +38,22 @@ public class TracerTransformer implements ClassFileTransformer {
         // excluded libraries
 //        "com/sun",
         "org/eclipse",
+        "org/drools/rule/GroupElement",
     };
     
     private static String[] no_details = {
         "java",
         "sun",
         "com/sun",
+        "org/mvel2/asm",
     };
+    
+    private static String[] do_details = {
+//        "java/lang",
+//        "java/util",
+    };
+    
+    private static int classCounter = 0;
 
     @Override
     public byte[] transform(ClassLoader loader, String className, 
@@ -67,7 +76,8 @@ public class TracerTransformer implements ClassFileTransformer {
             if (className.startsWith(e))
                 return classfileBuffer;
         }
-        System.out.println(">> " + className + "     " + loader);
+        //System.out.println(">> " + className + "     " + loader);
+        if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
         return transform(classfileBuffer, loader);
     }
 
@@ -105,6 +115,7 @@ public class TracerTransformer implements ClassFileTransformer {
         boolean isTracedFlagSet = false;
         boolean isTestClass;
         boolean noDetails;
+        boolean hasSource = false;
         
         TypeDescriptor type;
         final ClassLoader cl;
@@ -123,6 +134,7 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitSource(String source, String debug) {
             super.visitSource(source, debug);
             type.setSource(source);
+            hasSource = true;
         }
 
         @Override
@@ -135,8 +147,16 @@ public class TracerTransformer implements ClassFileTransformer {
             this.interfaces = interfaces;
             for (String s: no_details) {
                 if (name.startsWith(s)) {
-                    noDetails = true;
-                    break;
+                    boolean exclude = true;
+                    for (String s2: do_details) {
+                       if (name.startsWith(s2)) {
+                           exclude = false;
+                       }
+                    }
+                    if (exclude) {
+                        noDetails = true;
+                        break;
+                    }
                 }
             }
         }
@@ -176,6 +196,9 @@ public class TracerTransformer implements ClassFileTransformer {
             if (noDetails && (access & ACC_PUBLIC) == 0) {
                 return sup;
             }
+            if (!hasSource) {
+                return sup;
+            }
             return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model, cl, noDetails, exceptions);
         }
         
@@ -195,7 +218,7 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String RETURN_ = "return";
         private static final String RETURN_DESC_2 = "II)V";
         private static final String STORE_ = "store";
-        private static final String STORE_DESC_2 = "II)V";
+        private static final String STORE_DESC_2 = "III)V";
         private static final String ARG_ = "arg";
         private static final String ARG_DESC_2 = "I)V";
         private static final String PUT_ = "put";
@@ -235,10 +258,11 @@ public class TracerTransformer implements ClassFileTransformer {
         private boolean methodLineSet = false;
         private int lastLine = -1;
         private int lastTracedLine = -2;
+        private int lastOffset = 0;
         
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
-
+        
         public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
             this.name = name;
@@ -285,8 +309,10 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLocalVariable(name, desc, signature, start, end, index);
             if (me.variablesAreInitialized()) return;
             String type = org.objectweb.asm.Type.getType(desc).getClassName();
-            me.addVariable(index, name, type);
+            VarDescriptor vdesc = me.addVariable(index, start.getOffset(), name, type);
             if (index < argTypes.size()) argTypes.set(index, null);
+            if (DEBUG) System.out.println(" " + vdesc.getId());
+//            if (DEBUG) System.out.println(vdesc);
         }
 
         @Override
@@ -296,6 +322,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (exHandlers.remove(label)) {
                 traceCatch();
             }
+            lastOffset = label.getOffset();
         }
 
         @Override
@@ -357,9 +384,9 @@ public class TracerTransformer implements ClassFileTransformer {
                         argTypeName = TypeDescriptor.descriptorToName(argType);
                         varName = "$"+i;
                     }
-                    me.addVariable(i, varName, argTypeName);
+                    me.addVariable(i, 0, varName, argTypeName);
                 }
-                VarDescriptor var =  me.getVariable(i);
+                VarDescriptor var =  me.getVariable(i, 0);
                 if (var != null) var.setArgument(true);
             }
             me.variablesCompleted();
@@ -393,6 +420,7 @@ public class TracerTransformer implements ClassFileTransformer {
             desc = "(" + type.getDescriptor() + STORE_DESC_2;
             super.visitLdcInsn(var);
             super.visitLdcInsn(lastLine);
+            super.visitLdcInsn(lastOffset);
             super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);          
         }
 
@@ -491,12 +519,16 @@ public class TracerTransformer implements ClassFileTransformer {
                 case ARETURN: traceReturn(ArgumentType.OBJECT); break;
                 case ATHROW: traceThrow(); break;
                 case BASTORE: traceAStore(ArgumentType.BYTE); break;
+                case CASTORE: traceAStore(ArgumentType.CHAR); break;
+                case SASTORE: traceAStore(ArgumentType.SHORT); break;
                 case IASTORE: traceAStore(ArgumentType.INT); break;
                 case LASTORE: traceAStore(ArgumentType.LONG); break;
                 case FASTORE: traceAStore(ArgumentType.FLOAT); break;
                 case DASTORE: traceAStore(ArgumentType.DOUBLE); break;
                 case AASTORE: traceAStore(ArgumentType.OBJECT); break;
                 case BALOAD:
+                case CALOAD:
+                case SALOAD:
                 case IALOAD:
                 case LALOAD:
                 case FALOAD:
@@ -508,6 +540,8 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitInsn(opcode);
             switch (opcode) {
                 case BALOAD: traceALoad(ArgumentType.BYTE); break;
+                case CALOAD: traceALoad(ArgumentType.CHAR); break;
+                case SALOAD: traceALoad(ArgumentType.SHORT); break;
                 case IALOAD: traceALoad(ArgumentType.INT); break;
                 case LALOAD: traceALoad(ArgumentType.LONG); break;
                 case FALOAD: traceALoad(ArgumentType.FLOAT); break;
@@ -602,7 +636,9 @@ public class TracerTransformer implements ClassFileTransformer {
         DOUBLE('D'),
         OBJECT('A'),
         VOID('V'),
-        BYTE('B');
+        BYTE('B'),
+        CHAR('C'),
+        SHORT('S'),;
         
         private final char key;
         private final String descriptor;
@@ -655,9 +691,12 @@ public class TracerTransformer implements ClassFileTransformer {
             return width == 1 ? Opcodes.DUP2_X1 : Opcodes.DUP2_X2;
         }
         
+        private static final int O_BYTE = 6;//BYTE.ordinal();
+        
         public int LOAD() {
-            if (this == BYTE) return INT.LOAD();
-            return Opcodes.ILOAD + ordinal();
+            int o = ordinal();
+            if (o >= O_BYTE) return INT.LOAD();
+            return Opcodes.ILOAD + o;
         }
         
         private static final ArgumentType[] VALUES = values();

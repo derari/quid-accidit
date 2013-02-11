@@ -191,6 +191,7 @@ public class CallTrace {
             thrown(lastLine, ot);
         } else if (!ignore) {
             ct.ensurePersisted();
+            ot.ensurePersisted();
             out.traceThrow(ct, ot.getThrowEvent());
             ot.markThrowTraced();
         }
@@ -202,6 +203,7 @@ public class CallTrace {
             if (!ot.isThrowTraced()) return;
         }
         lastLine = line;
+        ensureThrown(ot);
         ThrowableTrace exTrace = new ThrowableTrace(line, stepCounter.next(), ot);
         out.traceCatch(this, exTrace);    
         ot.markCatchTraced();
@@ -209,17 +211,17 @@ public class CallTrace {
 
     public void argument(int argId, Object value) {
         if (ignore) return;
-        variable(lastLine, argId, value, step);
+        variable(lastLine, 0, argId, value, step);
     }
     
-    public void variable(int line, int varId, Object value) {
+    public void variable(int line, int offset, int varId, Object value) {
         lastLine = line;
         if (ignore) return;
-        variable(line, varId, value, stepCounter.next());
+        variable(line, offset, varId, value, stepCounter.next());
     }
     
-    public void variable(int line, int varId, Object value, long step) {
-        VarDescriptor var = method.getVariable(varId);
+    public void variable(int line, int offset, int varId, Object value, long step) {
+        VarDescriptor var = method.getVariable(varId, offset);
         if (var == null) return; // variables not traced
         try {
             PrimitiveType primType = var.getPrimitiveType();
