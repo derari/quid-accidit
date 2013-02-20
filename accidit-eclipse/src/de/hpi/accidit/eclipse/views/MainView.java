@@ -107,7 +107,7 @@ public class MainView extends ViewPart {
 			return getName();
 		}
 		
-		public Object getAdapter(Class key) {
+		public Object getAdapter(@SuppressWarnings("rawtypes") Class key) {
 			return null;
 		}
 	}

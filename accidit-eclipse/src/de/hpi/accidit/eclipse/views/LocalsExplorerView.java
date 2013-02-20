@@ -27,48 +27,54 @@ public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 	public LocalsExplorerView() {}
 
 	@Override
-	public void createPartControl(Composite parent) {
-		// TODO remove SWT.MULTI as only single selection behavior is wanted
-		viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+	public void createPartControl(Composite parent) {		
+		viewer = new TreeViewer(parent, SWT.H_SCROLL | SWT.V_SCROLL);
 		viewer.getTree().setHeaderVisible(true);
 		
 		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
 		column0.setText("Local Name");
-		column0.setWidth(100);
+		column0.setWidth(150);
 		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
 		column1.setText("Value");
-		column1.setWidth(50);
+		column1.setWidth(150);
 		TreeColumn column2 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column2.setText("Step");
-		column2.setWidth(30);
+		column2.setText("Type");
+		column2.setWidth(50);
 		TreeColumn column3 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column3.setText("Arg");
-		column3.setWidth(30);
+		column3.setText("Last Change");
+		column3.setWidth(50);
 		
-		contentProvider = new LocalsContentProvider();
-		
+		contentProvider = new LocalsContentProvider();		
 		viewer.setContentProvider(contentProvider);
 		viewer.setLabelProvider(new LocalsLabelProvider());
 		viewer.setInput(getViewSite());
 		
-		getSite().getPage().addSelectionListener(MethodExplorerView.ID, (ISelectionListener) this);
+		getSite().setSelectionProvider(viewer);
+		
+		getSite().getPage().addSelectionListener(MethodExplorerView.ID, this);
 	}
 
 	@Override
 	public void setFocus() {
 		viewer.getControl().setFocus();
 	}
+	
+	@Override
+	public void dispose() {
+		getSite().getPage().removeSelectionListener(this);
+		super.dispose();
+	}
 
 	@Override
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
-		if (part instanceof MethodExplorerView) {
+		if (part instanceof MethodExplorerView && selection instanceof ITreeSelection) {
 			ITreeSelection treeSelection = (ITreeSelection) selection;			
-			selectedCalledMethodChanged((CalledMethod) treeSelection.getFirstElement());
+			selectedMethodChanged((CalledMethod) treeSelection.getFirstElement());
 		}
 	}
 
-	private void selectedCalledMethodChanged(CalledMethod selection) {
-		contentProvider.calledMethodSelected(selection);
+	public void selectedMethodChanged(CalledMethod selectedMethod) {
+		contentProvider.setSelectedMethod(selectedMethod);
 		viewer.refresh();
 	}
 

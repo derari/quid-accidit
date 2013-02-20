@@ -8,9 +8,9 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import de.hpi.accidit.eclipse.views.MethodExplorerView;
+
 public class OpenMethodExplorerViewHandler extends AbstractHandler {
-	
-	public static final String ID = "de.hpi.accidit.eclipse.views.MethodExplorerView";
 	
 	public OpenMethodExplorerViewHandler() {}
 
@@ -22,7 +22,7 @@ public class OpenMethodExplorerViewHandler extends AbstractHandler {
 		IWorkbenchPage page = window.getActivePage();
 		
 		try {
-			page.showView(ID);
+			page.showView(MethodExplorerView.ID);
 		} catch (PartInitException e) {
 			e.printStackTrace();
 		}

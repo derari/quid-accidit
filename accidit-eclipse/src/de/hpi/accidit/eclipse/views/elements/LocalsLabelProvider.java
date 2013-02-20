@@ -15,19 +15,18 @@ public class LocalsLabelProvider extends LabelProvider implements
 
 	@Override
 	public String getColumnText(Object element, int columnIndex) {
-		if(!(element instanceof Local)) {
+		if(!(element instanceof LocalBase)) {
 			System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
 			return null;
 		}			
 		
-		Local local = (Local) element;
-		
+		LocalBase local = (LocalBase) element;
 		switch(columnIndex) {
-			case 0: return local.name;
-			case 1: return local.getValue();
-			case 2: return String.valueOf(local.step);
-			case 3: return String.valueOf(local.arg);
-			default: return null;
+		case 0: return local.getName();
+		case 1: return local.getValue();
+		case 2: return local.getType();
+		case 3: return local.getStep();
+		default: return null;
 		}
 	}
 

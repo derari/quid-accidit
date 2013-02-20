@@ -12,6 +12,8 @@ public class CalledMethod {
 	public int methodId;
 	public String type;
 	public String method;
+	
+	public CalledMethod parentMethod;
 
 	public CalledMethod() { };
 }
