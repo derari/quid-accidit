@@ -9,7 +9,7 @@ public class LocalPrimitive extends LocalBase {
 	}
 	
 	public String getValue() {
-		return value;
+		return String.format("\"%s\"", value);
 	}
 	
 	public boolean isObject() {

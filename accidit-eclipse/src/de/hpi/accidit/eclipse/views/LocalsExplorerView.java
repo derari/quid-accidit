@@ -33,16 +33,16 @@ public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 		
 		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
 		column0.setText("Local Name");
-		column0.setWidth(150);
+		column0.setWidth(100);
 		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
 		column1.setText("Value");
-		column1.setWidth(150);
-		TreeColumn column2 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column2.setText("Type");
-		column2.setWidth(50);
+		column1.setWidth(100);
+		TreeColumn column2 = new TreeColumn(viewer.getTree(), SWT.RIGHT);
+		column2.setText("Change Step");
+		column2.setWidth(75);
 		TreeColumn column3 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column3.setText("Last Change");
-		column3.setWidth(50);
+		column3.setText("Type");
+		column3.setWidth(500);
 		
 		contentProvider = new LocalsContentProvider();		
 		viewer.setContentProvider(contentProvider);

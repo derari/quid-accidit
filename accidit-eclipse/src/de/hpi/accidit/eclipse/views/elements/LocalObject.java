@@ -10,7 +10,8 @@ public class LocalObject extends LocalBase {
 
 	@Override
 	public String getValue() {
-		return type;
+		String result = type.substring(type.lastIndexOf(".") + 1);
+		return result.substring(result.lastIndexOf("$") + 1);
 	}
 
 	@Override

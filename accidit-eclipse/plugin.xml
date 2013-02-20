@@ -24,7 +24,6 @@
       </category>
       <view
             name="Accidit View"
-            icon="icons/sample.gif"
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.MainView"
             id="de.hpi.accidit.eclipse.views.MainView">
@@ -32,9 +31,8 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.MethodExplorerView"
-            icon="icons/sample.gif"
             id="de.hpi.accidit.eclipse.views.MethodExplorerView"
-            name="Method Explorer View"
+            name="Method Explorer"
             restorable="true">
       </view>
       <view
@@ -42,7 +40,7 @@
             class="de.hpi.accidit.eclipse.views.LocalsExplorerView"
             icon="icons/sample.gif"
             id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
-            name="Locals Explorer View"
+            name="Locals and Fields"
             restorable="true">
       </view>
    </extension>
@@ -94,6 +92,40 @@
             id="de.hpi.accidit.eclipse.commands.browseVariableHistory"
             name="Browse Variable History">
       </command>
+      <category
+            id="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            name="Step Navigation">
+      </category>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepOut"
+            name="Step Out">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepInto"
+            name="Step Into">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepOver"
+            name="Step Over">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepBackOut"
+            name="Step Back Out">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepBackInto"
+            name="Step Back Into">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.stepBackOver"
+            name="Step Back Over">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -112,6 +144,30 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.BrowseVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.browseVariableHistory">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepOutHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepOut">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepIntoHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepInto">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepOverHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepOver">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepBackIntoHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepBackInto">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepBackOutHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepBackOut">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.StepBackOverHandler"
+            commandId="de.hpi.accidit.eclipse.commands.stepBackOver">
       </handler>
    </extension>
    <extension
@@ -165,6 +221,50 @@
                commandId="de.hpi.accidit.eclipse.commands.browseVariableHistory"
                icon="icons/sample.gif"
                id="de.hpi.accidit.eclipse.toolbars.browseVariableHistory"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.MethodExplorerView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepInto"
+               icon="icons/step_into.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepInto"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepOver"
+               icon="icons/step_over.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepOver"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepOut"
+               icon="icons/step_out.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepOut"
+               style="push">
+         </command>
+         <separator
+               name="accidit-eclipse.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepBackOut"
+               icon="icons/step_back_out.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepBackOut"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepBackOver"
+               icon="icons/step_back_over.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepBackOver"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.stepBackInto"
+               icon="icons/step_back_into.png"
+               id="de.hpi.accidit.eclipse.toolbars.stepBackInto"
                style="push">
          </command>
       </menuContribution>

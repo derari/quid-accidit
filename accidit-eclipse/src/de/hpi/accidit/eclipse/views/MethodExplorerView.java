@@ -36,42 +36,46 @@ public class MethodExplorerView extends ViewPart {
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.MethodExplorerView";
 
-	private TreeViewer viewer;
+	private TreeViewer treeViewer;
 	private CalledMethodContentProvider contentProvider;
 
 	public MethodExplorerView() { }
 
 	@Override
 	public void createPartControl(Composite parent) {
-		viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
-		viewer.getTree().setHeaderVisible(true);
+		treeViewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		treeViewer.getTree().setHeaderVisible(true);
 		
-		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
+		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 		column0.setText("Method");
-		column0.setWidth(300);
-		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column1.setText("Call Location");
-		column1.setWidth(100);
-		TreeColumn column2 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column2.setText("Call Step");
-		column2.setWidth(50);
-		TreeColumn column3 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column3.setText("Method Id");
-		column3.setWidth(50);
+		column0.setWidth(500);
+		TreeColumn column1 = new TreeColumn(treeViewer.getTree(), SWT.RIGHT);
+		column1.setText("Call Step");
+		column1.setWidth(60);
+		TreeColumn column2 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+		column2.setText("Call Location");
+		column2.setWidth(500);
+//		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+//		column3.setText("Method Id");
+//		column3.setWidth(50);
 		
 		contentProvider = new CalledMethodContentProvider();
-		viewer.setContentProvider(contentProvider);
-		viewer.setLabelProvider(new CalledMethodLabelProvider());
-		viewer.setInput(getViewSite());
+		treeViewer.setContentProvider(contentProvider);
+		treeViewer.setLabelProvider(new CalledMethodLabelProvider());
+		treeViewer.setInput(getViewSite());
 		
-		getSite().setSelectionProvider(viewer);
+		getSite().setSelectionProvider(treeViewer);
 		
 		hookDoubleCLickAction();
 	}
 
 	@Override
 	public void setFocus() {
-		viewer.getControl().setFocus();
+		treeViewer.getControl().setFocus();
+	}
+	
+	public TreeViewer getTreeViewer() {
+		return treeViewer;
 	}
 	
 	public int getTestCaseId() {
@@ -83,11 +87,11 @@ public class MethodExplorerView extends ViewPart {
 	}
 	
 	public void refresh() {
-		viewer.refresh();
+		treeViewer.refresh();
 	}
 	
 	private void hookDoubleCLickAction() {
-		viewer.addDoubleClickListener(new IDoubleClickListener() {
+		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			public void doubleClick(DoubleClickEvent event) {
 				ISelection selection = event.getSelection();
 				Object obj = ((IStructuredSelection) selection).getFirstElement();

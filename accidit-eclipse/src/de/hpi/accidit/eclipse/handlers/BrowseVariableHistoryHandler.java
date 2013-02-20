@@ -40,7 +40,7 @@ public class BrowseVariableHistoryHandler extends AbstractHandler {
 		ElementListSelectionDialog dialog = 
 				new ElementListSelectionDialog(HandlerUtil.getActiveShell(event), new LabelProvider());
 		dialog.setElements(getLocalHistory(local, method));
-		dialog.setTitle("Which operating system are you using");
+		dialog.setTitle("The variable history.");
 		// User pressed cancel
 		if (dialog.open() != Window.OK) return false;
 		Object[] result = dialog.getResult();
