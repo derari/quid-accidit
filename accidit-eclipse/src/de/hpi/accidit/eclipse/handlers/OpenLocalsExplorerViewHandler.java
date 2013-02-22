@@ -8,9 +8,9 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.handlers.HandlerUtil;
 
-public class OpenLocalsExplorerViewHandler extends AbstractHandler {
+import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 
-	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
+public class OpenLocalsExplorerViewHandler extends AbstractHandler {
 
 	public OpenLocalsExplorerViewHandler() {}
 
@@ -22,7 +22,7 @@ public class OpenLocalsExplorerViewHandler extends AbstractHandler {
 		IWorkbenchPage page = window.getActivePage();
 
 		try {
-			page.showView(ID);
+			page.showView(LocalsExplorerView.ID);
 		} catch (PartInitException e) {
 			e.printStackTrace();
 		}

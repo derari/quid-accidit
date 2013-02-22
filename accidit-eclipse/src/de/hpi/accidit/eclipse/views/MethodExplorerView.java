@@ -36,94 +36,115 @@ public class MethodExplorerView extends ViewPart {
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.MethodExplorerView";
 
-	private TreeViewer viewer;
+	private TreeViewer treeViewer;
+	private CalledMethodContentProvider contentProvider;
 
 	public MethodExplorerView() { }
 
 	@Override
 	public void createPartControl(Composite parent) {
-		viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
-		viewer.getTree().setHeaderVisible(true);
+		treeViewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		treeViewer.getTree().setHeaderVisible(true);
 		
-		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
+		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 		column0.setText("Method");
-		column0.setWidth(300);
-		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column1.setText("File");
-		column1.setWidth(100);
+		column0.setWidth(500);
+		TreeColumn column1 = new TreeColumn(treeViewer.getTree(), SWT.RIGHT);
+		column1.setText("Call Step");
+		column1.setWidth(60);
+		TreeColumn column2 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+		column2.setText("Call Location");
+		column2.setWidth(500);
+//		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+//		column3.setText("Method Id");
+//		column3.setWidth(50);
 		
-		viewer.setContentProvider(new CalledMethodContentProvider());
-		viewer.setLabelProvider(new CalledMethodLabelProvider());
-		viewer.setInput(getViewSite());
+		contentProvider = new CalledMethodContentProvider();
+		treeViewer.setContentProvider(contentProvider);
+		treeViewer.setLabelProvider(new CalledMethodLabelProvider());
+		treeViewer.setInput(getViewSite());
 		
-		getSite().setSelectionProvider(viewer);
+		getSite().setSelectionProvider(treeViewer);
 		
 		hookDoubleCLickAction();
 	}
 
 	@Override
 	public void setFocus() {
-		viewer.getControl().setFocus();
+		treeViewer.getControl().setFocus();
+	}
+	
+	public TreeViewer getTreeViewer() {
+		return treeViewer;
+	}
+	
+	public int getTestCaseId() {
+		return contentProvider.getCurrentTestCaseId();
+	}
+	
+	public void setTestCaseId(int id) {
+		contentProvider.setCurrentTestCaseId(id);
+	}
+	
+	public void refresh() {
+		treeViewer.refresh();
 	}
 	
 	private void hookDoubleCLickAction() {
-		viewer.addDoubleClickListener(new IDoubleClickListener() {
+		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			public void doubleClick(DoubleClickEvent event) {
 				ISelection selection = event.getSelection();
 				Object obj = ((IStructuredSelection) selection).getFirstElement();
 				
 				// TODO refactor all ...
 				
-				if (!(obj instanceof CalledMethod)) {
-					return;
-				}else {
-					CalledMethod method = (CalledMethod) obj;
-					String filePath = method.type;
-										
-					// TODO put in own class to avoid multiple instances etc and use it outside of the ui thread
-					IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
-					for(IProject project : workspaceProjects) {
-						try {
-							// Check if it is a Java project
-							boolean isJavaProject = false;
-							String[] natureIds = project.getDescription().getNatureIds();
-							for(String natureId : natureIds) {
-								if(natureId.equals("org.eclipse.jdt.core.javanature")) {
-									isJavaProject = true;
-									break;
-								}
+				if (!(obj instanceof CalledMethod)) return;
+				
+				CalledMethod method = (CalledMethod) obj;
+				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
+				// TODO put in own class to avoid multiple instances etc and use it outside of the ui thread
+				IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
+				for(IProject project : workspaceProjects) {
+					try {
+						// Check if it is a Java project
+						boolean isJavaProject = false;
+						String[] natureIds = project.getDescription().getNatureIds();
+						for(String natureId : natureIds) {
+							if(natureId.equals("org.eclipse.jdt.core.javanature")) {
+								isJavaProject = true;
+								break;
 							}
-							if(!isJavaProject) {
-								// only search for source code files in java projects
+						}
+						if(!isJavaProject) {
+							// only search for source code files in java projects
+							continue;
+						}
+
+						// Search the IFile
+						IJavaProject javaProject = JavaCore.create(project);
+						IType javaFileType = javaProject.findType(filePath);
+
+						if(javaFileType != null) {
+							IResource iResource = javaFileType.getResource();
+							if (iResource == null) {
+								// TODO create window here and remove the error message.
+								System.err.println("iResource is null.");
 								continue;
 							}
-							
-							// Search the IFile
-							IJavaProject javaProject = JavaCore.create(project);
-							IType javaFileType = javaProject.findType(filePath);
-							
-							if(javaFileType != null) {
-								IResource iResource = javaFileType.getResource();
-								if (iResource == null) {
-									// TODO create window here and remove the error message.
-									System.err.println("iResource is null.");
-									continue;
-								}
-								
-								IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
-								IWorkbenchPage dPage = MethodExplorerView.this.getViewSite().getWorkbenchWindow().getActivePage();
-								if (dPage != null) {
-									try {										
-										IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
-										highlightLine(textEditor, method.callLine);
-									}catch (Exception e) {
-										// log exception
-									}
+
+							IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+							IWorkbenchPage dPage = MethodExplorerView.this.getViewSite().getWorkbenchWindow().getActivePage();
+							if (dPage != null) {
+								try {										
+									IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
+									highlightLine(textEditor, method.callLine);
+								}catch (Exception e) {
+									// log exception
 								}
 							}
-						} catch (CoreException e) {
-							e.printStackTrace();
 						}
+					} catch (CoreException e) {
+						e.printStackTrace();
 					}
 				}
 			};
@@ -131,9 +152,7 @@ public class MethodExplorerView extends ViewPart {
 	}
 	
 	private void highlightLine(IEditorPart editorPart, int lineNumber) {
-		if (!(editorPart instanceof ITextEditor) || lineNumber <= 0) {
-			return;
-		}
+		if (!(editorPart instanceof ITextEditor) || lineNumber <= 0) return;
 		
 		ITextEditor textEditor = (ITextEditor) editorPart;
 		IDocument document = textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
@@ -151,5 +170,5 @@ public class MethodExplorerView extends ViewPart {
 			}
 		}
 	}
-
+	
 }

@@ -23,7 +23,9 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 		
 		switch(columnIndex) {
 		case 0: return String.format("%s.%s", method.type, method.method);
-		case 1: return getFileName(method);
+		case 1: return String.valueOf(method.callStep);
+		case 2: return getFileName(method);
+//		case 3: return String.valueOf(method.methodId);
 		default: return null;
 		}
 	}
@@ -34,11 +36,10 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 	 * @return the file name and the line number
 	 */
 	public String getFileName(CalledMethod method) {
-		if (method.callLine < 1)
-			return "";
+		if (method.callLine < 1) return "";
 		
-		String typeName = method.type.substring(method.type.lastIndexOf(".") + 1);
-		return String.format("%s.java:%d", typeName, method.callLine);
+		//String typeName = method.type.substring(method.type.lastIndexOf(".") + 1);
+		return String.format("%s.java:%d", method.parentMethod.type, method.callLine);
 	}
 
 }

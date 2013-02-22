@@ -13,14 +13,12 @@ import org.eclipse.jface.viewers.Viewer;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 
 public class LocalsContentProvider implements ITreeContentProvider {
-	
+		
 	private Connection dbConnection;
 	
-	private static int currentTestId = 2;
+	public int currentTestId = 0;
 	
-	private boolean nothingSelected = true;
-	private int currentMethodId;
-	private long currentMethodStep;
+	private CalledMethod selectedMethod;
 	
 	public LocalsContentProvider() {
 		try {
@@ -30,6 +28,8 @@ public class LocalsContentProvider implements ITreeContentProvider {
 			System.err.println("No database connection available. Exiting.");
 			System.exit(0);
 		}
+		
+		this.selectedMethod = null;
 	}
 
 	@Override
@@ -38,31 +38,57 @@ public class LocalsContentProvider implements ITreeContentProvider {
 	@Override
 	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
 	
-	public void calledMethodSelected(CalledMethod method) {
-		nothingSelected = false;
-		currentMethodId = method.methodId;
-		currentMethodStep = method.callStep;
+	public void setSelectedMethod(CalledMethod method) {
+		this.selectedMethod = method;
+		
+		if(selectedMethod != null) this.currentTestId = selectedMethod.testId;		
 	}
 
 	@Override
 	public Object[] getElements(Object inputElement) {
-		if(nothingSelected) {
-			return new Object[0];
-		}
+		if(selectedMethod == null) return new Object[0];
+		if(selectedMethod.parentMethod == null) return new Object[0];
+		
+		// TODO: fix, currently not the actual type but the declared one.
+		// TODO: evaluate if callStep or exitStep is interesting here!
 		
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT methodId, variableId, variable, arg, primType, valueId, step ");
-		query.append("FROM vvariabletrace ");
-		query.append("WHERE testId = " + currentTestId + " ");
-		query.append("AND methodId = " + currentMethodId + " ");
-		query.append("ORDER BY variable");
+		query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
+		query.append("FROM VariableTrace vt ");
+		query.append("JOIN Variable v ON v.id = vt.variableId ");
+		query.append("JOIN Type t ON t.id = v.typeId ");
+		query.append("WHERE vt.testId = " + currentTestId + " ");
+		query.append("AND vt.step <= " + selectedMethod.callStep + " ");
+		query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
+		query.append("AND v.methodId = " + selectedMethod.parentMethod.methodId + " ");
+		query.append("ORDER BY v.name");
+		
+		System.out.println("Querying getElements: " + query.toString());
 		
 		return queryForLocals(query.toString()).toArray();
 	}
 
 	@Override
 	public Object[] getChildren(Object parentElement) {
-		return null;
+		if (!(parentElement instanceof LocalObject)) return null;
+		
+		LocalObject local = (LocalObject) parentElement;
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT f.Id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
+		query.append("FROM Field f ");
+		query.append("LEFT OUTER JOIN (");
+		query.append("	SELECT step, fieldId, primType, valueId ");
+		query.append("	FROM PutTrace ");
+		query.append("	WHERE testId = " + currentTestId + " ");
+		query.append("	AND thisId = " + local.objectId + " ");
+		query.append("	AND step <= " + selectedMethod.callStep + " ");
+		query.append(") pt ON pt.fieldId = f.id ");
+		query.append("JOIN Type t ON t.id = f.typeId ");
+		query.append("WHERE f.declaringTypeID = " + local.typeId);
+		
+		System.out.println("Querying getChildren: " + query.toString());
+		
+		return queryForLocals(query.toString()).toArray();
 	}
 
 	@Override
@@ -72,12 +98,12 @@ public class LocalsContentProvider implements ITreeContentProvider {
 
 	@Override
 	public boolean hasChildren(Object element) {
-		Local local = (Local) element;
+		LocalBase local = (LocalBase) element;
 		return local.isObject();
 	}
 	
-	private List<Local> queryForLocals(String query) {
-		List<Local> locals = new LinkedList<Local>();
+	private List<LocalBase> queryForLocals(String query) {
+		List<LocalBase> locals = new LinkedList<LocalBase>();
 		
 		ResultSet result = null;
 		try {
@@ -100,15 +126,37 @@ public class LocalsContentProvider implements ITreeContentProvider {
 		return locals;
 	}
 	
-	private Local buildLocal(ResultSet result) throws SQLException {
-		Local local = new Local();
-		local.methodId	= result.getInt(1);
-		local.id		= result.getInt(2);
-		local.name		= result.getString(3);
-		local.arg		= result.getInt(4);
-		local.primType	= result.getString(5).charAt(0);
-		local.valueId	= result.getLong(6);
-		local.step		= result.getInt(7);
+	private LocalBase buildLocal(ResultSet result) throws SQLException {
+		LocalBase local = createLocal(result);
+		setLocalBaseValues(local, result);
 		return local;
+	}
+	
+	private LocalBase createLocal(ResultSet result) throws SQLException {
+		if(result.getString(3) == null) return new LocalPrimitive("null");
+		
+		char primType = result.getString(3).charAt(0);
+		long valueId = result.getLong(4);
+		if(primType == 'L') return new LocalObject(valueId);
+		
+		switch(primType) {
+		case 'Z': return new LocalPrimitive(String.valueOf(valueId == 1)); // boolean
+		case 'B': return new LocalPrimitive(String.valueOf((byte) valueId)); // byte
+		case 'C': return new LocalPrimitive(String.valueOf((char) valueId)); // char
+		case 'D': return new LocalPrimitive(String.valueOf(Double.longBitsToDouble(valueId))); // double
+		case 'F': return new LocalPrimitive(String.valueOf(Float.intBitsToFloat((int) valueId))); // float
+		case 'I': return new LocalPrimitive(String.valueOf(valueId)); // int
+		case 'J': return new LocalPrimitive(String.valueOf(valueId)); // long
+		case 'S': return new LocalPrimitive(String.valueOf((short) valueId)); // short
+		default: return null;
+		}
+	}
+
+	private void setLocalBaseValues(LocalBase local, ResultSet result) throws SQLException {
+		local.id		= result.getInt(1);
+		local.name		= result.getString(2);
+		local.step		= result.getInt(5);
+		local.typeId	= result.getInt(6);
+		local.type		= result.getString(7);
 	}
 }
