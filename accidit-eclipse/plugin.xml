@@ -31,6 +31,7 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.MethodExplorerView"
+            icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.MethodExplorerView"
             name="Method Explorer"
             restorable="true">
@@ -38,7 +39,7 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.LocalsExplorerView"
-            icon="icons/sample.gif"
+            icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
             name="Locals and Fields"
             restorable="true">
@@ -219,7 +220,7 @@
             locationURI="toolbar:de.hpi.accidit.eclipse.views.LocalsExplorerView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.browseVariableHistory"
-               icon="icons/sample.gif"
+               icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.toolbars.browseVariableHistory"
                style="push">
          </command>

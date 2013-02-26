@@ -112,7 +112,9 @@ public class BrowseVariableHistoryHandler extends AbstractHandler {
 		
 		@Override
 		public String toString() {
-			return String.format("%d: %d (%s)", step, valueId, primType);
+			// TODO change
+			
+			return String.format("%d: %s (%s)", step, "null", primType);
 		}
 	}
 

@@ -54,7 +54,7 @@ public class MethodExplorerView extends ViewPart {
 		column1.setWidth(60);
 		TreeColumn column2 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 		column2.setText("Call Location");
-		column2.setWidth(500);
+		column2.setWidth(200);
 //		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 //		column3.setText("Method Id");
 //		column3.setWidth(50);
