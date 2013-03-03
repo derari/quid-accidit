@@ -11,10 +11,10 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
-import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
@@ -66,7 +66,7 @@ public class MethodExplorerView extends ViewPart {
 		
 		getSite().setSelectionProvider(treeViewer);
 		
-		hookDoubleCLickAction();
+		hookSelectionChangedListener();
 	}
 
 	@Override
@@ -90,65 +90,71 @@ public class MethodExplorerView extends ViewPart {
 		treeViewer.refresh();
 	}
 	
-	private void hookDoubleCLickAction() {
-		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
-			public void doubleClick(DoubleClickEvent event) {
-				ISelection selection = event.getSelection();
-				Object obj = ((IStructuredSelection) selection).getFirstElement();
+	private void hookSelectionChangedListener() {
+		treeViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			
+			@Override
+			public void selectionChanged(SelectionChangedEvent event) {
+				handleSelection(event.getSelection());
 				
-				// TODO refactor all ...
-				
-				if (!(obj instanceof CalledMethod)) return;
-				
-				CalledMethod method = (CalledMethod) obj;
-				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
-				// TODO put in own class to avoid multiple instances etc and use it outside of the ui thread
-				IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
-				for(IProject project : workspaceProjects) {
-					try {
-						// Check if it is a Java project
-						boolean isJavaProject = false;
-						String[] natureIds = project.getDescription().getNatureIds();
-						for(String natureId : natureIds) {
-							if(natureId.equals("org.eclipse.jdt.core.javanature")) {
-								isJavaProject = true;
-								break;
-							}
-						}
-						if(!isJavaProject) {
-							// only search for source code files in java projects
-							continue;
-						}
-
-						// Search the IFile
-						IJavaProject javaProject = JavaCore.create(project);
-						IType javaFileType = javaProject.findType(filePath);
-
-						if(javaFileType != null) {
-							IResource iResource = javaFileType.getResource();
-							if (iResource == null) {
-								// TODO create window here and remove the error message.
-								System.err.println("iResource is null.");
-								continue;
-							}
-
-							IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
-							IWorkbenchPage dPage = MethodExplorerView.this.getViewSite().getWorkbenchWindow().getActivePage();
-							if (dPage != null) {
-								try {										
-									IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
-									highlightLine(textEditor, method.callLine);
-								}catch (Exception e) {
-									// log exception
-								}
-							}
-						}
-					} catch (CoreException e) {
-						e.printStackTrace();
+			}
+		});
+	}
+	
+	private void handleSelection(ISelection selection) {
+		Object obj = ((IStructuredSelection) selection).getFirstElement();
+		
+		// TODO refactor all ...
+		
+		if (!(obj instanceof CalledMethod)) return;
+		
+		CalledMethod method = (CalledMethod) obj;
+		String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
+		// TODO put in own class to avoid multiple instances etc and use it outside of the ui thread
+		IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
+		for(IProject project : workspaceProjects) {
+			try {
+				// Check if it is a Java project
+				boolean isJavaProject = false;
+				String[] natureIds = project.getDescription().getNatureIds();
+				for(String natureId : natureIds) {
+					if(natureId.equals("org.eclipse.jdt.core.javanature")) {
+						isJavaProject = true;
+						break;
 					}
 				}
-			};
-		});
+				if(!isJavaProject) {
+					// only search for source code files in java projects
+					continue;
+				}
+
+				// Search the IFile
+				IJavaProject javaProject = JavaCore.create(project);
+				IType javaFileType = javaProject.findType(filePath);
+
+				if(javaFileType != null) {
+					IResource iResource = javaFileType.getResource();
+					if (iResource == null) {
+						// TODO create window here and remove the error message.
+						System.err.println("iResource is null.");
+						continue;
+					}
+
+					IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+					IWorkbenchPage dPage = MethodExplorerView.this.getViewSite().getWorkbenchWindow().getActivePage();
+					if (dPage != null) {
+						try {										
+							IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
+							highlightLine(textEditor, method.callLine);
+						}catch (Exception e) {
+							// log exception
+						}
+					}
+				}
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
+		}		
 	}
 	
 	private void highlightLine(IEditorPart editorPart, int lineNumber) {
