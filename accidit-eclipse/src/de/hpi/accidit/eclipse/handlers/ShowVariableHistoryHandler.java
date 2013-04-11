@@ -32,7 +32,6 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		LocalBase local = (LocalBase) selectedLocals.getFirstElement();
 		
 		ITreeContentProvider contentProvider = new LocalsHistoryContentProvider(method.testId, method, local);
-//		ILabelProvider labelProvider = new LocalsHistoryLabelProvider();
 		ILabelProvider labelProvider = new LocalsLabelProvider();
 		
 		ElementTreeSelectionDialog dialog = 
@@ -45,6 +44,8 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();
 			if (result.length < 1) return null;
+			
+			// TODO: process result to navigate in the MethodExplorerView
 			
 			System.out.println("Dialog result: " + result[0]);
 		}
