@@ -50,8 +50,7 @@ public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 		viewer.setInput(getViewSite());
 		
 		getSite().setSelectionProvider(viewer);
-		
-		getSite().getPage().addSelectionListener(MethodExplorerView.ID, this);
+		getSite().getPage().addSelectionListener(this);
 	}
 
 	@Override
@@ -68,8 +67,11 @@ public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 	@Override
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
 		if (part instanceof MethodExplorerView && selection instanceof ITreeSelection) {
-			ITreeSelection treeSelection = (ITreeSelection) selection;			
-			selectedMethodChanged((CalledMethod) treeSelection.getFirstElement());
+			Object obj = ((ITreeSelection) selection).getFirstElement();
+			if(obj instanceof CalledMethod) {
+				CalledMethod method = (CalledMethod) obj;
+				selectedMethodChanged(method);
+			}
 		}
 	}
 

@@ -90,8 +90,8 @@
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
-            id="de.hpi.accidit.eclipse.commands.browseVariableHistory"
-            name="Browse Variable History">
+            id="de.hpi.accidit.eclipse.commands.showVariableHistory"
+            name="Show Variable History">
       </command>
       <category
             id="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
@@ -143,10 +143,6 @@
             commandId="de.hpi.accidit.eclipse.commands.selectTestCase">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.BrowseVariableHistoryHandler"
-            commandId="de.hpi.accidit.eclipse.commands.browseVariableHistory">
-      </handler>
-      <handler
             class="de.hpi.accidit.eclipse.handlers.StepOutHandler"
             commandId="de.hpi.accidit.eclipse.commands.stepOut">
       </handler>
@@ -169,6 +165,10 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.StepBackOverHandler"
             commandId="de.hpi.accidit.eclipse.commands.stepBackOver">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
+            commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
       </handler>
    </extension>
    <extension
@@ -219,9 +219,9 @@
             allPopups="false"
             locationURI="toolbar:de.hpi.accidit.eclipse.views.LocalsExplorerView">
          <command
-               commandId="de.hpi.accidit.eclipse.commands.browseVariableHistory"
+               commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
-               id="de.hpi.accidit.eclipse.toolbars.browseVariableHistory"
+               id="de.hpi.accidit.eclipse.toolbars.showVariableHistory"
                style="push">
          </command>
       </menuContribution>

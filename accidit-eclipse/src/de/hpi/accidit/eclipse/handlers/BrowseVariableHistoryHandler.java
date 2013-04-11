@@ -23,6 +23,8 @@ import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.elements.CalledMethod;
 import de.hpi.accidit.eclipse.views.elements.LocalBase;
 
+// TODO remove. outdated!
+
 public class BrowseVariableHistoryHandler extends AbstractHandler {
 
 	@Override

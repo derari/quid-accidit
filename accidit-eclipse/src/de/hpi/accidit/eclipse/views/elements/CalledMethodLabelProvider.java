@@ -25,7 +25,7 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 		case 0: return String.format("%s.%s", method.type, method.method);
 		case 1: return String.valueOf(method.callStep);
 		case 2: return getFileName(method);
-//		case 3: return String.valueOf(method.methodId);
+		case 3: return String.valueOf(method.methodId);
 		default: return null;
 		}
 	}

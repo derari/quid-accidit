@@ -1,7 +1,8 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
-import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -14,7 +15,7 @@ import de.hpi.accidit.eclipse.views.elements.CalledMethodContentProvider;
 import de.hpi.accidit.eclipse.views.elements.CalledMethodLabelProvider;
 import de.hpi.accidit.eclipse.views.elements.JavaSrcFilesLocator;
 
-public class MethodExplorerView extends ViewPart {
+public class MethodExplorerView extends ViewPart implements ISelectionChangedListener {
 
 	/**
 	 * The ID of the view as specified by the extension.
@@ -31,7 +32,7 @@ public class MethodExplorerView extends ViewPart {
 	public void createPartControl(Composite parent) {
 		srcFilesLocator = new JavaSrcFilesLocator();
 		
-		treeViewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
+		treeViewer = new TreeViewer(parent, SWT.H_SCROLL | SWT.V_SCROLL);
 		treeViewer.getTree().setHeaderVisible(true);
 		
 		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
@@ -43,9 +44,9 @@ public class MethodExplorerView extends ViewPart {
 		TreeColumn column2 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 		column2.setText("Call Location");
 		column2.setWidth(200);
-//		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
-//		column3.setText("Method Id");
-//		column3.setWidth(50);
+		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+		column3.setText("Method Id");
+		column3.setWidth(50);
 		
 		contentProvider = new CalledMethodContentProvider();
 		treeViewer.setContentProvider(contentProvider);
@@ -53,8 +54,7 @@ public class MethodExplorerView extends ViewPart {
 		treeViewer.setInput(getViewSite());
 		
 		getSite().setSelectionProvider(treeViewer);
-		
-		hookSelectionChangedListener();
+		treeViewer.addSelectionChangedListener(this);
 	}
 
 	@Override
@@ -77,20 +77,19 @@ public class MethodExplorerView extends ViewPart {
 	public void refresh() {
 		treeViewer.refresh();
 	}
-	
-	private void hookSelectionChangedListener() {
-		treeViewer.addSelectionChangedListener(new ISelectionChangedListener() {
-			
-			@Override
-			public void selectionChanged(SelectionChangedEvent event) {
-				Object obj = ((IStructuredSelection) event.getSelection()).getFirstElement();
-				if (!(obj instanceof CalledMethod)) return;
+
+	@Override
+	public void selectionChanged(SelectionChangedEvent event) {
+		ISelection selection = event.getSelection();
+		if (selection instanceof ITreeSelection) {
+			Object obj = ((ITreeSelection) selection).getFirstElement();
+			if (obj instanceof CalledMethod) {
 				CalledMethod method = (CalledMethod) obj;
 				
 				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
 				int line = method.callLine;
 				srcFilesLocator.open(filePath, line, getViewSite().getPage());
 			}
-		});
-	}	
+		}	
+	}
 }

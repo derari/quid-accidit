@@ -13,7 +13,7 @@ import de.hpi.accidit.eclipse.views.MethodExplorerView;
 public class StepBackOverHandler extends AbstractHandler {
 
 	@Override
-	public Object execute(ExecutionEvent event) throws ExecutionException {
+	public Object execute(ExecutionEvent event) throws ExecutionException {		
 		MethodExplorerView methodExplorerView = 
 				(MethodExplorerView) HandlerUtil.getActiveWorkbenchWindow(event).getActivePage().findView(MethodExplorerView.ID);
 		TreeViewer viewer = methodExplorerView.getTreeViewer();

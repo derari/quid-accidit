@@ -13,6 +13,8 @@ public abstract class LocalBase {
 	public int step;
 	
 	public int methodId;
+	
+	public boolean isLocalVariable;
 
 	public String getName() {
 		return name;
