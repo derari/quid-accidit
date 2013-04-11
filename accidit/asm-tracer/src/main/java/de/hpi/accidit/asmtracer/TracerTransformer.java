@@ -76,7 +76,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (className.startsWith(e))
                 return classfileBuffer;
         }
-        //System.out.println(">> " + className + "     " + loader);
+//        System.out.println(">> " + className + "     " + loader);
         if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
         return transform(classfileBuffer, loader);
     }

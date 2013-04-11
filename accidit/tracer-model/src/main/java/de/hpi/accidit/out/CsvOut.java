@@ -1,6 +1,8 @@
 package de.hpi.accidit.out;
 
 import de.hpi.accidit.model.*;
+import de.hpi.accidit.out.internal.AccBufferedOutputStream;
+import de.hpi.accidit.out.internal.AccPrintStream;
 import de.hpi.accidit.trace.*;
 import java.io.*;
 
@@ -11,11 +13,15 @@ import java.io.*;
 public class CsvOut implements Out {
     
     public static class Csv {
-        final PrintStream ps;
+        final AccPrintStream ps;
         boolean newLine = true;
 
         public Csv(File dir, String name) throws FileNotFoundException {
-            this.ps = new PrintStream(new File(dir, name+".csv"));
+            
+            this.ps = new AccPrintStream(
+                    new AccBufferedOutputStream(
+                    new FileOutputStream(new File(dir, name+".csv")),
+                    1024 * 1024 * 16));
         }
         
         private void sep() {
