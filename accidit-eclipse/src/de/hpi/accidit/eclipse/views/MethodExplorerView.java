@@ -89,6 +89,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
 				int line = method.callLine;
 				srcFilesLocator.open(filePath, line, getViewSite().getPage());
+				setFocus();
 			}
 		}	
 	}
