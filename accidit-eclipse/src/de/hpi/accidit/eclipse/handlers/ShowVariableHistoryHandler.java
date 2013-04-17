@@ -11,12 +11,12 @@ import org.eclipse.ui.ISelectionService;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.dataClasses.Method;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
-import de.hpi.accidit.eclipse.views.provider.LocalsHistoryContentProvider;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {

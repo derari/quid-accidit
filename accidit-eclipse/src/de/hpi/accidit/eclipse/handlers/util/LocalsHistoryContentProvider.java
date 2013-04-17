@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.views.provider;
+package de.hpi.accidit.eclipse.handlers.util;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
