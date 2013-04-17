@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.views.util;
+package de.hpi.accidit.eclipse.handlers.util;
 
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -6,6 +6,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 
@@ -30,19 +31,20 @@ public class LocalsHistorySelectionDialog extends ElementTreeSelectionDialog {
 			System.out.println("LocalsHistorySelectionDialog: viewer is null!");
 			return;
 		}
+		Tree tree = viewer.getTree();
 		
-		viewer.getTree().setHeaderVisible(true);
+		tree.setHeaderVisible(true);
 		
-		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
+		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
 		column0.setText("Local Name");
 		column0.setWidth(100);
-		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
+		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
 		column1.setText("Value");
 		column1.setWidth(100);
-		TreeColumn column2 = new TreeColumn(viewer.getTree(), SWT.RIGHT);
+		TreeColumn column2 = new TreeColumn(tree, SWT.RIGHT);
 		column2.setText("Change Step");
 		column2.setWidth(75);
-		TreeColumn column3 = new TreeColumn(viewer.getTree(), SWT.LEFT);
+		TreeColumn column3 = new TreeColumn(tree, SWT.LEFT);
 		column3.setText("Type");
 		column3.setWidth(200);
 	}
