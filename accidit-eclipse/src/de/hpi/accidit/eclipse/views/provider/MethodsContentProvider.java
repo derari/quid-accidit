@@ -13,13 +13,13 @@ import org.eclipse.jface.viewers.Viewer;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.views.dataClasses.Method;
 
-public class CalledMethodContentProvider implements ITreeContentProvider {
+public class MethodsContentProvider implements ITreeContentProvider {
 	
 	private Connection dbConnection;
 	
 	private int currentTestCaseId = 0;
 	
-	public CalledMethodContentProvider() {
+	public MethodsContentProvider() {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
 		} catch (SQLException e) {

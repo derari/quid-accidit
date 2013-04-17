@@ -6,7 +6,7 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hpi.accidit.eclipse.views.dataClasses.Method;
 
-public class CalledMethodLabelProvider extends LabelProvider implements
+public class MethodsLabelProvider extends LabelProvider implements
 		ITableLabelProvider {
 
 	@Override

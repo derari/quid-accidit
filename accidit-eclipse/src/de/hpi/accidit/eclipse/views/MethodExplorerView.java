@@ -11,8 +11,8 @@ import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.views.dataClasses.Method;
-import de.hpi.accidit.eclipse.views.provider.CalledMethodContentProvider;
-import de.hpi.accidit.eclipse.views.provider.CalledMethodLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.MethodsContentProvider;
+import de.hpi.accidit.eclipse.views.provider.MethodsLabelProvider;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 public class MethodExplorerView extends ViewPart implements ISelectionChangedListener {
@@ -23,7 +23,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 	public static final String ID = "de.hpi.accidit.eclipse.views.MethodExplorerView";
 
 	private TreeViewer treeViewer;
-	private CalledMethodContentProvider contentProvider;
+	private MethodsContentProvider contentProvider;
 	private JavaSrcFilesLocator srcFilesLocator;
 
 	public MethodExplorerView() { }
@@ -48,9 +48,9 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		column3.setText("Method Id");
 		column3.setWidth(50);
 		
-		contentProvider = new CalledMethodContentProvider();
+		contentProvider = new MethodsContentProvider();
 		treeViewer.setContentProvider(contentProvider);
-		treeViewer.setLabelProvider(new CalledMethodLabelProvider());
+		treeViewer.setLabelProvider(new MethodsLabelProvider());
 		treeViewer.setInput(getViewSite());
 		
 		getSite().setSelectionProvider(treeViewer);
