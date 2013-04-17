@@ -1,4 +1,5 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.dataClasses;
+
 
 public class LocalPrimitive extends LocalBase {
 

@@ -10,10 +10,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.part.ViewPart;
 
-import de.hpi.accidit.eclipse.views.elements.CalledMethod;
-import de.hpi.accidit.eclipse.views.elements.CalledMethodContentProvider;
-import de.hpi.accidit.eclipse.views.elements.CalledMethodLabelProvider;
-import de.hpi.accidit.eclipse.views.elements.JavaSrcFilesLocator;
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
+import de.hpi.accidit.eclipse.views.provider.CalledMethodContentProvider;
+import de.hpi.accidit.eclipse.views.provider.CalledMethodLabelProvider;
+import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 public class MethodExplorerView extends ViewPart implements ISelectionChangedListener {
 
@@ -83,8 +83,8 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		ISelection selection = event.getSelection();
 		if (selection instanceof ITreeSelection) {
 			Object obj = ((ITreeSelection) selection).getFirstElement();
-			if (obj instanceof CalledMethod) {
-				CalledMethod method = (CalledMethod) obj;
+			if (obj instanceof Method) {
+				Method method = (Method) obj;
 				
 				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
 				int line = method.callLine;

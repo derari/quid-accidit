@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.provider;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -11,6 +11,7 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
 
 public class CalledMethodContentProvider implements ITreeContentProvider {
 	
@@ -56,9 +57,9 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 
 	@Override
 	public Object[] getChildren(Object parentElement) {
-		if (!(parentElement instanceof CalledMethod)) return null;
+		if (!(parentElement instanceof Method)) return null;
 				
-		CalledMethod parentMethod = (CalledMethod) parentElement;
+		Method parentMethod = (Method) parentElement;
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT ");
 		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
@@ -74,22 +75,22 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 
 	@Override
 	public Object getParent(Object element) {
-		if (!(element instanceof CalledMethod)) return null;
+		if (!(element instanceof Method)) return null;
 		
-		CalledMethod calledMethod = (CalledMethod) element;
+		Method calledMethod = (Method) element;
 		return calledMethod.parentMethod;
 	}
 
 	@Override
 	public boolean hasChildren(Object element) {
-		if (!(element instanceof CalledMethod)) return false;
+		if (!(element instanceof Method)) return false;
 		
-		CalledMethod method = (CalledMethod) element;
+		Method method = (Method) element;
 		return getChildren(method).length != 0;
 	}
 	
-	private List<CalledMethod> queryForCalledMethods(String query, CalledMethod parentMethod) {
-		List<CalledMethod> calledMethods = new LinkedList<CalledMethod>();
+	private List<Method> queryForCalledMethods(String query, Method parentMethod) {
+		List<Method> calledMethods = new LinkedList<Method>();
 		
 		ResultSet result = null;
 		try {
@@ -114,8 +115,8 @@ public class CalledMethodContentProvider implements ITreeContentProvider {
 		return calledMethods;
 	}
 	
-	private CalledMethod buildCalledMethod(ResultSet result, CalledMethod parentMethod) throws SQLException {
-		CalledMethod method = new CalledMethod();
+	private Method buildCalledMethod(ResultSet result, Method parentMethod) throws SQLException {
+		Method method = new Method();
 		method.testId		= result.getInt(1);
 		method.callStep		= result.getLong(2);
 		method.exitStep		= result.getInt(3);

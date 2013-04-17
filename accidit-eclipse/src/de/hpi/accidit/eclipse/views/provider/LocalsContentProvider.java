@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.provider;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -11,16 +11,19 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
+import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
+import de.hpi.accidit.eclipse.views.dataClasses.LocalObject;
+import de.hpi.accidit.eclipse.views.dataClasses.LocalPrimitive;
 
-public class LocalsHistoryContentProvider implements ITreeContentProvider {
-	
+public class LocalsContentProvider implements ITreeContentProvider {
+		
 	private Connection dbConnection;
 	
 	private int selectedTestCaseId;
-	private CalledMethod selectedMethod;
-	private LocalBase selectedLocal;
+	private Method selectedMethod;
 	
-	public LocalsHistoryContentProvider(int selectedTestCaseId,	CalledMethod selectedMethod, LocalBase selectedLocal) {
+	public LocalsContentProvider() {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
 		} catch (SQLException e) {
@@ -28,49 +31,51 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 			System.err.println("No database connection available. Exiting.");
 			System.exit(0);
 		}
-		
-		this.selectedTestCaseId = selectedTestCaseId;
-		this.selectedMethod = selectedMethod;
-		this.selectedLocal = selectedLocal;
 	}
 
 	@Override
-	public void dispose() {}
+	public void dispose() { }
 
 	@Override
-	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {}
+	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
+	
+	public void setSelectedMethod(Method method) {
+		// TODO refactor into setSelectedMethod and setTestId
+		
+		this.selectedMethod = method;
+		
+		if(method != null) this.selectedTestCaseId = method.testId;		
+	}
 
 	@Override
 	public Object[] getElements(Object inputElement) {
+		if(selectedMethod == null) return new Object[0];
+		if(selectedMethod.parentMethod == null) return new Object[0];
+		
+		// TODO: fix, currently not the actual type but the declared one.
+		// TODO: evaluate if callStep or exitStep is interesting here!
+		
 		StringBuilder query = new StringBuilder();
+		query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
+		query.append("FROM VariableTrace vt ");
+		query.append("JOIN Variable v ON v.id = vt.variableId ");
+		query.append("JOIN Type t ON t.id = v.typeId ");
+		query.append("WHERE vt.testId = " + selectedTestCaseId + " ");
+		query.append("AND vt.step <= " + selectedMethod.callStep + " ");
+		query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
+		query.append("AND v.methodId = " + selectedMethod.parentMethod.methodId + " ");
+		query.append("ORDER BY v.name");
 		
-		if(selectedLocal.isLocalVariable) {
-			query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
-			query.append("FROM VariableTrace vt ");
-			query.append("JOIN Variable v ON v.id = vt.variableId AND v.methodId = vt.methodId ");
-			query.append("JOIN Type t ON t.id = v.typeId ");
-			query.append("WHERE vt.testId = " + selectedTestCaseId + " ");
-			query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
-			query.append("AND vt.variableId = " + selectedLocal.id + " ");
-			query.append("ORDER BY vt.step");
-		} else {
-			query.append("SELECT f.id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
-			query.append("FROM PutTrace pt ");
-			query.append("JOIN Field f ON f.id = pt.fieldId ");
-			query.append("JOIN Type t ON t.id = f.typeId ");
-			query.append("WHERE pt.testId = " + selectedTestCaseId + " ");
-			query.append("AND pt.fieldId = " + selectedLocal.id + " ");
-			query.append("ORDER BY pt.step");
-		}
+		System.out.println("Querying getElements: " + query.toString());
 		
-		return queryForLocals(query.toString()).toArray();
+		return queryForLocals(query.toString(), true).toArray();
 	}
 
 	@Override
 	public Object[] getChildren(Object parentElement) {
 		if (!(parentElement instanceof LocalObject)) return null;
-		LocalObject local = (LocalObject) parentElement;
 		
+		LocalObject local = (LocalObject) parentElement;
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT f.Id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
 		query.append("FROM Field f ");
@@ -86,7 +91,7 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		
 		System.out.println("Querying getChildren: " + query.toString());
 		
-		return queryForLocals(query.toString()).toArray();
+		return queryForLocals(query.toString(), false).toArray();
 	}
 
 	@Override
@@ -100,11 +105,7 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		return local.isObject();
 	}
 	
-	/* *************************************************** */
-	
-	// TODO refactor. copy from LocalsContentProvider
-	
-	private List<LocalBase> queryForLocals(String query) {
+	private List<LocalBase> queryForLocals(String query, boolean areLocalVariables) {
 		List<LocalBase> locals = new LinkedList<LocalBase>();
 		
 		ResultSet result = null;
@@ -112,12 +113,13 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 			Statement statement = dbConnection.createStatement();
 			result = statement.executeQuery(query);
 		} catch (SQLException e) {
-			System.err.println("Locals not retrievable.");
+			System.err.println("Locals not retrievable. Exiting.");
 			e.printStackTrace();
+			System.exit(0);
 		}
 		
 		try {
-			while(result.next()) locals.add(buildLocal(result));
+			while(result.next()) locals.add(buildLocal(result, areLocalVariables));
 		} catch (SQLException e) {
 			System.err.println("Failed to process result set. Exiting.");
 			e.printStackTrace();
@@ -127,9 +129,10 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		return locals;
 	}
 	
-	private LocalBase buildLocal(ResultSet result) throws SQLException {
+	private LocalBase buildLocal(ResultSet result, boolean isLocalVariable) throws SQLException {
 		LocalBase local = createLocal(result);
 		setLocalBaseFields(local, result);
+		local.isLocalVariable = isLocalVariable;
 		return local;
 	}
 	
@@ -138,12 +141,9 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		
 		char primType = result.getString(3).charAt(0);
 		long valueId = result.getLong(4);
+		if(primType == 'L') return new LocalObject(valueId);
 		
-		//System.out.println("LocalsHistoryContentProvider: createLocal: valueId is " + valueId);
-		
-		if (primType == 'L') return new LocalObject(valueId);
-		
-		switch (primType) {
+		switch(primType) {
 		case 'Z': return new LocalPrimitive(String.valueOf(valueId == 1)); // boolean
 		case 'B': return new LocalPrimitive(String.valueOf((byte) valueId)); // byte
 		case 'C': return new LocalPrimitive(String.valueOf((char) valueId)); // char
@@ -156,12 +156,11 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		}
 	}
 
-	private void setLocalBaseFields(LocalBase local, ResultSet result) throws SQLException {
+	private void setLocalBaseFields(LocalBase local, ResultSet result) throws SQLException {		
 		local.id		= result.getInt(1);
 		local.name		= result.getString(2);
 		local.step		= result.getInt(5);
 		local.typeId	= result.getInt(6);
 		local.type		= result.getString(7);
 	}
-
 }

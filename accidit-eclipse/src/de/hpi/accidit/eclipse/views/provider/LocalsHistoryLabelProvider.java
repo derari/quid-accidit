@@ -1,6 +1,8 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.provider;
 
 import org.eclipse.jface.viewers.LabelProvider;
+
+import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 
 public class LocalsHistoryLabelProvider extends LabelProvider {
 

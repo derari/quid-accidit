@@ -1,8 +1,10 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.provider;
 
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
+
+import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 
 public class LocalsLabelProvider extends LabelProvider implements
 		ITableLabelProvider {

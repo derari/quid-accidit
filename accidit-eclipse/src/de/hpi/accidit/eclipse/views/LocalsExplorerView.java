@@ -10,9 +10,9 @@ import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 
-import de.hpi.accidit.eclipse.views.elements.CalledMethod;
-import de.hpi.accidit.eclipse.views.elements.LocalsContentProvider;
-import de.hpi.accidit.eclipse.views.elements.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
+import de.hpi.accidit.eclipse.views.provider.LocalsContentProvider;
+import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
 public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 
@@ -68,14 +68,14 @@ public class LocalsExplorerView extends ViewPart implements ISelectionListener {
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
 		if (part instanceof MethodExplorerView && selection instanceof ITreeSelection) {
 			Object obj = ((ITreeSelection) selection).getFirstElement();
-			if(obj instanceof CalledMethod) {
-				CalledMethod method = (CalledMethod) obj;
+			if(obj instanceof Method) {
+				Method method = (Method) obj;
 				selectedMethodChanged(method);
 			}
 		}
 	}
 
-	public void selectedMethodChanged(CalledMethod selectedMethod) {
+	public void selectedMethodChanged(Method selectedMethod) {
 		contentProvider.setSelectedMethod(selectedMethod);
 		viewer.refresh();
 	}

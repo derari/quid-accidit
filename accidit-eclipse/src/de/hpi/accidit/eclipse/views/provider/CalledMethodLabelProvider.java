@@ -1,8 +1,10 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.provider;
 
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
+
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
 
 public class CalledMethodLabelProvider extends LabelProvider implements
 		ITableLabelProvider {
@@ -14,12 +16,12 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 
 	@Override
 	public String getColumnText(Object element, int columnIndex) {
-		if(!(element instanceof CalledMethod)) {
+		if(!(element instanceof Method)) {
 			System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
 			return null;
 		}			
 		
-		CalledMethod method = (CalledMethod) element;
+		Method method = (Method) element;
 		
 		switch(columnIndex) {
 		case 0: return String.format("%s.%s", method.type, method.method);
@@ -35,7 +37,7 @@ public class CalledMethodLabelProvider extends LabelProvider implements
 	 * 
 	 * @return the file name and the line number
 	 */
-	public String getFileName(CalledMethod method) {
+	public String getFileName(Method method) {
 		if (method.callLine < 1) return "";
 		
 		//String typeName = method.type.substring(method.type.lastIndexOf(".") + 1);

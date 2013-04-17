@@ -13,11 +13,11 @@ import org.eclipse.ui.handlers.HandlerUtil;
 
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
-import de.hpi.accidit.eclipse.views.elements.CalledMethod;
-import de.hpi.accidit.eclipse.views.elements.LocalBase;
-import de.hpi.accidit.eclipse.views.elements.LocalsHistoryContentProvider;
-import de.hpi.accidit.eclipse.views.elements.LocalsHistorySelectionDialog;
-import de.hpi.accidit.eclipse.views.elements.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.dataClasses.Method;
+import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
+import de.hpi.accidit.eclipse.views.provider.LocalsHistoryContentProvider;
+import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.util.LocalsHistorySelectionDialog;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {
 
@@ -27,7 +27,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		ITreeSelection selectedMethods = (ITreeSelection) selectionService.getSelection(MethodExplorerView.ID);
 		ITreeSelection selectedLocals = (ITreeSelection) selectionService.getSelection(LocalsExplorerView.ID);
 
-		CalledMethod method = (CalledMethod) selectedMethods.getFirstElement();
+		Method method = (Method) selectedMethods.getFirstElement();
 		if (selectedLocals.size() < 1) return null;
 		LocalBase local = (LocalBase) selectedLocals.getFirstElement();
 		

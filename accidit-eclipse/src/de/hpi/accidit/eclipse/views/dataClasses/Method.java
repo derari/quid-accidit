@@ -1,7 +1,7 @@
-package de.hpi.accidit.eclipse.views.elements;
+package de.hpi.accidit.eclipse.views.dataClasses;
 
 
-public class CalledMethod {
+public class Method {
 
 	public int testId;
 	public long callStep;
@@ -13,7 +13,7 @@ public class CalledMethod {
 	public String type;
 	public String method;
 	
-	public CalledMethod parentMethod;
+	public Method parentMethod;
 
-	public CalledMethod() { };
+	public Method() { };
 }
