@@ -1,158 +1,116 @@
 package de.hpi.accidit.orm.map;
 
-import java.lang.reflect.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 import de.hpi.accidit.orm.cursor.ResultCursor;
-import de.hpi.accidit.orm.cursor.ResultCursorBase;
+import de.hpi.accidit.orm.map.ResultBuilder.EntityFactory;
+import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
 
 
 public abstract class Mapping<Type> {
 
 	private final Class<Type> recordClass;
-	private ResultAdapter<List<Type>> listResult = null;
-	private ResultAdapter<Type[]> arrayResult = null;
-	private ResultAdapter<ResultCursor<Type>> cursorResult = null;
+	private ResultBuilder<Type[], Type> arrayResult = null;
+	
+	private final EntityFactory<Type> ef = new EntityFactory<Type>() {
+		@Override
+		public Type newEntity() {
+			return Mapping.this.newRecord();
+		}
+		@Override
+		public Type newCursorValue(ResultCursor<Type> rc) {
+			return Mapping.this.newCursorValue(rc);
+		}
+		@Override
+		public Type copy(Type e) {
+			return Mapping.this.copy(e);
+		}
+	};
 	
 	public Mapping(Class<Type> recordClass) {
 		this.recordClass = recordClass;
 	}
 	
-	protected abstract Type newRecord();
+	protected Type newRecord() {
+		throw new UnsupportedOperationException("Records not supported");
+	}
 	
-	protected abstract Type newCursorValue(ResultCursor<Type> cursor);
+	protected Type newCursorValue(ResultCursor<Type> cursor) {
+		throw new UnsupportedOperationException("Cursor not supported");
+	}
 	
-	protected abstract void setField(Type record, ResultSet rs, int i, String field) throws SQLException;
+	protected Type copy(Type e) {
+		throw new UnsupportedOperationException("Copy not supported");
+	}
+	
+	protected void setField(Type record, String field, ResultSet rs, int i) throws SQLException {
+		throw new IllegalArgumentException(
+				"Cannot set field " + field + " of " + recordClass.getSimpleName());
+	}
+	
+	public void setField(Type record, String field, Object value) throws SQLException {
+		throw new IllegalArgumentException(
+				"Cannot set field " + field + " of " + recordClass.getSimpleName());
+	}
 	
 	protected void setFields(Type record, ResultSet rs, List<String> fields) throws SQLException {
 		final int len = fields.size();
 		for (int i = 0; i < len; i++) {
-			setField(record, rs, i+1, fields.get(i));
+			setField(record, fields.get(i), rs, i+1);
 		}
 	}
 	
-	public ResultAdapter<List<Type>> asList() {
-		if (listResult == null) {
-			listResult = new ListResult();
-		}
-		return listResult;
+	public ValueAdapter<Type> getValueAdapter(final List<String> fields) {
+		return new ValueAdapterBase<Type>() {
+			private ResultSet rs;
+			private int[] fieldIndices;
+			
+			@Override
+			public void initialize(ResultSet rs) throws SQLException {
+				this.rs = rs;
+				this.fieldIndices = getFieldIndices(rs, fields);
+			}
+
+			@Override
+			public void apply(Type entity) throws SQLException {
+				int len = fieldIndices.length;
+				for (int i = 0; i < len; i++) {
+					setField(entity, fields.get(i), rs, fieldIndices[i]);
+				}
+			}
+
+			@Override
+			public void complete() throws SQLException { }
+		};
 	}
 	
-	public ResultAdapter<Type[]> asArray() {
+	public EntityFactory<Type> getEntityFactory() {
+		return ef;
+	}
+	
+	public ResultBuilder<List<Type>, Type> asList() {
+		return ResultBuilders.getListResult();
+	}
+	
+	public ResultBuilder<Type[], Type> asArray() {
 		if (arrayResult == null) {
-			arrayResult = new ArrayResult();
+			arrayResult = ResultBuilders.getArrayResult(recordClass);
 		}
 		return arrayResult;
 	}
 	
-	public ResultAdapter<ResultCursor<Type>> asCursor() {
-		if (cursorResult == null) {
-			cursorResult = new CursorResult();
-		}
-		return cursorResult;
+	public ResultBuilder<ResultCursor<Type>, Type> asCursor() {
+		return ResultBuilders.getCursorResult();
 	}
 	
-	protected class ArrayResult implements ResultAdapter<Type[]> {
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public Type[] adapt(ResultSet rs, List<String> fields) throws SQLException {
-			List<Type> result = asList().adapt(rs, fields);
-			return result.toArray((Type[]) Array.newInstance(recordClass, result.size()));
-		}
-		
+	public ResultBuilder<Type, Type> getSingle() {
+		return ResultBuilders.getSingleResult();
 	}
 	
-	protected class ListResult implements ResultAdapter<List<Type>> {
-
-		@Override
-		public List<Type> adapt(ResultSet rs, List<String> fields) throws SQLException {
-			final List<Type> result = new ArrayList<>();
-			while (rs.next()) {
-				final Type record = newRecord();
-				setFields(record, rs, fields);
-				result.add(record);
-			}
-			return result;
-		}
-		
-	}
-	
-	protected class CursorResult implements ResultAdapter<ResultCursor<Type>> {
-
-		@Override
-		public ResultCursor<Type> adapt(ResultSet rs, List<String> fields) throws SQLException {
-			return new MappedResultCursor(rs, fields);
-		}
-		
-	}
-	
-	protected class MappedResultCursor extends ResultCursorBase<Type> {
-
-		private final ResultSet rs;
-		private final List<String> fields;
-		
-		private boolean nextIsExpected = true;
-		private boolean isAtNext = false;
-		
-		public MappedResultCursor(ResultSet rs, List<String> fields) {
-			this.rs = rs;
-			this.fields = fields;
-			setCursorValue(newCursorValue(this));
-		}
-
-		@Override
-		public boolean hasNext() {
-			try {
-				if (nextIsExpected) {
-					if (!isAtNext) {
-						nextIsExpected = rs.next();
-						isAtNext = nextIsExpected;
-					}
-				}
-				return nextIsExpected;
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		@Override
-		public Type getFixCopy() {
-			try {
-				if (isAtNext) {
-					rs.previous();
-				}
-				Type record = newRecord();
-				setFields(record, rs, fields);
-				return record;
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		@Override
-		protected void makeNext() {
-			if (!isAtNext) {
-				hasNext();
-				if (!isAtNext) {
-					throw new IllegalStateException("No next element");
-				}
-			}
-			isAtNext = false;
-			try {
-				setFields(cursor, rs, fields);
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		
-		@Override
-		public void close() throws Exception {
-			rs.close();
-		}
+	public ResultBuilder<Type, Type> getFirst() {
+		return ResultBuilders.getFirstResult();
 	}
 	
 }

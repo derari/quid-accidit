@@ -1,11 +1,13 @@
-package de.hpi.accidit.orm;
+package de.hpi.accidit.test;
 
+import de.hpi.accidit.orm.OConnection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import de.hpi.accidit.orm.cursor.CursorValue;
 import de.hpi.accidit.orm.cursor.ResultCursor;
-import de.hpi.accidit.orm.dsl.SelectBuilder;
+import de.hpi.accidit.orm.dsl.QueryBuilder;
+import de.hpi.accidit.orm.dsl.QueryTemplate;
 import de.hpi.accidit.orm.dsl.View;
 import de.hpi.accidit.orm.map.Mapping;
 
@@ -67,34 +69,40 @@ public class Person {
 		};
 
 		@Override
-		protected void setField(Person p, ResultSet rs, int i, String field) throws SQLException {
+		protected void setField(Person record, String field, ResultSet rs, int i) throws SQLException {
 			switch (field) {
 			case "firstName":
-				p.firstName = rs.getString(i);
+				record.firstName = rs.getString(i);
 				break;
 			case "lastName":
-				p.lastName = rs.getString(i);
+				record.lastName = rs.getString(i);
 				break;
 			case "address":
-				p.address = rs.getString(i);
+				record.address = rs.getString(i);
 				break;
 			}
 		}
 	};
 	
-	protected static final SelectBuilder FIELDS = new SelectBuilder() {{
-		addFields("firstName",	"p.firstName",
-				  "lastName",	"p.lastName",
-				  "address",	"a.value AS address");
+	protected static QueryTemplate TEMPLATE = new QueryTemplate() {{
+		
+		from("Persons p");
+		select("firstName", "p.firstName",
+				   "lastName",	"p.lastName");
+		where("firstName_LIKE", 	"firstName LIKE ?",
+				   "lastName_LIKE", 	"lastName LIKE ?");
+		
+		optinal_join("a", "Addresses a").on("p.addressId = a.id");
+		using("a")
+			.select("address", "a.street AS address")
+			.where("address_LIKE", "a.street LIKE ?");
+		
 	}};
 	
-	public static class Query extends de.hpi.accidit.orm.dsl.Query<Person> {
-		
-		public Query(OConnection cnn, String[] fields) {
-			super(cnn, FIELDS, MAPPING);
-			select(fields);
-			from("Persons p");
-			join("Addresses a", "p.addressId = a.id");
+	public static class Query extends QueryBuilder<Person> {
+		public Query(OConnection cnn, String[] attributes) {
+			super(cnn, TEMPLATE, MAPPING);
+			select(attributes);
 		}
 		
 		public Query where() {
@@ -102,8 +110,12 @@ public class Person {
 		}
 		
 		public Query lastName_startsWith(String prefix) {
-			where("p.lastName LIKE ?");
-			addArgument(prefix + "%");
+			where("lastName_LIKE", prefix + "%");
+			return this;
+		}
+		
+		public Query address_like(String pattern) {
+			where("address_LIKE", pattern);
 			return this;
 		}
 		
@@ -113,7 +125,6 @@ public class Person {
 			System.out.println(s);
 			return s;
 		}
-		
 	}
 
 }
