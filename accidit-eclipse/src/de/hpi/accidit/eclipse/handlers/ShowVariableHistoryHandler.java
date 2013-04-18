@@ -39,7 +39,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		dialog.setTitle("Varible History");
 		dialog.setBlockOnOpen(true);
 		dialog.setInput(HandlerUtil.getActiveEditorInput(event));
-		dialog.setEmptyListMessage("The selected variable wasn't set in the traced context at all.");		
+		dialog.setEmptyListMessage("The selected variable wasn't set in the traced context at all.");
 		
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();

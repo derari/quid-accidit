@@ -10,9 +10,9 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 
-public class LocalsHistorySelectionDialog extends ElementTreeSelectionDialog {
+public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 
-	public LocalsHistorySelectionDialog(Shell parent,
+	public TestCaseSelectionDialog(Shell parent,
 			ILabelProvider labelProvider, 
 			ITreeContentProvider contentProvider) {
 		
@@ -34,18 +34,12 @@ public class LocalsHistorySelectionDialog extends ElementTreeSelectionDialog {
 		Tree tree = viewer.getTree();
 		tree.setHeaderVisible(true);
 		
-		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
-		column0.setText("Local Name");
-		column0.setWidth(100);
+		TreeColumn column0 = new TreeColumn(tree, SWT.RIGHT);
+		column0.setText("Id");
+		column0.setWidth(50);
 		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
-		column1.setText("Value");
-		column1.setWidth(100);
-		TreeColumn column2 = new TreeColumn(tree, SWT.RIGHT);
-		column2.setText("Change Step");
-		column2.setWidth(75);
-		TreeColumn column3 = new TreeColumn(tree, SWT.LEFT);
-		column3.setText("Type");
-		column3.setWidth(200);
+		column1.setText("Id");
+		column1.setWidth(350);
 	}
 
 }
