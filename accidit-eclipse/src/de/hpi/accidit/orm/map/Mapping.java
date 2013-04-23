@@ -1,5 +1,6 @@
 package de.hpi.accidit.orm.map;
 
+import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -48,6 +49,20 @@ public abstract class Mapping<Type> {
 	protected void setField(Type record, String field, ResultSet rs, int i) throws SQLException {
 		throw new IllegalArgumentException(
 				"Cannot set field " + field + " of " + recordClass.getSimpleName());
+	}
+	
+	protected void injectField(Type record, String field, ResultSet rs, int i) throws SQLException {
+		injectField(record, field, rs.getObject(i));
+	}
+	
+	protected void injectField(Type record, String field, Object value) throws SQLException {
+		try {
+			Field f = record.getClass().getDeclaredField(field);
+			f.setAccessible(true);
+			f.set(record, value);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public void setField(Type record, String field, Object value) throws SQLException {

@@ -33,7 +33,7 @@ public class OConnection implements AutoCloseable {
 	}
 
 	@Override
-	public void close() throws Exception {
+	public void close() throws SQLException {
 		try {
 			boolean terminated = false;
 			try {

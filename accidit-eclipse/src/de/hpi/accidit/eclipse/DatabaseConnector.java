@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
+import de.hpi.accidit.orm.OConnection;
 
 public class DatabaseConnector {
 	
@@ -30,7 +31,7 @@ public class DatabaseConnector {
 		return DriverManager.getConnection(dbString);
 	}
 	
-	public static Connection getValidConnection() throws SQLException {
+	private static String getDBString() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
 		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
@@ -38,7 +39,24 @@ public class DatabaseConnector {
 		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
 		
 		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s", dbAddress, dbSchema, dbUser, dbPassword);
+		return dbString;
+	}
+	
+	public static Connection getValidConnection() throws SQLException {
+		String dbString = getDBString();
 		return DriverManager.getConnection(dbString);
+	}
+	
+	private static String lastDbString = null;
+	private static OConnection cnn = null;
+	
+	public static synchronized OConnection getValidOConnection() throws SQLException {
+		String dbString = getDBString();
+		if (!dbString.equals(lastDbString)) {
+			if (cnn != null) cnn.close();
+			cnn = new OConnection(getValidConnection());
+		}
+		return cnn;
 	}
 	
 	/**
@@ -51,7 +69,8 @@ public class DatabaseConnector {
 	 */
 	public static boolean testConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) {
 		try {
-			getConnection(dbAddress, dbSchema, dbUser, dbPassword);
+			Connection c = getConnection(dbAddress, dbSchema, dbUser, dbPassword);
+			c.close();
 		} catch (SQLException e) {
 			return false;
 		}
