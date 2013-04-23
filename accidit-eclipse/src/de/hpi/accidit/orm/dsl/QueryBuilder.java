@@ -3,6 +3,7 @@ package de.hpi.accidit.orm.dsl;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,22 +13,19 @@ import java.util.Set;
 import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.OFuture;
 import de.hpi.accidit.orm.OPreparedStatement;
+import de.hpi.accidit.orm.dsl.QueryTemplate.AdapterTemplate;
 import de.hpi.accidit.orm.dsl.QueryTemplate.Attribute;
 import de.hpi.accidit.orm.dsl.QueryTemplate.Condition;
 import de.hpi.accidit.orm.dsl.QueryTemplate.Join;
-import de.hpi.accidit.orm.dsl.QueryTemplate.Relation;
+import de.hpi.accidit.orm.dsl.QueryTemplate.OrderBy;
 import de.hpi.accidit.orm.map.Mapping;
 import de.hpi.accidit.orm.map.MultiValueAdapter;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
-import de.hpi.accidit.orm.map.IdMap;
-import de.hpi.accidit.orm.map.ValueAdapterBase;
-
-import java.util.Collections;
 
 public class QueryBuilder<Result> {
 	
 	private final OConnection cnn;
-	private final QueryTemplate template;
+	private final QueryTemplate<Result> template;
 	private final Mapping<Result> mapping;
 	
 	private final List<String>  	resultAttributes = new ArrayList<>();
@@ -40,16 +38,17 @@ public class QueryBuilder<Result> {
 	private final List<Object[]> 	conditionArguments = new ArrayList<>();
 	private final Map<String, Integer>	conditionIndizes = new HashMap<>();
 	private int totalArgCount = 0;
-	private final Map<String, SelectedRelation> relations = new HashMap<>();
-	
+	private final Map<String, SelectedAdapter<Result>> adapters = new HashMap<>();
+	private final List<Ordering> 	orderings = new ArrayList<>();
+	private final Set<String>  		orderingKeys = new HashSet<>();
 	
 	private final List<String>		publicResultAttributes = Collections.unmodifiableList(resultAttributes);
 
-	public QueryBuilder(QueryTemplate template, Mapping<Result> mapping) {
+	public QueryBuilder(QueryTemplate<Result> template, Mapping<Result> mapping) {
 		this(null, template, mapping);
 	}
 
-	public QueryBuilder(OConnection cnn, QueryTemplate template, Mapping<Result> mapping) {
+	public QueryBuilder(OConnection cnn, QueryTemplate<Result> template, Mapping<Result> mapping) {
 		this.cnn = cnn;
 		this.template = template;
 		this.mapping = mapping;
@@ -58,10 +57,13 @@ public class QueryBuilder<Result> {
 	private void _addDependencies(String[] required) {
 		for (String key: required) {
 			if (template.getAttribute(key) != null) {
-				_selectAttribute(key, false);
+				_selectAttribute(key);
 			}
 			if (template.getJoin(key) != null) {
 				_joinTable(key);
+			}
+			if (template.getOrderBy(key) != null) {
+				_ordering(key, null);
 			}
 		}
 	}
@@ -73,28 +75,30 @@ public class QueryBuilder<Result> {
 		if (dot > 0) key = key.substring(0, dot);
 		
 		if (resultAttributesGuard.add(key)) {
-			_selectAttribute(key, true);
+			_selectAttribute(key);
+			if (template.getAdapter(key) != null) {
+				resultAttributes.add(key);
+			}
 		}
 		
 		if (part2 != null) {
-			SelectedRelation sr = relations.get(key);
+			SelectedAdapter<Result> sr = adapters.get(key);
 			sr.select(part2);
 		}
 		
 	}
 	
-	private void _selectAttribute(String key, boolean result) {
+	private void _selectAttribute(String key) {
 		if (selectedAttributeKeys.add(key)) {
 			Attribute a = template.getAttribute(key);
 			if (a != null) {
 				_addDependencies(a.getDependencies());
 				selectedAttributes.add(a);
-				if (result) resultAttributes.add(key);
 			}
-			Relation r = template.getRelation(key);
-			if (r != null) {
-				_addDependencies(r.getDependencies());
-				relations.put(key, new SelectedRelation(r));
+			AdapterTemplate<Result> at = template.getAdapter(key);
+			if (at != null) {
+				_addDependencies(at.getDependencies());
+				adapters.put(key, new SelectedAdapter<Result>(at));
 			}
 		}
 	}
@@ -142,89 +146,46 @@ public class QueryBuilder<Result> {
 		System.arraycopy(arguments, 0, argValues, 0, argValues.length);
 	}
 	
-	protected static class SelectedRelation {
-		private final Relation r;
+	private void _ordering(String key, Boolean asc) {
+		if (orderingKeys.add(key)) {
+			OrderBy ob = template.getOrderBy(key);
+			_addDependencies(ob.getDependencies());
+			Ordering o = new Ordering(ob, asc);
+			orderings.add(o);
+		}
+	}
+	
+	protected static class SelectedAdapter<E> {
+		private final AdapterTemplate<E> r;
 		private List<String> selected = null;
-		public SelectedRelation(Relation r) {
+		public SelectedAdapter(AdapterTemplate<E> r) {
 			this.r = r;
 		}
 		protected void select(String attribute) {
 			if (selected == null) selected = new ArrayList<>();
 			selected.add(attribute);
 		}
-		public Relation getRelation() {
+		public AdapterTemplate<E> getAdapterTemplate() {
 			return r;
 		}
-		public String[] getAttributes() {
-			if (selected == null) return null;
-			return selected.toArray(new String[selected.size()]);
+		public List<String> getSelectedAttributes() {
+			return selected;
 		}
 	}
 	
-	protected static class RelationAdapter<Entity> extends ValueAdapterBase<Entity> {
-
-		private final OConnection cnn;
-		private final SelectedRelation sr;
-		private final Mapping<Entity> mapping;
-		private final List<Entity> records = new ArrayList<>();
-		private final List<Object> keys = new ArrayList<>();
-		private final IdMap<SQLException> idMap;
-		private ResultSet rs = null;
-		private int[] keyIndices = null;
-
-		public RelationAdapter(OConnection cnn, SelectedRelation sr, Mapping<Entity> mapping) {
-			this.cnn = cnn;
-			this.sr = sr;
-			this.mapping = mapping;
-			idMap = new IdMap<SQLException>(sr.r.getReferenceKeys().length) {
-				@Override
-				protected Object[] fetchValues(Object[] keys) throws SQLException {
-					return RelationAdapter.this.fetchValues(keys);
-				}
-			};
+	protected static class Ordering {
+		private final OrderBy ob;
+		private final Boolean asc;
+		public Ordering(OrderBy ob, Boolean asc) {
+			this.ob = ob;
+			this.asc = asc;
 		}
-		
-		@Override
-		public void initialize(ResultSet rs) throws SQLException {
-			this.rs = rs;
-			this.keyIndices = getFieldIndices(rs, sr.r.getReferenceKeys());
+		public String getField() {
+			return ob.getField();
 		}
-		
-		@Override
-		public void apply(Entity record) throws SQLException {
-			final Object key;
-			if (keyIndices.length == 1)  {
-				key = rs.getObject(keyIndices[0]);
-			} else {
-				final Object[] keyArray = new Object[keyIndices.length];
-				for (int i = 0; i < keyArray.length; i++) {
-					keyArray[i] = rs.getObject(keyIndices[i]);
-				}
-				key = keyArray;
-			}
-			records.add(record);
-			keys.add(key);
+		public boolean isAsc() {
+			return asc != null ? asc : ob.defaultAsc();
 		}
-
-		@Override
-		public void complete() throws SQLException {
-			final Object[] keyArray = keys.toArray();
-			final Object[] values = idMap.getAll(keyArray);
-			String field = sr.r.getAttribute();
-			for (int i = 0; i < values.length; i++) {
-				Entity r = records.get(i);
-				mapping.setField(r, field, values[i]);
-			}
-		}
-
-		protected Object[] fetchValues(Object[] keys) throws SQLException {
-			return cnn
-					.select(sr.getAttributes())
-					.from(sr.r.getView())
-					.byKeys(keys)
-					.run().asArray();
-		}
-		
 	}
 	
 	protected void select(String... attributes) {
@@ -253,6 +214,22 @@ public class QueryBuilder<Result> {
 	
 	protected void addCondition(String key, Object... arguments) {
 		addCondition(key, key, arguments);
+	}
+	
+	protected void orderBy(String key, Boolean asc) {
+		_ordering(key, asc);
+	}
+	
+	protected void orderBy(String key) {
+		_ordering(key, null);
+	}
+	
+	protected void orderByAsc(String key) {
+		orderBy(key, true);
+	}
+	
+	protected void orderByDesc(String key) {
+		orderBy(key, false);
 	}
 	
 	/**
@@ -321,6 +298,18 @@ public class QueryBuilder<Result> {
 			sb.append(c.getCondition());
 		}
 		
+		boolean firstOrderBy = true;
+		for (Ordering o: orderings) {
+			if (firstOrderBy) {
+				firstOrderBy = false;
+				sb.append("\nORDER BY ");
+			} else {
+				sb.append(", ");
+			}
+			sb.append(o.getField());
+			sb.append(o.isAsc() ? " ASC" : " DESC");
+		}
+		
 		sb.append(';');
 		return sb.toString();
 	}
@@ -330,7 +319,7 @@ public class QueryBuilder<Result> {
 	}
 	
 	protected ValueAdapter<Result> valueAdapter(OConnection cnn) {
-		int size = relations.size();
+		int size = adapters.size();
 		if (size == 0) {
 			return mapping.getValueAdapter(publicResultAttributes);
 		} else {
@@ -338,8 +327,8 @@ public class QueryBuilder<Result> {
 			ValueAdapter<Result>[] pp = new ValueAdapter[size+1];
 			pp[0] = mapping.getValueAdapter(publicResultAttributes);
 			int i = 1;
-			for (SelectedRelation sr: relations.values()) {
-				pp[i++] = new RelationAdapter<Result>(cnn, sr, mapping);
+			for (SelectedAdapter<Result> sr: adapters.values()) {
+				pp[i++] = sr.getAdapterTemplate().newAdapter(mapping, cnn, sr.getSelectedAttributes());
 			}
 			return new MultiValueAdapter<>(pp);
 		}

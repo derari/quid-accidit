@@ -4,7 +4,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-import de.hpi.accidit.orm.OFuture;
 import de.hpi.accidit.orm.cursor.ResultCursor;
 import de.hpi.accidit.orm.map.Mapping;
 import de.hpi.accidit.orm.map.ResultBuilder;

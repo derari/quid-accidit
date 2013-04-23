@@ -13,7 +13,7 @@ import de.hpi.accidit.orm.dsl.Select;
 
 public class OConnection implements AutoCloseable {
 
-	final Connection connection;
+	private final Connection connection;
 	private final ExecutorService executor = Executors.newFixedThreadPool(3);
 	
 	public OConnection(Connection connection) {
@@ -83,6 +83,5 @@ public class OConnection implements AutoCloseable {
 	public Select select(String... fields) {
 		return new Select(this, fields);
 	}
-
 	
 }

@@ -9,12 +9,10 @@ import java.util.List;
 import java.util.Map;
 
 import de.hpi.accidit.orm.OConnection;
-import de.hpi.accidit.orm.dsl.QueryBuilder.RelationAdapter;
-import de.hpi.accidit.orm.dsl.QueryBuilder.SelectedRelation;
 import de.hpi.accidit.orm.map.IdMap;
 import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.map.ValueAdapterBase;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
+import de.hpi.accidit.orm.map.ValueAdapterBase;
 
 public class QueryTemplate<E> {
 	
@@ -24,7 +22,6 @@ public class QueryTemplate<E> {
 	private final Map<String, Attribute> attributes = new HashMap<>();
 	private final Map<String, Join> autoJoins = new HashMap<>();
 	private final Map<String, Condition> conditions = new HashMap<>();
-//	private final Map<String, Relation> relations = new HashMap<>();
 	private final Map<String, OrderBy> orderBys = new HashMap<>();
 	private final Map<String, AdapterTemplate<E>> adapters = new HashMap<>();
 	
@@ -150,16 +147,17 @@ public class QueryTemplate<E> {
 	}
 	
 	protected void relation(String key, View<? extends QueryByKey<?>> view, String... required) {
-//		Relation r = new Relation(key, view, required);
-//		relations.put(key, r);
-//		selectableAttributes.add(key);
 		RelationAdapterFactory<E> raf = new RelationAdapterFactory<>(key, view, required);
+		valueAdapter(key, raf, required);
 	}
 	
-	protected void adapterTemplate
+	protected void valueAdapter(String key, ValueAdapterFactory<E> vaf, String... required) {
+		AdapterTemplate<E> at = new AdapterTemplate<>(vaf, required);
+		adapters.put(key, at);
+	}
 
-	protected Using using(String... dependencies) {
-		return new Using(this, dependencies);
+	protected Using<E> using(String... dependencies) {
+		return new Using<E>(this, dependencies);
 	}
 	
 	private static int countParameters(String s) {
@@ -186,8 +184,12 @@ public class QueryTemplate<E> {
 		return conditions.get(key);
 	}
 	
-	/* QueryBuilder */ Relation getRelation(String key) {
-		return relations.get(key);
+	/* QueryBuilder */ AdapterTemplate<E> getAdapter(String key) {
+		return adapters.get(key);
+	}
+	
+	/* QueryBuilder */ OrderBy getOrderBy(String key) {
+		return orderBys.get(key);
 	}
 	
 	/* QueryBuilder */ List<String> getSelectableAttributes() {
@@ -269,6 +271,12 @@ public class QueryTemplate<E> {
 			this.field = field;
 			this.defaultAsc = defaultAsc;
 		}
+		public String getField() {
+			return field;
+		}
+		public boolean defaultAsc() {
+			return defaultAsc;
+		}
 	}
 	
 //	protected static class Relation extends QueryPart {
@@ -290,73 +298,81 @@ public class QueryTemplate<E> {
 //		}
 //	}
 	
-	protected static class AdapterTemplate<E> extends QueryPart {
+	protected static class AdapterTemplate<E> extends QueryPart implements ValueAdapterFactory<E> {
 		private final ValueAdapterFactory<E> f;
 		public AdapterTemplate(ValueAdapterFactory<E> f, String[] required) {
 			super(required);
 			this.f = f;
 		}
+		@Override
+		public ValueAdapter<E> newAdapter(Mapping<E> mapping, OConnection cnn, List<String> attributes) {
+			return f.newAdapter(mapping, cnn, attributes);
+		}
 	}
 	
-	protected static class Using {
-		private final QueryTemplate qt;
+	protected static class Using<E> {
+		private final QueryTemplate<E> qt;
 		private final String[] required;
-		public Using(QueryTemplate qt, String[] required) {
+		public Using(QueryTemplate<E> qt, String[] required) {
 			this.qt = qt;
 			this.required = required;
 		}
-		public Using select(String key, String definition) {
+		public Using<E> select(String key, String definition) {
 			qt.foreignAttribute(key, definition, required);
 			return this;
 		}
-		public Using select(String... definitions) {
+		public Using<E> select(String... definitions) {
 			for (int i = 0; i < definitions.length; i += 2) {
 				select(definitions[i], definitions[i+1]);
 			}
 			return this;
 		}
-		public Using where(String key, String condition) {
+		public Using<E> where(String key, String condition) {
 			qt.foreignCondition(key, condition, required);
 			return this;
 		}
-		public Using where(String... conditions) {
+		public Using<E> where(String... conditions) {
 			for (int i = 0; i < conditions.length; i += 2) {
 				where(conditions[i], conditions[i+1]);
 			}
 			return this;
 		}
-		public Using optional_join(String key, String table, String on) {
+		public Using<E> optional_join(String key, String table, String on) {
 			qt.optional_join(key, table, on, required);
 			return this;
 		}
-		public Using internal_select(String key, String definition) {
+		public Using<E> internal_select(String key, String definition) {
 			qt.internForeignAttribute(key, definition, required);
 			return this;
 		}
-		public Using internal_select(String... definitions) {
+		public Using<E> internal_select(String... definitions) {
 			for (int i = 0; i < definitions.length; i += 2) {
 				internal_select(definitions[i], definitions[i+1]);
 			}
 			return this;
 		}
-		public Using orderBy(String key, String field, boolean defaultAsc) {
+		public Using<E> orderBy(String key, String field, boolean defaultAsc) {
 			qt.orderBy(key, field, defaultAsc, required);
 			return this;
 		}
 		
-		public Using orderBy(String key, String field) {
+		public Using<E> orderBy(String key, String field) {
 			return orderBy(key, field, true);
 		}
 		
-		public Using orderByAsc(String key, String field) {
+		public Using<E> orderByAsc(String key, String field) {
 			return orderBy(key, field, true);
 		}
 		
-		public Using orderByDesc(String key, String field) {
+		public Using<E> orderByDesc(String key, String field) {
 			return orderBy(key, field, false);
 		}
-		public Using relation(String key, View<? extends QueryByKey<?>> view) {
+		public Using<E> relation(String key, View<? extends QueryByKey<?>> view) {
 			qt.relation(key, view, required);
+			return this;
+		}
+		public Using<E> valueAdapter(String key,ValueAdapterFactory<E> vaf) {
+			qt.valueAdapter(key, vaf, required);
 			return this;
 		}
 	}
