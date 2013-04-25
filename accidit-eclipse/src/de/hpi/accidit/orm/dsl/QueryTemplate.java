@@ -12,6 +12,7 @@ import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.map.IdMap;
 import de.hpi.accidit.orm.map.Mapping;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
+import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapterFactory;
 import de.hpi.accidit.orm.map.ValueAdapterBase;
 
 public class QueryTemplate<E> {
@@ -371,14 +372,10 @@ public class QueryTemplate<E> {
 			qt.relation(key, view, required);
 			return this;
 		}
-		public Using<E> valueAdapter(String key,ValueAdapterFactory<E> vaf) {
+		public Using<E> valueAdapter(String key, ValueAdapterFactory<E> vaf) {
 			qt.valueAdapter(key, vaf, required);
 			return this;
 		}
-	}
-	
-	protected static interface ValueAdapterFactory<E> {
-		ValueAdapter<E> newAdapter(Mapping<E> mapping, OConnection cnn, List<String> attributes);
 	}
 	
 	protected static class RelationAdapterFactory<E> implements ValueAdapterFactory<E> {
@@ -457,7 +454,7 @@ public class QueryTemplate<E> {
 		protected Object[] fetchValues(Object[] keys) throws SQLException {
 			return cnn
 					.select(attributes).from(r.view).byKeys(keys)
-					.run().asArray();
+					.asArray().run();
 		}
 		
 	}

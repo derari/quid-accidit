@@ -1,17 +1,25 @@
 package de.hpi.accidit.eclipse.views.dataClasses;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+
 import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.dsl.QueryBuilder;
 import de.hpi.accidit.orm.dsl.QueryTemplate;
 import de.hpi.accidit.orm.dsl.View;
 import de.hpi.accidit.orm.map.Mapping;
+import de.hpi.accidit.orm.map.ResultBuilder;
+import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
+import de.hpi.accidit.orm.util.QueryFactoryView;
+import de.hpi.accidit.orm.util.ReflectiveMapping;
 
 
 public class Method {
 
 	public int testId;
 	public long callStep;
-	public int exitStep;
+	public long exitStep;
 	public int depth;
 	public int callLine;
 	
@@ -20,24 +28,13 @@ public class Method {
 	public String method;
 	
 	public Method parentMethod;
+	public Method[] children;
 
 	public Method() { };
 	
-	public static final View<Query> VIEW = new View<Method.Query>() {
-		@Override
-		public Query newQuery(OConnection cnn, String[] select) {
-			return new Query(cnn, select);
-		}
-	};
+	public static final View<Query> VIEW = new QueryFactoryView<>(Query.class);
 	
-	private static final Mapping<Method> MAPPING = new Mapping<Method>(Method.class) {
-		protected Method newRecord() {
-			return new Method();
-		};
-		protected void setField(Method record, String field, java.sql.ResultSet rs, int i) throws java.sql.SQLException {
-			injectField(record, field, rs, i);
-		};
-	};
+	private static final Mapping<Method> MAPPING = new ReflectiveMapping<>(Method.class);
 	
 	private static final QueryTemplate<Method> TEMPLATE = new QueryTemplate<Method>(){{
 		select("testId", 	"i.testId",
@@ -53,9 +50,9 @@ public class Method {
 		using("t")
 			.select("type", "t.name AS type");
 		
-		where("test_EQ", "i.test = ?",
+		where("test_EQ", "i.testId = ?",
 			  "depth_EQ", "i.depth = ?",
-			  "step_BETWEEN", "i.callStep > ? AND i.callStep < =");
+			  "step_BETWEEN", "i.callStep > ? AND i.callStep < ?");
 		
 		orderBy("o_callStep", "callStep");
 	}};
@@ -66,18 +63,49 @@ public class Method {
 			super(cnn, TEMPLATE, MAPPING);
 			select(fields);
 		}
-		public Query childrenOfCall(Method m) {
+		public Query where() {
+			return this;
+		}
+		public Query childOf(Method m) {
 			where("test_EQ", m.testId);
 			where("depth_EQ", m.depth+1);
 			where("step_BETWEEN", m.callStep, m.exitStep);
 			orderBy("o_callStep");
+			apply(new SetParentAdapter(m));
 			return this;
 		}
-		@Override
-		protected String queryString() {
-			String s = super.queryString();
-			System.out.println(s);
-			return s;
+		public Query rootOfTest(int i) {
+			where("test_EQ", i);
+			where("depth_EQ", 0);
+			return this;
 		}
+	}
+	
+	private static class SetParentAdapter 
+					implements ResultBuilder.ValueAdapter<Method>, 
+							   ResultBuilder.ValueAdapterFactory<Method> {
+		
+		private final Method parent;
+		
+		public SetParentAdapter(Method parent) {
+			this.parent = parent;
+		}
+
+		@Override
+		public ValueAdapter<Method> newAdapter(Mapping<Method> mapping,
+				OConnection cnn, List<String> attributes) {
+			return this;
+		}
+
+		@Override
+		public void initialize(ResultSet rs) throws SQLException {}
+
+		@Override
+		public void apply(Method entity) throws SQLException {
+			entity.parentMethod = parent;
+		}
+
+		@Override
+		public void complete() throws SQLException {}
 	}
 }
