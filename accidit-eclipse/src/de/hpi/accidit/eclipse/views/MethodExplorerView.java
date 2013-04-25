@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.views;
 
+import java.util.List;
+
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeSelection;
@@ -51,7 +53,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		contentProvider = new MethodsContentProvider();
 		treeViewer.setContentProvider(contentProvider);
 		treeViewer.setLabelProvider(new MethodsLabelProvider());
-		treeViewer.setInput(getViewSite());
+		treeViewer.setInput(new Object());
 		
 		getSite().setSelectionProvider(treeViewer);
 		treeViewer.addSelectionChangedListener(this);
