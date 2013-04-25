@@ -12,16 +12,23 @@ import org.eclipse.jface.viewers.Viewer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.views.dataClasses.Method;
+import de.hpi.accidit.orm.OConnection;
+import de.hpi.accidit.orm.dsl.View;
+import static de.hpi.accidit.orm.dsl.Select.*;
 
 public class MethodsContentProvider implements ITreeContentProvider {
 	
+	private static final View<Method.Query> Methods = Method.VIEW;
+	
 	private Connection dbConnection;
+	private OConnection cnn;
 	
 	private int currentTestCaseId = 0;
 	
 	public MethodsContentProvider() {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
+			cnn = DatabaseConnector.getValidOConnection();
 		} catch (SQLException e) {
 			e.printStackTrace();
 			System.err.println("No database connection available. Exiting.");
@@ -41,36 +48,48 @@ public class MethodsContentProvider implements ITreeContentProvider {
 	public void dispose() { }
 
 	@Override
-	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
+	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { 
+		System.out.println(newInput);
+	}
 
 	@Override
 	public Object[] getElements(Object inputElement) {
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT testId, callStep, exitStep, depth, callLine, methodId, type, method ");
-		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = " + currentTestCaseId + " ");
-		query.append("AND depth = 0 ");
-		query.append("ORDER BY callStep");
-		
-		return queryForCalledMethods(query.toString(), null).toArray();
+		return select().from(Methods)
+				.where().rootOfTest(currentTestCaseId)
+				.asArray()._run(cnn);
+//		
+//		StringBuilder query = new StringBuilder();
+//		query.append("SELECT testId, callStep, exitStep, depth, callLine, methodId, type, method ");
+//		query.append("FROM vinvocationtrace ");
+//		query.append("WHERE testId = " + currentTestCaseId + " ");
+//		query.append("AND depth = 0 ");
+//		query.append("ORDER BY callStep");
+//		
+//		return queryForCalledMethods(query.toString(), null).toArray();
 	}
 
 	@Override
 	public Object[] getChildren(Object parentElement) {
 		if (!(parentElement instanceof Method)) return null;
 				
-		Method parentMethod = (Method) parentElement;
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT ");
-		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
-		query.append("FROM vinvocationtrace ");
-		query.append("WHERE testId = " + currentTestCaseId + " ");
-		query.append("AND depth = " + (parentMethod.depth + 1) + " ");
-		query.append("AND callStep > " + parentMethod.callStep + " ");
-		query.append("AND exitStep < " + parentMethod.exitStep + " ");
-		query.append("ORDER BY callStep");
-		
-		return queryForCalledMethods(query.toString(), parentMethod).toArray();
+		Method method = (Method) parentElement;
+		if (method.children == null) {
+			method.children = select().from(Methods)
+					.where().childOf(method)
+					.asArray()._run(cnn);
+		}
+		return method.children;
+//		StringBuilder query = new StringBuilder();
+//		query.append("SELECT ");
+//		query.append("testId, callStep, exitStep, depth, callLine, methodId, type, method ");
+//		query.append("FROM vinvocationtrace ");
+//		query.append("WHERE testId = " + currentTestCaseId + " ");
+//		query.append("AND depth = " + (parentMethod.depth + 1) + " ");
+//		query.append("AND callStep > " + parentMethod.callStep + " ");
+//		query.append("AND exitStep < " + parentMethod.exitStep + " ");
+//		query.append("ORDER BY callStep");
+//		
+//		return queryForCalledMethods(query.toString(), parentMethod).toArray();
 	}
 
 	@Override
