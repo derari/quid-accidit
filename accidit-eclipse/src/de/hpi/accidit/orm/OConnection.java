@@ -1,6 +1,8 @@
 package de.hpi.accidit.orm;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -10,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import de.hpi.accidit.orm.dsl.Select;
+import de.hpi.accidit.orm.util.OFutureBase;
 
 public class OConnection implements AutoCloseable {
 
@@ -22,7 +25,11 @@ public class OConnection implements AutoCloseable {
 	}
 	
 	public OPreparedStatement prepare(String sql) throws SQLException {
-		return new OPreparedStatement(this, connection.prepareStatement(sql));
+		return new OPreparedStatement(this, sql);
+	}
+	
+	/* OPreparedStatement */ PreparedStatement preparedStatement(String sql) throws SQLException {
+		return connection.prepareStatement(sql);
 	}
 	
 	/**
@@ -30,6 +37,12 @@ public class OConnection implements AutoCloseable {
 	 */
 	protected Future<?> submit(Runnable queryCommand) {
 		return executor.submit(queryCommand);
+	}
+	
+	public <P, R> OFuture<R> submit(OFutureAction<P, R> action, P arg) {
+		ActionResult<P, R> result = new ActionResult<P, R>(action, arg);
+		result.cancelDelegate = submit(result);
+		return result;
 	}
 
 	@Override
@@ -48,6 +61,38 @@ public class OConnection implements AutoCloseable {
 			connection.close();
 			runningExecs.remove(executor);
 		}
+	}
+	
+	private static class ActionResult<P, R>
+					extends OFutureBase<R>
+					implements Runnable {
+
+		Future<?> cancelDelegate = null;
+		private final OFutureAction<P, R> action;
+		private final P param;
+		
+		public ActionResult(OFutureAction<P, R> action, P param) {
+			super(null);
+			this.action = action;
+			this.param = param;
+		}
+
+		@Override
+		protected Future<?> getCancelDelegate() {
+			return cancelDelegate;
+		}
+		
+		@Override
+		public void run() {
+			try {
+				setValue(action.call(param));
+			} catch (Throwable e) {
+				if (e instanceof InterruptedException) {
+					Thread.currentThread().interrupt();
+				}
+				setException(e);
+			}
+		}		
 	}
 	
 	// Executor management =========================================================

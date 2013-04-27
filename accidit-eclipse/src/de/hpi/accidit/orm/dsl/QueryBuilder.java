@@ -107,7 +107,7 @@ public class QueryBuilder<Result> {
 		}
 	}
 	
-	private void _addValueAdapter(String key, ValueAdapterFactory<Result> vaf) {
+	private void _addValueAdapter(String key, ValueAdapterFactory<? super Result> vaf) {
 		adapters.put(key, new SelectedAdapter<Result>(vaf));
 	}
 	
@@ -166,8 +166,8 @@ public class QueryBuilder<Result> {
 	protected static class SelectedAdapter<E> {
 		private final ValueAdapterFactory<E> r;
 		private List<String> selected = null;
-		public SelectedAdapter(ValueAdapterFactory<E> r) {
-			this.r = r;
+		public SelectedAdapter(ValueAdapterFactory<? super E> r) {
+			this.r = (ValueAdapterFactory) r;
 		}
 		protected void select(String attribute) {
 			if (selected == null) selected = new ArrayList<>();
@@ -266,7 +266,7 @@ public class QueryBuilder<Result> {
 	
 	private int i = 0;
 	
-	protected void apply(ValueAdapterFactory<Result> vaf) {
+	protected void apply(ValueAdapterFactory<? super Result> vaf) {
 		String key = "$vaf$" + i;
 		_addValueAdapter(key, vaf);
 	}

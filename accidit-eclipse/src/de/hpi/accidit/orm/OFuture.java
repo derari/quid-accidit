@@ -16,6 +16,10 @@ public interface OFuture<V> extends Future<V> {
 	V getResult();
 	
 	Throwable getException();
+	
+	boolean _waitUntilDone();
+	
+	V _get();
 
 	<R> OFuture<R> onComplete(OFutureAction<? super OFuture<V>, R> action);
 	

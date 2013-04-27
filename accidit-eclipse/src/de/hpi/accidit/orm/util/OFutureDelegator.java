@@ -33,7 +33,17 @@ public class OFutureDelegator<V> implements OFuture<V> {
 	public boolean isDone() {
 		return getDelegatee().isDone();
 	}
-
+	
+	@Override
+	public boolean _waitUntilDone() {
+		return getDelegatee()._waitUntilDone();
+	}
+	
+	@Override
+	public V _get() {
+		return getDelegatee()._get();
+	}
+	
 	@Override
 	public V get() throws InterruptedException, ExecutionException {
 		return getDelegatee().get();
