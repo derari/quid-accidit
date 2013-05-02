@@ -44,6 +44,15 @@
             name="Locals and Fields"
             restorable="true">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.NavigatorView"
+            fastViewWidthRatio="0.3"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.NavigatorView"
+            name="Navigator"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
@@ -174,10 +183,10 @@
    <extension
          point="org.eclipse.ui.bindings">
       <key
-            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+            commandId="de.hpi.accidit.eclipse.commands.selectTestCase"
             contextId="org.eclipse.ui.contexts.window"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+6">
+            sequence="M1+1">
       </key>
    </extension>
    <extension

@@ -1,8 +1,6 @@
 package de.hpi.accidit.eclipse.model;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
-import de.hpi.accidit.orm.OFuture;
-import de.hpi.accidit.orm.OFutureAction;
 
 public class Trace {
 

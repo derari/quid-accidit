@@ -1,6 +1,5 @@
 package de.hpi.accidit.eclipse.views.provider;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,12 +8,9 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
-import de.hpi.accidit.eclipse.model.ExitEvent;
 import de.hpi.accidit.eclipse.model.Invocation;
-import de.hpi.accidit.eclipse.model.LineElement;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.dataClasses.Method;
 
 public class MethodsLabelProvider extends LabelProvider implements
 		ITableLabelProvider {

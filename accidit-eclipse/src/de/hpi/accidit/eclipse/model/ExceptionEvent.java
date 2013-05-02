@@ -4,16 +4,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-import de.hpi.accidit.eclipse.model.TraceElement.SetParentAdapter;
 import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.dsl.QueryBuilder;
 import de.hpi.accidit.orm.dsl.QueryTemplate;
 import de.hpi.accidit.orm.dsl.View;
 import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.util.QueryFactoryView;
-import de.hpi.accidit.orm.util.ReflectiveMapping;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapterFactory;
+import de.hpi.accidit.orm.util.QueryFactoryView;
+import de.hpi.accidit.orm.util.ReflectiveMapping;
 
 public class ExceptionEvent extends TraceElement {
 

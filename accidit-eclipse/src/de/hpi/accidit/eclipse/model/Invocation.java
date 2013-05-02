@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.model;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -16,8 +14,6 @@ import de.hpi.accidit.orm.dsl.QueryBuilder;
 import de.hpi.accidit.orm.dsl.QueryTemplate;
 import de.hpi.accidit.orm.dsl.View;
 import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.map.ResultBuilder;
-import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
 import de.hpi.accidit.orm.util.OLazyFuture;
 import de.hpi.accidit.orm.util.QueryFactoryView;
 import de.hpi.accidit.orm.util.ReflectiveMapping;
