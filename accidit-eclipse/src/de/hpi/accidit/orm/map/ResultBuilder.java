@@ -2,7 +2,9 @@ package de.hpi.accidit.orm.map;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
+import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.cursor.ResultCursor;
 
 public interface ResultBuilder<R, E> {
@@ -30,6 +32,10 @@ public interface ResultBuilder<R, E> {
 		
 		E copy(E e);
 		
+	}
+	
+	static interface ValueAdapterFactory<E> {
+		ValueAdapter<E> newAdapter(Mapping<E> mapping, OConnection cnn, List<String> attributes);
 	}
 	
 }

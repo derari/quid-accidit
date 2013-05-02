@@ -55,7 +55,7 @@ public class JavaSrcFilesLocator {
 		return projects;
 	}
 	
-	public IFile getFile(String filePath) {
+	public void open(String filePath, int line, IWorkbenchPage dPage) {
 		for(IJavaProject javaProject : getProjects()) {
 			IType javaFileType;
 			try {
@@ -65,30 +65,20 @@ public class JavaSrcFilesLocator {
 				continue;
 			}
 
-			if(javaFileType != null) {
-				IResource iResource = javaFileType.getResource();
-				
-				if (iResource != null) {
-					IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
-					
-					if (iFile != null) {
-						return iFile;
-					}
+			if(javaFileType == null) continue;
+			
+			IResource iResource = javaFileType.getResource();
+			if (iResource == null) continue;
+
+			IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+			if (dPage != null) {
+				try {										
+					IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
+					highlightLine(textEditor, line);
+				}catch (Exception e) {
+					e.printStackTrace();
+					// log exception
 				}
-			}
-		}
-		
-		return null;
-	}
-	
-	public void openFile(IFile iFile, int line, IWorkbenchPage dPage) {
-		if (dPage != null) {
-			try {										
-				IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
-				highlightLine(textEditor, line);
-			}catch (Exception e) {
-				e.printStackTrace();
-				// log exception
 			}
 		}
 	}

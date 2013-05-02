@@ -50,13 +50,24 @@ public class DatabaseConnector {
 	private static String lastDbString = null;
 	private static OConnection cnn = null;
 	
-	public static synchronized OConnection getValidOConnection() throws SQLException {
+	public static synchronized OConnection getValidOConnection() {
 		String dbString = getDBString();
 		if (!dbString.equals(lastDbString)) {
-			if (cnn != null) cnn.close();
-			cnn = new OConnection(getValidConnection());
+			try {
+				if (cnn != null) {
+					cnn.close();
+				}
+				lastDbString = dbString;
+				cnn = new OConnection(getValidConnection());
+			} catch (SQLException e) {
+				throw new RuntimeException(e);
+			}
 		}
 		return cnn;
+	}
+	
+	public static OConnection cnn() {
+		return getValidOConnection();
 	}
 	
 	/**

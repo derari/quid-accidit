@@ -84,9 +84,32 @@ public abstract class OFutureBase<V> implements OFuture<V> {
 	}
 	
 	@Override
+	public boolean _waitUntilDone() {
+		try {
+			waitUntilDone();
+			return true;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return false;
+		}
+	}
+	
+	@Override
+	public V _get() {
+		try {
+			return get();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new RuntimeException(e);
+		} catch (ExecutionException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	@Override
 	public V get() throws InterruptedException, ExecutionException {
 		waitUntilDone();
-		return _get();
+		return __get();
 	}
 
 	@Override
@@ -94,10 +117,10 @@ public abstract class OFutureBase<V> implements OFuture<V> {
 		if (!waitUntilDone(timeout, unit)) {
 			throw new TimeoutException();
 		}
-		return _get();
+		return __get();
 	}
 	
-	private V _get() throws ExecutionException {
+	private V __get() throws ExecutionException {
 		assert done;
 		if (exception != null) throw new ExecutionException(exception);
 		return value;

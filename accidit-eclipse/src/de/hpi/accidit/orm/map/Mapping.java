@@ -57,7 +57,21 @@ public abstract class Mapping<Type> {
 	
 	protected void injectField(Type record, String field, Object value) throws SQLException {
 		try {
-			Field f = record.getClass().getDeclaredField(field);
+			Field f = null;
+			Class<?> clazz = record.getClass();
+			while (clazz != null && f == null) {
+				Field[] fields = clazz.getDeclaredFields();
+				for (Field df: fields) {
+					if (df.getName().equals(field)) {
+						f = df;
+						break;
+					}
+				}
+				clazz = clazz.getSuperclass();
+			}
+			if (f == null) {
+				throw new NoSuchFieldException(field);
+			}
 			f.setAccessible(true);
 			f.set(record, value);
 		} catch (Exception e) {

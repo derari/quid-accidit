@@ -13,6 +13,7 @@ import java.util.Set;
 import de.hpi.accidit.orm.OConnection;
 import de.hpi.accidit.orm.OFuture;
 import de.hpi.accidit.orm.OPreparedStatement;
+import de.hpi.accidit.orm.cursor.ResultCursor;
 import de.hpi.accidit.orm.dsl.QueryTemplate.AdapterTemplate;
 import de.hpi.accidit.orm.dsl.QueryTemplate.Attribute;
 import de.hpi.accidit.orm.dsl.QueryTemplate.Condition;
@@ -20,7 +21,10 @@ import de.hpi.accidit.orm.dsl.QueryTemplate.Join;
 import de.hpi.accidit.orm.dsl.QueryTemplate.OrderBy;
 import de.hpi.accidit.orm.map.Mapping;
 import de.hpi.accidit.orm.map.MultiValueAdapter;
+import de.hpi.accidit.orm.map.ResultBuilder;
+import de.hpi.accidit.orm.map.ValueAdapterBase;
 import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
+import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapterFactory;
 
 public class QueryBuilder<Result> {
 	
@@ -76,7 +80,7 @@ public class QueryBuilder<Result> {
 		
 		if (resultAttributesGuard.add(key)) {
 			_selectAttribute(key);
-			if (template.getAdapter(key) != null) {
+			if (template.getAttribute(key) != null) {
 				resultAttributes.add(key);
 			}
 		}
@@ -98,9 +102,13 @@ public class QueryBuilder<Result> {
 			AdapterTemplate<Result> at = template.getAdapter(key);
 			if (at != null) {
 				_addDependencies(at.getDependencies());
-				adapters.put(key, new SelectedAdapter<Result>(at));
+				_addValueAdapter(key, at);
 			}
 		}
+	}
+	
+	private void _addValueAdapter(String key, ValueAdapterFactory<? super Result> vaf) {
+		adapters.put(key, new SelectedAdapter<Result>(vaf));
 	}
 	
 	private void _joinTable(String key) {
@@ -156,16 +164,16 @@ public class QueryBuilder<Result> {
 	}
 	
 	protected static class SelectedAdapter<E> {
-		private final AdapterTemplate<E> r;
+		private final ValueAdapterFactory<E> r;
 		private List<String> selected = null;
-		public SelectedAdapter(AdapterTemplate<E> r) {
-			this.r = r;
+		public SelectedAdapter(ValueAdapterFactory<? super E> r) {
+			this.r = (ValueAdapterFactory) r;
 		}
 		protected void select(String attribute) {
 			if (selected == null) selected = new ArrayList<>();
 			selected.add(attribute);
 		}
-		public AdapterTemplate<E> getAdapterTemplate() {
+		public ValueAdapterFactory<E> getAdapterTemplate() {
 			return r;
 		}
 		public List<String> getSelectedAttributes() {
@@ -256,6 +264,13 @@ public class QueryBuilder<Result> {
 		return new Condition(condition);
 	}
 	
+	private int i = 0;
+	
+	protected void apply(ValueAdapterFactory<? super Result> vaf) {
+		String key = "$vaf$" + i;
+		_addValueAdapter(key, vaf);
+	}
+	
 //	public void setCondition(String key, Object... arguments) {
 //		setCondition(key, key, arguments);
 //	}
@@ -318,7 +333,7 @@ public class QueryBuilder<Result> {
 		return flatten(conditionArguments, totalArgCount);
 	}
 	
-	protected ValueAdapter<Result> valueAdapter(OConnection cnn) {
+	protected ValueAdapter<Result> buildValueAdapter(OConnection cnn) {
 		int size = adapters.size();
 		if (size == 0) {
 			return mapping.getValueAdapter(publicResultAttributes);
@@ -386,26 +401,46 @@ public class QueryBuilder<Result> {
 		return result;
 	}
 	
-	public Submit<Result> submit(OConnection cnn) throws SQLException {
-		OPreparedStatement ps = cnn.prepare(queryString());
-		OFuture<ResultSet> result = ps.submit(arguments());
-		ValueAdapter<Result> va = valueAdapter(cnn);
-		return new Submit<>(result, mapping, va);
+	public ResultSet run() throws SQLException {
+		return run(cnn);
 	}
 	
-	public Submit<Result> submit() throws SQLException {
+	public ResultSet run(OConnection cnn) throws SQLException {
+		OPreparedStatement ps = cnn.prepare(queryString());
+		return ps.run(arguments());
+	}
+	
+	public OFuture<ResultSet> submit() throws SQLException {
 		return submit(cnn);
 	}
 	
-	public Run<Result> run(OConnection cnn) throws SQLException {
+	public OFuture<ResultSet> submit(OConnection cnn) throws SQLException {
 		OPreparedStatement ps = cnn.prepare(queryString());
-		ResultSet result = ps.run(arguments());
-		ValueAdapter<Result> va = valueAdapter(cnn);
-		return new Run<>(result, mapping, va);
+		return ps.submit(arguments());
 	}
 	
-	public Run<Result> run() throws SQLException {
-		return run(cnn);
+	public <R> Submittable<R> as(ResultBuilder<R, Result> rb) {
+		return new Submittable<>(cnn, this, rb, mapping.getEntityFactory());
+	}
+	
+	public Submittable<Result[]> asArray() {
+		return as(mapping.asArray());
+	}
+	
+	public Submittable<List<Result>> asList() {
+		return as(mapping.asList());
+	}
+	
+	public Submittable<ResultCursor<Result>> asCursor() {
+		return as(mapping.asCursor());
+	}
+	
+	public Submittable<Result> getSingle() {
+		return as(mapping.getSingle());
+	}
+	
+	public Submittable<Result> getFirst() {
+		return as(mapping.getFirst());
 	}
 	
 }

@@ -20,11 +20,10 @@ public class OpenMethodExplorerViewHandler extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
 		IWorkbenchPage page = window.getActivePage();
-		
 		try {
 			page.showView(MethodExplorerView.ID);
 		} catch (PartInitException e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 
 		return null;

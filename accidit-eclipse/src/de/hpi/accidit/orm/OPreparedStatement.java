@@ -10,11 +10,11 @@ import de.hpi.accidit.orm.util.OFutureBase;
 public class OPreparedStatement {
 
 	private final OConnection cnn;
-	private final PreparedStatement stmt;
+	private final String sql;
 	
-	public OPreparedStatement(OConnection cnn, PreparedStatement stmt) {
+	public OPreparedStatement(OConnection cnn, String sql) {
 		this.cnn = cnn;
-		this.stmt = stmt;
+		this.sql = sql;
 	}
 
 	public OFuture<ResultSet> submit(Object[] args) {
@@ -24,6 +24,7 @@ public class OPreparedStatement {
 	}
 	
 	public ResultSet run(Object[] args) throws SQLException {
+		PreparedStatement stmt = cnn.preparedStatement(sql);
 		synchronized (stmt) {
 			fillArgs(stmt, args);
 			return stmt.executeQuery();			
