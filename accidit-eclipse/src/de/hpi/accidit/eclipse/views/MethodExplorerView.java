@@ -1,5 +1,10 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeSelection;
@@ -7,6 +12,7 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.part.ViewPart;
 
@@ -85,11 +91,29 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			Object obj = ((ITreeSelection) selection).getFirstElement();
 			if (obj instanceof Method) {
 				Method method = (Method) obj;
-				
-				String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
-				int line = method.callLine;
-				srcFilesLocator.open(filePath, line, getViewSite().getPage());
-				setFocus();
+
+				final String filePath = (method.parentMethod != null) ? method.parentMethod.type : method.type;
+				final int line = method.callLine;
+
+				Job job = new Job("First Job") {
+					@Override
+					protected IStatus run(IProgressMonitor monitor) {
+						//asyncDataRequest();
+						final IFile file = srcFilesLocator.getFile(filePath);
+
+						//syncWithUi();
+						Display.getDefault().asyncExec(new Runnable() {
+							public void run() {
+								srcFilesLocator.openFile(file, line, getViewSite().getPage());
+								setFocus();
+							}
+						});
+						return Status.OK_STATUS;
+					}
+
+				};
+				job.setUser(true);
+				job.schedule();
 			}
 		}	
 	}

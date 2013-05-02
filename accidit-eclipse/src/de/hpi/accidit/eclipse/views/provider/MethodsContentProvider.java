@@ -41,10 +41,10 @@ public class MethodsContentProvider implements ITreeContentProvider {
 	public void dispose() { }
 
 	@Override
-	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
+	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {	}
 
 	@Override
-	public Object[] getElements(Object inputElement) {
+	public Object[] getElements(Object inputElement) {		
 		StringBuilder query = new StringBuilder();
 		query.append("SELECT testId, callStep, exitStep, depth, callLine, methodId, type, method ");
 		query.append("FROM vinvocationtrace ");
