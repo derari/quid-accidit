@@ -85,6 +85,11 @@
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
+            id="de.hpi.accidit.eclipse.commands.openNavigatorView"
+            name="Open Navigator">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
             id="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
             name="Open Locals Explorer ">
       </command>
@@ -179,6 +184,10 @@
             class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
       </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openNavigatorView">
+      </handler>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
@@ -206,8 +215,16 @@
                   id="de.hpi.accidit.eclipse.menus.openLocalsExplorerView">
             </command>
             <command
+                  commandId="de.hpi.accidit.eclipse.commands.openNavigatorView"
+                  id="de.hpi.accidit.eclipse.menus.openNavigatorView">
+            </command>
+            <separator
+                  name="accidit-eclipse.separator1"
+                  visible="true">
+            </separator>
+            <command
                   commandId="de.hpi.accidit.eclipse.commands.selectTestCase"
-                  icon="icons/sample.gif"
+                  icon="icons/a_logo.png"
                   id="de.hpi.accidit.eclipse.menus.selectTestCase">
             </command>
          </menu>
