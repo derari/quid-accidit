@@ -15,6 +15,10 @@ public abstract class DoInUiThread<T> implements OFutureAction<OFuture<T>, Void>
 	public Void call(OFuture<T> param) throws Exception {
 		value = param.getResult();
 		error = param.getException();
+		
+		// TODO rm
+		System.out.println("DoInUiThread<T> #call (async)");
+		
 		Display.getDefault().asyncExec(this);
 		return null;
 	}

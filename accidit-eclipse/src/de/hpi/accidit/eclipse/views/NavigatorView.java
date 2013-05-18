@@ -2,6 +2,8 @@ package de.hpi.accidit.eclipse.views;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Color;
@@ -125,21 +127,11 @@ public class NavigatorView extends ViewPart {
 	}
 	
 	private void hookListener(final Control control) {
-		control.addMouseListener(new MouseListener() {
+		control.addMouseListener(new MouseAdapter() {
 			
 			@Override
 			public void mouseUp(MouseEvent e) {
 				System.out.println("Event! - " + control);
-			}
-			
-			@Override
-			public void mouseDown(MouseEvent e) {
-				return;
-			}
-			
-			@Override
-			public void mouseDoubleClick(MouseEvent e) {
-				return;
 			}
 		});
 	}

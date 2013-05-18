@@ -5,12 +5,18 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.TreePath;
+import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
@@ -63,6 +69,8 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		
 		ui = TraceNavigatorUI.getGlobal();
 		ui.setTraceExplorer(this);
+		
+		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
 	}
 
 	@Override
@@ -100,6 +108,134 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		}	
 	}
 	
+	class TraceExplorerKeyAdapter extends KeyAdapter {
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			e.doit = false;
+			
+			switch(e.keyCode) {
+			case SWT.ARROW_UP: handleArrowUp(); break;
+			case SWT.ARROW_LEFT: handleArrowLeft(); break;
+			case SWT.ARROW_RIGHT: handleArrowRight(); break;
+			case SWT.ARROW_DOWN: handleArrowDown(); break;
+			default: break;
+			}
+		}
+		
+		private void handleArrowUp() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			if (parentPath.getSegmentCount() != 0) {
+				TreePath newSelectionPath = parentPath; 
+
+				// build path from tree
+				TreeItem item = treeViewer.getTree().getSelection()[0];
+				TreeItem parentItem = item.getParentItem();
+
+				int itemIndex = parentItem.indexOf(item);
+				if (itemIndex > 0) {
+					TreeItem upperItem = parentItem.getItems()[itemIndex - 1];
+					newSelectionPath = newSelectionPath.createChildPath(upperItem.getData());
+				} else {
+					treeViewer.collapseToLevel(parentPath, 1);
+				}
+				
+				TreeSelection newSelection = new TreeSelection(newSelectionPath);
+				treeViewer.setSelection(newSelection);
+			} else {
+				treeViewer.setSelection(null);
+			}
+		}
+
+		private void handleArrowLeft() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			if (parentPath.getSegmentCount() != 0) {
+				// TODO: check for expanded subpaths and collapse them!
+				treeViewer.collapseToLevel(parentPath, 1);
+				TreeSelection newSelection = new TreeSelection(parentPath);
+				treeViewer.setSelection(newSelection);
+			} else {
+				treeViewer.setSelection(null);
+			}
+		}
+		
+		private void handleArrowRight() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			// load elements of interest ...
+			treeViewer.expandToLevel(path, 1);
+			
+			// TODO check if elements are loaded - check if there are actually children
+			
+			// TODO find first child path if there is one - expandedTreePaths don't include children as it seems
+		}
+		
+		private void handleArrowDown() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+
+			if (currentSelection.isEmpty()) {
+				treeViewer.expandToLevel(TreePath.EMPTY, 1);
+				TreeItem[] rootItems = treeViewer.getTree().getItems();
+				if (rootItems.length != 0) {
+					treeViewer.setSelection(new StructuredSelection(rootItems[0].getData()));
+				}
+				return;
+			}
+			
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			if (parentPath.getSegmentCount() != 0) {
+				TreePath newSelectionPath = parentPath; 
+
+				// build path from tree
+				TreeItem item = treeViewer.getTree().getSelection()[0];
+				TreeItem parentItem = item.getParentItem();
+
+				int itemIndex = parentItem.indexOf(item);
+				if (parentItem.getItemCount() > itemIndex + 1) {
+					TreeItem upperItem = parentItem.getItems()[itemIndex + 1];
+					newSelectionPath = parentPath.createChildPath(upperItem.getData());
+				} else {
+					// based on the assumption that there's always a following element exactly one level above (return)
+					TreeItem parentItemParent = parentItem.getParentItem();
+					if (parentItemParent == null) {
+						treeViewer.setSelection(null);
+						treeViewer.collapseAll();
+						return;
+					}
+					
+					int parentItemIndex = parentItemParent.indexOf(parentItem);
+					TreeItem lowerItem = parentItemParent.getItem(parentItemIndex + 1); 
+					
+					treeViewer.collapseToLevel(parentPath, 1);
+					newSelectionPath = newSelectionPath.getParentPath();
+					newSelectionPath = newSelectionPath.createChildPath(lowerItem.getData());
+				}
+				
+				TreeSelection newSelection = new TreeSelection(newSelectionPath);
+				treeViewer.setSelection(newSelection);
+			} else {
+				treeViewer.setSelection(null);
+			}
+		}
+	}
+	
 	public static class TraceContentProvider implements ILazyTreeContentProvider {
 		
 		private TreeViewer viewer;
@@ -134,6 +270,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 				} else {
 					viewer.setChildCount(inv, 1);
 					inv.asyncChildren().onComplete(new DoInUiThread<TraceElement[]>() {
+						
 						@Override
 						protected void run(TraceElement[] value, Throwable error) {
 							viewer.setChildCount(inv, 0);

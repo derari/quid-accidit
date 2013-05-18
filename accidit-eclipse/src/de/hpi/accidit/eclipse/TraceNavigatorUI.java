@@ -61,6 +61,10 @@ public class TraceNavigatorUI {
 	public void refresh() {
 		Display.getDefault().asyncExec(new Runnable() {
 		    public void run() {
+		    	
+		    	// TODO: remove!
+		    	System.out.println("TraceNavigatorUI #refresh (async)");
+		    	
 		    	if (traceExplorer != null) traceExplorer.refresh();
 		    }
 		});
