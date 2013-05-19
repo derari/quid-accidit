@@ -130,25 +130,20 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			TreePath path = currentSelection.getPaths()[0];
 			TreePath parentPath = path.getParentPath();
 			
-			if (parentPath.getSegmentCount() != 0) {
-				TreePath newSelectionPath = parentPath; 
-
+			if (parentPath.getSegmentCount() > 0) {
 				// build path from tree
 				TreeItem item = treeViewer.getTree().getSelection()[0];
 				TreeItem parentItem = item.getParentItem();
 
 				int itemIndex = parentItem.indexOf(item);
 				if (itemIndex > 0) {
-					TreeItem upperItem = parentItem.getItems()[itemIndex - 1];
-					newSelectionPath = newSelectionPath.createChildPath(upperItem.getData());
+					TreeItem previousItem = parentItem.getItems()[itemIndex - 1];
+					TreePath previousItemPath = parentPath.createChildPath(previousItem.getData());
+					treeViewer.setSelection(new TreeSelection(previousItemPath));
 				} else {
+					treeViewer.setSelection(new TreeSelection(parentPath));
 					treeViewer.collapseToLevel(parentPath, 1);
 				}
-				
-				TreeSelection newSelection = new TreeSelection(newSelectionPath);
-				treeViewer.setSelection(newSelection);
-			} else {
-				treeViewer.setSelection(null);
 			}
 		}
 
@@ -159,13 +154,10 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			TreePath path = currentSelection.getPaths()[0];
 			TreePath parentPath = path.getParentPath();
 			
-			if (parentPath.getSegmentCount() != 0) {
-				// TODO: check for expanded subpaths and collapse them!
-				treeViewer.collapseToLevel(parentPath, 1);
+			if (parentPath.getSegmentCount() > 0) {
 				TreeSelection newSelection = new TreeSelection(parentPath);
 				treeViewer.setSelection(newSelection);
-			} else {
-				treeViewer.setSelection(null);
+				treeViewer.collapseToLevel(parentPath, 1);
 			}
 		}
 		
@@ -174,45 +166,41 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			if (currentSelection.isEmpty()) return;
 			
 			TreePath path = currentSelection.getPaths()[0];
-			TreePath parentPath = path.getParentPath();
-			
-			// load elements of interest ...
-			treeViewer.expandToLevel(path, 1);
-			
-			// TODO check if elements are loaded - check if there are actually children
-			
-			// TODO find first child path if there is one - expandedTreePaths don't include children as it seems
+			treeViewer.expandToLevel(path, 1); // load elements asynchronously
+						
+			TreeItem item = treeViewer.getTree().getSelection()[0];
+			if (item.getItemCount() > 0) {
+				TreePath childPath = path.createChildPath(item.getItem(0).getData());
+				treeViewer.setSelection(new TreeSelection(childPath));
+			}
 		}
 		
 		private void handleArrowDown() {
 			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
-
 			if (currentSelection.isEmpty()) {
-				treeViewer.expandToLevel(TreePath.EMPTY, 1);
+//				treeViewer.expandToLevel(TreePath.EMPTY, 1);
 				TreeItem[] rootItems = treeViewer.getTree().getItems();
-				if (rootItems.length != 0) {
+				if (rootItems.length > 0) {
 					treeViewer.setSelection(new StructuredSelection(rootItems[0].getData()));
 				}
 				return;
 			}
 			
-			
 			TreePath path = currentSelection.getPaths()[0];
 			TreePath parentPath = path.getParentPath();
-			
-			if (parentPath.getSegmentCount() != 0) {
-				TreePath newSelectionPath = parentPath; 
-
+			if (parentPath.getSegmentCount() > 0) {
 				// build path from tree
 				TreeItem item = treeViewer.getTree().getSelection()[0];
 				TreeItem parentItem = item.getParentItem();
 
 				int itemIndex = parentItem.indexOf(item);
 				if (parentItem.getItemCount() > itemIndex + 1) {
-					TreeItem upperItem = parentItem.getItems()[itemIndex + 1];
-					newSelectionPath = parentPath.createChildPath(upperItem.getData());
+					TreeItem nextItem = parentItem.getItems()[itemIndex + 1];
+					TreePath nextItemPath = parentPath.createChildPath(nextItem.getData());
+					treeViewer.setSelection(new TreeSelection(nextItemPath));
 				} else {
-					// based on the assumption that there's always a following element exactly one level above (return)
+					// find find item behind the parent
+					// assumption: there's always a next item exactly one level above (return)
 					TreeItem parentItemParent = parentItem.getParentItem();
 					if (parentItemParent == null) {
 						treeViewer.setSelection(null);
@@ -221,17 +209,11 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 					}
 					
 					int parentItemIndex = parentItemParent.indexOf(parentItem);
-					TreeItem lowerItem = parentItemParent.getItem(parentItemIndex + 1); 
-					
+					TreeItem nextParentItem = parentItemParent.getItem(parentItemIndex + 1); 
+					TreePath nextParentItemPath = parentPath.getParentPath().createChildPath(nextParentItem.getData());
+					treeViewer.setSelection(new TreeSelection(nextParentItemPath));
 					treeViewer.collapseToLevel(parentPath, 1);
-					newSelectionPath = newSelectionPath.getParentPath();
-					newSelectionPath = newSelectionPath.createChildPath(lowerItem.getData());
 				}
-				
-				TreeSelection newSelection = new TreeSelection(newSelectionPath);
-				treeViewer.setSelection(newSelection);
-			} else {
-				treeViewer.setSelection(null);
 			}
 		}
 	}
