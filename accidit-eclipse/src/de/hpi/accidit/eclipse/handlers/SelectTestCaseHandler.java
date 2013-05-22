@@ -35,7 +35,7 @@ public class SelectTestCaseHandler extends AbstractHandler {
 		
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();
-			if (result.length < 1) return null;
+			if (result == null || result.length < 1) return null;
 			TestCase newTestCase = (TestCase) result[0];
 
 			methodExplorerView.setTestCaseId(newTestCase.id);

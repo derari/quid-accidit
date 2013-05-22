@@ -7,17 +7,22 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.TreePath;
+import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.Invocation;
-import de.hpi.accidit.eclipse.model.LineElement;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
@@ -40,8 +45,6 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 
 	@Override
 	public void createPartControl(Composite parent) {
-		
-		
 		Tree tree = new Tree(parent, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
 		treeViewer = new TreeViewer(tree);
 		treeViewer.getTree().setHeaderVisible(true);
@@ -62,6 +65,8 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		
 		ui = TraceNavigatorUI.getGlobal();
 		ui.setTraceExplorer(this);
+		
+		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
 	}
 
 	@Override
@@ -90,12 +95,123 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		ISelection selection = event.getSelection();
 		if (selection instanceof ITreeSelection) {
 			Object obj = ((ITreeSelection) selection).getFirstElement();
+
 			if (obj instanceof TraceElement) {
 				TraceElement te = (TraceElement) obj;
 				ui.setStep(te);
 			}
 			setFocus();
 		}	
+	}
+	
+	class TraceExplorerKeyAdapter extends KeyAdapter {
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			e.doit = false;
+			
+			switch(e.keyCode) {
+			case SWT.ARROW_UP: handleArrowUp(); break;
+			case SWT.ARROW_LEFT: handleArrowLeft(); break;
+			case SWT.ARROW_RIGHT: handleArrowRight(); break;
+			case SWT.ARROW_DOWN: handleArrowDown(); break;
+			default: break;
+			}
+		}
+		
+		private void handleArrowUp() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			if (parentPath.getSegmentCount() > 0) {
+				// build path from tree
+				TreeItem item = treeViewer.getTree().getSelection()[0];
+				TreeItem parentItem = item.getParentItem();
+
+				int itemIndex = parentItem.indexOf(item);
+				if (itemIndex > 0) {
+					TreeItem previousItem = parentItem.getItems()[itemIndex - 1];
+					TreePath previousItemPath = parentPath.createChildPath(previousItem.getData());
+					treeViewer.setSelection(new TreeSelection(previousItemPath));
+				} else {
+					treeViewer.setSelection(new TreeSelection(parentPath));
+					treeViewer.collapseToLevel(parentPath, 1);
+				}
+			}
+		}
+
+		private void handleArrowLeft() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			
+			if (parentPath.getSegmentCount() > 0) {
+				TreeSelection newSelection = new TreeSelection(parentPath);
+				treeViewer.setSelection(newSelection);
+				treeViewer.collapseToLevel(parentPath, 1);
+			}
+		}
+		
+		private void handleArrowRight() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) return;
+			
+			TreePath path = currentSelection.getPaths()[0];
+			treeViewer.expandToLevel(path, 1); // load elements asynchronously
+						
+			TreeItem item = treeViewer.getTree().getSelection()[0];
+			if (item.getItemCount() > 0) {
+				TreePath childPath = path.createChildPath(item.getItem(0).getData());
+				treeViewer.setSelection(new TreeSelection(childPath));
+			}
+		}
+		
+		private void handleArrowDown() {
+			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
+			if (currentSelection.isEmpty()) {
+//				treeViewer.expandToLevel(TreePath.EMPTY, 1);
+				TreeItem[] rootItems = treeViewer.getTree().getItems();
+				if (rootItems.length > 0) {
+					treeViewer.setSelection(new StructuredSelection(rootItems[0].getData()));
+				}
+				return;
+			}
+			
+			TreePath path = currentSelection.getPaths()[0];
+			TreePath parentPath = path.getParentPath();
+			if (parentPath.getSegmentCount() > 0) {
+				// build path from tree
+				TreeItem item = treeViewer.getTree().getSelection()[0];
+				TreeItem parentItem = item.getParentItem();
+
+				int itemIndex = parentItem.indexOf(item);
+				if (parentItem.getItemCount() > itemIndex + 1) {
+					TreeItem nextItem = parentItem.getItems()[itemIndex + 1];
+					TreePath nextItemPath = parentPath.createChildPath(nextItem.getData());
+					treeViewer.setSelection(new TreeSelection(nextItemPath));
+				} else {
+					// find find item behind the parent
+					// assumption: there's always a next item exactly one level above (return)
+					TreeItem parentItemParent = parentItem.getParentItem();
+					if (parentItemParent == null) {
+						treeViewer.setSelection(null);
+						treeViewer.collapseAll();
+						return;
+					}
+					
+					int parentItemIndex = parentItemParent.indexOf(parentItem);
+					TreeItem nextParentItem = parentItemParent.getItem(parentItemIndex + 1); 
+					TreePath nextParentItemPath = parentPath.getParentPath().createChildPath(nextParentItem.getData());
+					treeViewer.setSelection(new TreeSelection(nextParentItemPath));
+					treeViewer.collapseToLevel(parentPath, 1);
+				}
+			}
+		}
 	}
 	
 	public static class TraceContentProvider implements ILazyTreeContentProvider {
