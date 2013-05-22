@@ -4,6 +4,7 @@ import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
 
+import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 
 public class LocalsLabelProvider extends LabelProvider implements
@@ -11,25 +12,25 @@ public class LocalsLabelProvider extends LabelProvider implements
 
 	@Override
 	public Image getColumnImage(Object element, int columnIndex) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String getColumnText(Object element, int columnIndex) {
-		if(!(element instanceof LocalBase)) {
-			System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
-			return null;
-		}			
-		
-		LocalBase local = (LocalBase) element;
-		switch(columnIndex) {
-		case 0: return local.getName();
-		case 1: return local.getValue();
-		case 2: return local.getStep();
-		case 3: return local.getType();
-		default: return null;
+		if (!(element instanceof NamedValue)) {
+			return String.valueOf(element);
 		}
+		NamedValue nv = (NamedValue) element;
+		switch (columnIndex) {
+		case 0: return nv.getName();
+		case 1: 
+			if (nv.isInitialized()) {
+				return nv.getValue().getLongString();
+			} else {
+				return "Pending...";
+			}
+		}
+		return "-";
 	}
 
 }

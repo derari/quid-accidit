@@ -11,7 +11,6 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.eclipse.views.dataClasses.Method;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalObject;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalPrimitive;
@@ -21,10 +20,10 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 	private Connection dbConnection;
 	
 	private int selectedTestCaseId;
-	private Method selectedMethod;
+//	private Method selectedMethod;
 	private LocalBase selectedLocal;
 	
-	public LocalsHistoryContentProvider(int selectedTestCaseId,	Method selectedMethod, LocalBase selectedLocal) {
+	public LocalsHistoryContentProvider(int selectedTestCaseId,	Object selectedMethod, LocalBase selectedLocal) {
 		try {
 			dbConnection = DatabaseConnector.getValidConnection();
 		} catch (SQLException e) {
@@ -34,7 +33,7 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		}
 		
 		this.selectedTestCaseId = selectedTestCaseId;
-		this.selectedMethod = selectedMethod;
+//		this.selectedMethod = selectedMethod;
 		this.selectedLocal = selectedLocal;
 	}
 
@@ -48,24 +47,24 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 	public Object[] getElements(Object inputElement) {
 		StringBuilder query = new StringBuilder();
 		
-		if(selectedLocal.isLocalVariable) {
-			query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
-			query.append("FROM VariableTrace vt ");
-			query.append("JOIN Variable v ON v.id = vt.variableId AND v.methodId = vt.methodId ");
-			query.append("JOIN Type t ON t.id = v.typeId ");
-			query.append("WHERE vt.testId = " + selectedTestCaseId + " ");
-			query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
-			query.append("AND vt.variableId = " + selectedLocal.id + " ");
-			query.append("ORDER BY vt.step");
-		} else {
-			query.append("SELECT f.id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
-			query.append("FROM PutTrace pt ");
-			query.append("JOIN Field f ON f.id = pt.fieldId ");
-			query.append("JOIN Type t ON t.id = f.typeId ");
-			query.append("WHERE pt.testId = " + selectedTestCaseId + " ");
-			query.append("AND pt.fieldId = " + selectedLocal.id + " ");
-			query.append("ORDER BY pt.step");
-		}
+//		if(selectedLocal.isLocalVariable) {
+//			query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
+//			query.append("FROM VariableTrace vt ");
+//			query.append("JOIN Variable v ON v.id = vt.variableId AND v.methodId = vt.methodId ");
+//			query.append("JOIN Type t ON t.id = v.typeId ");
+//			query.append("WHERE vt.testId = " + selectedTestCaseId + " ");
+//			query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
+//			query.append("AND vt.variableId = " + selectedLocal.id + " ");
+//			query.append("ORDER BY vt.step");
+//		} else {
+//			query.append("SELECT f.id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
+//			query.append("FROM PutTrace pt ");
+//			query.append("JOIN Field f ON f.id = pt.fieldId ");
+//			query.append("JOIN Type t ON t.id = f.typeId ");
+//			query.append("WHERE pt.testId = " + selectedTestCaseId + " ");
+//			query.append("AND pt.fieldId = " + selectedLocal.id + " ");
+//			query.append("ORDER BY pt.step");
+//		}
 		
 		return queryForLocals(query.toString()).toArray();
 	}
@@ -83,7 +82,7 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		query.append("	FROM PutTrace ");
 		query.append("	WHERE testId = " + selectedTestCaseId + " ");
 		query.append("	AND thisId = " + local.objectId + " ");
-		query.append("	AND step <= " + selectedMethod.callStep + " ");
+//		query.append("	AND step <= " + selectedMethod.callStep + " ");
 		query.append(") pt ON pt.fieldId = f.id ");
 		query.append("JOIN Type t ON t.id = f.typeId ");
 		query.append("WHERE f.declaringTypeID = " + local.typeId);

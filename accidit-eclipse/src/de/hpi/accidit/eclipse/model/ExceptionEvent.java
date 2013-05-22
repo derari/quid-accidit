@@ -2,18 +2,15 @@ package de.hpi.accidit.eclipse.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
-import de.hpi.accidit.eclipse.model.TraceElement.SetParentAdapter;
-import de.hpi.accidit.orm.OConnection;
-import de.hpi.accidit.orm.dsl.QueryBuilder;
-import de.hpi.accidit.orm.dsl.QueryTemplate;
-import de.hpi.accidit.orm.dsl.View;
-import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.util.QueryFactoryView;
-import de.hpi.accidit.orm.util.ReflectiveMapping;
-import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
-import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapterFactory;
+import org.cthul.miro.MiConnection;
+import org.cthul.miro.dsl.QueryTemplate;
+import org.cthul.miro.dsl.QueryWithTemplate;
+import org.cthul.miro.dsl.View;
+import org.cthul.miro.map.Mapping;
+import org.cthul.miro.map.ResultBuilder.ValueAdapter;
+import org.cthul.miro.util.QueryFactoryView;
+import org.cthul.miro.util.ReflectiveMapping;
 
 public class ExceptionEvent extends TraceElement {
 
@@ -44,20 +41,20 @@ public class ExceptionEvent extends TraceElement {
 		from("ThrowTrace f");
 	}};
 	
-	public static class ThrowQuery extends QueryBuilder<ExceptionEvent> {
-		public ThrowQuery(OConnection cnn, String[] select) {
-			super(cnn, THROW_TEMPLATE, MAPPING);
-			select(select);
-			apply(new SetIsThrow(true));
+	public static class ThrowQuery extends QueryWithTemplate<ExceptionEvent> {
+		public ThrowQuery(MiConnection cnn, String[] select) {
+			super(cnn, MAPPING, THROW_TEMPLATE);
+			select_keys(select);
+			adapter(new SetIsThrow(true));
 		}
 		public ThrowQuery where() {
 			return this;
 		}
 		public ThrowQuery inInvocation(Invocation inv) {
-			where("testId_EQ", inv.testId);
-			where("callStep_EQ", inv.step);
-			orderBy("o_step");
-			apply(new SetParentAdapter(inv));
+			where_key("testId_EQ", inv.testId);
+			where_key("callStep_EQ", inv.step);
+			orderBy_key("o_step");
+			adapter(new SetParentAdapter(inv));
 			return this;
 		}
 	}
@@ -66,25 +63,25 @@ public class ExceptionEvent extends TraceElement {
 		from("CatchTrace f");
 	}};
 	
-	public static class CatchQuery extends QueryBuilder<ExceptionEvent> {
-		public CatchQuery(OConnection cnn, String[] select) {
-			super(cnn, CATCH_TEMPLATE, MAPPING);
-			select(select);
-			apply(new SetIsThrow(false));
+	public static class CatchQuery extends QueryWithTemplate<ExceptionEvent> {
+		public CatchQuery(MiConnection cnn, String[] select) {
+			super(cnn, MAPPING, CATCH_TEMPLATE);
+			select_keys(select);
+			adapter(new SetIsThrow(false));
 		}
 		public CatchQuery where() {
 			return this;
 		}
 		public CatchQuery inInvocation(Invocation inv) {
-			where("testId_EQ", inv.testId);
-			where("callStep_EQ", inv.step);
-			orderBy("o_step");
-			apply(new SetParentAdapter(inv));
+			where_key("testId_EQ", inv.testId);
+			where_key("callStep_EQ", inv.step);
+			orderBy_key("o_step");
+			adapter(new SetParentAdapter(inv));
 			return this;
 		}
 	}
 	
-	private static class SetIsThrow implements ValueAdapterFactory<ExceptionEvent>, ValueAdapter<ExceptionEvent> {
+	private static class SetIsThrow implements ValueAdapter<ExceptionEvent> {
 
 		private boolean isThrow;
 		
@@ -106,10 +103,7 @@ public class ExceptionEvent extends TraceElement {
 		}
 
 		@Override
-		public ValueAdapter<ExceptionEvent> newAdapter(
-				Mapping<ExceptionEvent> mapping, OConnection cnn,
-				List<String> attributes) {
-			return this;
+		public void close() throws SQLException {
 		}
 		
 	}

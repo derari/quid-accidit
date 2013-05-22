@@ -1,15 +1,12 @@
 package de.hpi.accidit.eclipse;
 
-import org.eclipse.swt.widgets.Display;
+import org.cthul.miro.MiConnection;
 import org.eclipse.ui.IWorkbenchPage;
 
-import de.hpi.accidit.eclipse.model.Invocation;
-import de.hpi.accidit.eclipse.model.LineElement;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
-import de.hpi.accidit.orm.OConnection;
 
 public class TraceNavigatorUI {
 
@@ -23,7 +20,7 @@ public class TraceNavigatorUI {
 	// UI
 	private IWorkbenchPage mainPage = null;
 	private MethodExplorerView traceExplorer = null;
-	private LocalsExplorerView localsExprorer = null;
+	private LocalsExplorerView localsExplorer = null;
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
 	
@@ -47,26 +44,26 @@ public class TraceNavigatorUI {
 	}
 	
 	public void setLocalsExprorer(LocalsExplorerView localsExprorer) {
-		this.localsExprorer = localsExprorer;
+		this.localsExplorer = localsExprorer;
 	}
 	
 	public void unsetLocalsExprorer(LocalsExplorerView localsExprorer) {
-		if (this.localsExprorer == localsExprorer) {
-			this.localsExprorer = null;
+		if (this.localsExplorer == localsExprorer) {
+			this.localsExplorer = null;
 		}
 	}
 	
-	public OConnection cnn() {
+	public MiConnection cnn() {
 		return DatabaseConnector.getValidOConnection();
 	}
 	
-	public void refresh() {
-		Display.getDefault().asyncExec(new Runnable() {
-		    public void run() {
-		    	if (traceExplorer != null) traceExplorer.refresh();
-		    }
-		});
-	}
+//	public void refresh() {
+//		Display.getDefault().asyncExec(new Runnable() {
+//		    public void run() {
+//		    	if (traceExplorer != null) traceExplorer.refresh();
+//		    }
+//		});
+//	}
 	
 	public int getTestId() {
 		return testId;
@@ -80,6 +77,7 @@ public class TraceNavigatorUI {
 		this.step = 0;
 		this.testId = testId;
 		if (traceExplorer != null) traceExplorer.setTestCaseId(testId);
+		if (localsExplorer != null) localsExplorer.setStep(testId, 0, 0);
 	}
 	
 	public void setStep(long step) {
@@ -91,6 +89,9 @@ public class TraceNavigatorUI {
 		if (le.parent != null) {
 			String filePath = le.parent.type;
 			srcFilesLocator.open(filePath, le.line, mainPage);
+			if (localsExplorer != null) {
+				localsExplorer.setStep(le.parent.testId, le.parent.step, le.step);
+			}
 		}
 	}
 	

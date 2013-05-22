@@ -4,13 +4,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-import de.hpi.accidit.orm.OConnection;
-import de.hpi.accidit.orm.dsl.QueryTemplate;
-import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.map.ResultBuilder;
-import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
+import org.cthul.miro.MiConnection;
+import org.cthul.miro.dsl.QueryTemplate;
+import org.cthul.miro.dsl.ValueAdapterFactory;
+import org.cthul.miro.map.Mapping;
+import org.cthul.miro.map.ResultBuilder;
+import org.cthul.miro.map.ResultBuilder.ValueAdapter;
 
-public class TraceElement implements Comparable<TraceElement> {
+
+public class TraceElement extends ModelBase implements Comparable<TraceElement> {
 
 	public Invocation parent;
 	public int line;
@@ -37,26 +39,19 @@ public class TraceElement implements Comparable<TraceElement> {
 
 	
 	protected static class TETemplate<V extends TraceElement> extends QueryTemplate<V> {{
-		select("line", "f.line",
-			   "step", "f.step");
+		select("f.line", "f.step");
 		where("testId_EQ", "f.testId = ?");
 		where("callStep_EQ", "f.callStep = ?");
 		orderBy("o_step", "f.step");
 	}};
 	
 	protected static class SetParentAdapter 
-					implements ResultBuilder.ValueAdapter<TraceElement>, 
-							   ResultBuilder.ValueAdapterFactory<TraceElement> {
+					implements ResultBuilder.ValueAdapter<TraceElement> {
 		
 		private final Invocation parent;
 		
 		public SetParentAdapter(Invocation parent) {
 			this.parent = parent;
-		}
-		
-		@Override
-		public ValueAdapter<TraceElement> newAdapter(Mapping<TraceElement> mapping, OConnection cnn, List<String> attributes) {
-			return this;
 		}
 		
 		@Override
@@ -69,6 +64,9 @@ public class TraceElement implements Comparable<TraceElement> {
 		
 		@Override
 		public void complete() throws SQLException {}
-		}
+
+		@Override
+		public void close() throws SQLException {}
+	}
 	
 }

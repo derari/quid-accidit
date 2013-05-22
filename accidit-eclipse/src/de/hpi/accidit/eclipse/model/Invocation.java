@@ -1,26 +1,24 @@
 package de.hpi.accidit.eclipse.model;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.cthul.miro.MiConnection;
+import org.cthul.miro.MiFuture;
+import org.cthul.miro.MiFutureAction;
+import org.cthul.miro.dsl.QueryBuilder;
+import org.cthul.miro.dsl.QueryTemplate;
+import org.cthul.miro.dsl.QueryWithTemplate;
+import org.cthul.miro.dsl.View;
+import org.cthul.miro.map.Mapping;
+import org.cthul.miro.util.LazyFuture;
+import org.cthul.miro.util.QueryFactoryView;
+import org.cthul.miro.util.ReflectiveMapping;
+
 import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.orm.OConnection;
-import de.hpi.accidit.orm.OFuture;
-import de.hpi.accidit.orm.OFutureAction;
-import de.hpi.accidit.orm.dsl.QueryBuilder;
-import de.hpi.accidit.orm.dsl.QueryTemplate;
-import de.hpi.accidit.orm.dsl.View;
-import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.map.ResultBuilder;
-import de.hpi.accidit.orm.map.ResultBuilder.ValueAdapter;
-import de.hpi.accidit.orm.util.OLazyFuture;
-import de.hpi.accidit.orm.util.QueryFactoryView;
-import de.hpi.accidit.orm.util.ReflectiveMapping;
 
 public class Invocation extends TraceElement {
 
@@ -36,13 +34,7 @@ public class Invocation extends TraceElement {
 	public String type;
 	public String method;
 	
-	private OFuture<TraceElement[]> fChildren = new OLazyFuture<TraceElement[]>() {
-		@Override
-		protected OFuture<? extends TraceElement[]> initialize() throws Exception {
-			final OConnection cnn = DatabaseConnector.cnn();
-			return cnn.submit(FETCH_CHILDREN, Invocation.this);
-		}
-	};
+	private TraceElement[] children = null;
 
 	public Invocation() { };
 	
@@ -57,43 +49,39 @@ public class Invocation extends TraceElement {
 	}
 	
 	public TraceElement[] getChildren() {
-		if (fChildren._waitUntilDone()) {
-			if (fChildren.hasResult()) {
-				return fChildren.getResult();
-			} else {
-				return new TraceElement[]{new ErrorElement(fChildren.getException().getMessage())};
-			}
+		if (!beInitialized()) {
+			return new TraceElement[]{new ErrorElement("interrupted")};
 		}
-		return new TraceElement[]{new ErrorElement("interrupted")};
+		if (!isInitSuccess()) {
+			return new TraceElement[]{new ErrorElement(getInitException().getMessage())};
+		}
+		return children;
 	}
 	
-	public OFuture<TraceElement[]> asyncChildren() {
-		return fChildren;
-	}
-	
-	protected TraceElement[] fetchChildren() throws Exception {
-		final OConnection cnn = DatabaseConnector.cnn();
+	@Override
+	protected void lazyInitialize() throws Exception {
+		final MiConnection cnn = DatabaseConnector.cnn();
 		
 		List<Invocation> calls = cnn
 				.select().from(VIEW)
 				.where().childOf(Invocation.this)
-				.asList().run();
+				.asList().execute();
 		List<ExceptionEvent> catchs = cnn
 				.select("line", "step").from(ExceptionEvent.CATCH_VIEW)
 				.where().inInvocation(Invocation.this)
-				.asList().run();
+				.asList().execute();
 		List<ExceptionEvent> thrown = cnn
 				.select("line", "step").from(ExceptionEvent.CATCH_VIEW)
 				.where().inInvocation(Invocation.this)
-				.asList().run();
+				.asList().execute();
 		List<FieldEvent> fields = cnn
 				.select("line", "step").from(FieldEvent.PUT_VIEW)
 				.where().inInvocation(testId, step)
-				.asList().run();
+				.asList().execute();
 		List<VariableEvent> vars = cnn
 				.select("line", "step").from(VariableEvent.VIEW)
 				.where().inInvocation(testId, step)
-				.asList().run();
+				.asList().execute();
 		
 		SortedSet<TraceElement> major = new TreeSet<>();
 		major.addAll(calls);
@@ -134,34 +122,24 @@ public class Invocation extends TraceElement {
 		
 		result.add(new ExitEvent(this, returned, exitLine, exitStep));
 		
-		return result.toArray(new TraceElement[result.size()]);
+		children = result.toArray(new TraceElement[result.size()]);
 	}
-
-	private static final OFutureAction<Invocation, TraceElement[]> FETCH_CHILDREN = new OFutureAction<Invocation, TraceElement[]>() {
-		public TraceElement[] call(Invocation param) throws Exception {
-			return param.fetchChildren();
-		};
-	};
 	
 	public static final View<Query> VIEW = new QueryFactoryView<>(Query.class);
 	
 	private static final Mapping<Invocation> MAPPING = new ReflectiveMapping<>(Invocation.class);
 	
 	private static final QueryTemplate<Invocation> TEMPLATE = new QueryTemplate<Invocation>(){{
-		select("testId", 	"i.testId",
-			   "step", 		"i.callStep AS step",
-			   "exitStep", 	"i.exitStep",
-			   "depth",		"i.depth",
-			   "line",		"i.callLine AS line",
-			   "returned",	"i.returned",
-			   "exitLine",	"i.exitLine");
+		select("i.testId", "i.callStep AS step", "i.exitStep", 
+			   "i.depth", "i.callLine AS line",
+			   "i.returned", "i.exitLine");
 		from("InvocationTrace i");
-		optional_join("m", "Method m", "i.methodId = m.id");
+		join("Method m ON i.methodId = m.id");
 		using("m")
-			.select("method", "m.name AS method")
-			.optional_join("t", "Type t", "m.declaringTypeId = t.id");
+			.select("m.name AS method")
+			.join("Type t ON m.declaringTypeId = t.id");
 		using("t")
-			.select("type", "t.name AS type");
+			.select("t.name AS type");
 		
 		where("test_EQ", "i.testId = ?",
 			  "depth_EQ", "i.depth = ?",
@@ -171,25 +149,25 @@ public class Invocation extends TraceElement {
 	}};
 
 	
-	public static class Query extends QueryBuilder<Invocation> {
-		public Query(OConnection cnn, String[] fields) {
-			super(cnn, TEMPLATE, MAPPING);
-			select(fields);
+	public static class Query extends QueryWithTemplate<Invocation> {
+		public Query(MiConnection cnn, String[] fields) {
+			super(cnn, MAPPING, TEMPLATE);
+			select_keys(fields);
 		}
 		public Query where() {
 			return this;
 		}
 		public Query childOf(Invocation m) {
-			where("test_EQ", m.testId);
-			where("depth_EQ", m.depth+1);
-			where("step_BETWEEN", m.step, m.exitStep);
-			orderBy("o_callStep");
-			apply(new SetParentAdapter(m));
+			where_key("test_EQ", m.testId);
+			where_key("depth_EQ", m.depth+1);
+			where_key("step_BETWEEN", m.step, m.exitStep);
+			orderBy_key("o_callStep");
+			adapter(new SetParentAdapter(m));
 			return this;
 		}
 		public Query rootOfTest(int i) {
-			where("test_EQ", i);
-			where("depth_EQ", 0);
+			where_key("test_EQ", i);
+			where_key("depth_EQ", 0);
 			return this;
 		}
 	}
