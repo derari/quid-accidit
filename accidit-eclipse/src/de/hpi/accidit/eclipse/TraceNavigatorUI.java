@@ -92,7 +92,7 @@ public class TraceNavigatorUI {
 		setStep(le.step);
 		if (le.parent != null) {
 			String filePath = le.parent.type;
-			srcFilesLocator.open(filePath, le.line, mainPage);
+			srcFilesLocator.open(filePath, le.line, mainPage, traceExplorer);
 		}
 	}
 	

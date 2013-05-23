@@ -82,10 +82,6 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		return treeViewer;
 	}
 	
-	public int getTestCaseId() {
-		return 0;
-	}
-	
 	public void setTestCaseId(int id) {
 		treeViewer.setInput(new Trace(id, ui));
 	}
