@@ -1,11 +1,18 @@
 package de.hpi.accidit.eclipse.model;
 
+import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
+
 import org.cthul.miro.MiConnection;
 import org.cthul.miro.dsl.View;
 import org.cthul.miro.graph.GraphQuery;
 import org.cthul.miro.graph.GraphQueryTemplate;
 import org.cthul.miro.graph.SelectByKey;
 import org.cthul.miro.map.Mapping;
+import org.cthul.miro.map.ResultBuilder.ValueAdapter;
 import org.cthul.miro.util.QueryFactoryView;
 import org.cthul.miro.util.ReflectiveMapping;
 
@@ -22,19 +29,49 @@ public abstract class Value extends ModelBase {
 	
 	public abstract NamedValue[] getChildren();
 	
+	/**
+	 * Shows temporary children.
+	 */
+	public NamedValue[] previewChildren() {
+		return null;
+	}
+	
+	public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
+		if (!isInitialized()) return;
+		if (!hasChildren()) return;
+		for (NamedValue nv: getChildren()) {
+			nv.updateValue(step, updateCallback);
+		}
+	}
+	
+	public boolean needsUpdate(long step) {
+		if (!isInitialized()) return false;
+		if (!hasChildren()) return false;
+		for (NamedValue nv: getChildren()) {
+			if (nv.needsUpdate(step)) {
+				reInitialize();
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public static class Primitive extends Value {
 		
 		private final char primType;
 		private final String value;
+		private final long valueId;
 		
 		public Primitive(Object value) {
 			this.value = String.valueOf(value);
 			primType = '?';
+			valueId = 0;
 		}
 
 		public Primitive(char primType, long value) {
 			this.primType = primType;
 			this.value = stringValue(primType, value);
+			this.valueId = value;
 		}
 		
 		private String stringValue(char primType, long valueId) {
@@ -49,6 +86,10 @@ public abstract class Value extends ModelBase {
 			case 'S': return String.valueOf((short) valueId); // short
 			default: return "null";
 			}
+		}
+		
+		public long getValueId() {
+			return valueId;
 		}
 
 		@Override
@@ -72,7 +113,88 @@ public abstract class Value extends ModelBase {
 		}
 	}
 
-	public static class ObjectSnapshot extends Value {
+	public static abstract class ValueWithChildren extends Value {
+		
+		protected NamedValue[] children;
+		private boolean[] updateNeeded = null;
+		private volatile boolean isInitializing = false;
+
+		@Override
+		public boolean hasChildren() {
+			return children != null && children.length > 0;
+		}
+
+		@Override
+		public NamedValue[] getChildren() {
+			if (!beInitialized() || !isInitSuccess()) {
+				Throwable t = getInitException();
+				if (t != null) {
+					t.printStackTrace(System.err);
+					NamedValue nv = new NamedValue(t.getMessage());
+					children = new NamedValue[]{nv};
+				} else {
+					children = new NamedValue[]{new NamedValue("-no data-")};
+				}
+			}
+			return children;
+		}
+		
+		@Override
+		public NamedValue[] previewChildren() {
+			return children;
+		}
+		
+		@Override
+		public boolean needsUpdate(long step) {
+			if (isInitializing) {
+				// we would have to block to wait for a result,
+				// assume update is needed instead
+				reInitialize(); // stop current execution
+				return true;
+			}
+			boolean valueUpdate = false;
+			if (!isInitialized()) return false;
+			if (!hasChildren()) return false;
+			for (int i = 0; i < children.length; i++) {
+				boolean u = children[i].needsUpdate(step);
+				updateNeeded[i] = u;
+				valueUpdate |= u;
+			}
+			if (valueUpdate) {
+				reInitialize();
+			}
+			return valueUpdate;
+		}
+		
+		@Override
+		protected void lazyInitialize() throws Exception {
+			isInitializing = true;
+			try {
+				NamedValue[] newChildren = fetchChildren();
+				if (updateNeeded == null) {
+					children = newChildren;
+					updateNeeded = new boolean[children.length];
+				} else {
+					for (int i = 0; i < updateNeeded.length; i++) {
+						if (updateNeeded[i]) {
+							children[i] = newChildren[i];
+						}
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace(System.err);
+				NamedValue nv = new NamedValue(e.getMessage());
+				children = new NamedValue[]{nv};
+				updateNeeded = null;
+			} finally {
+				isInitializing = false;
+			}
+		}
+		
+		protected abstract NamedValue[] fetchChildren() throws Exception;
+	}
+	
+	public static class ObjectSnapshot extends ValueWithChildren {
 		
 		private int testId = -1;
 		private long step = -1;
@@ -80,7 +202,6 @@ public abstract class Value extends ModelBase {
 		private Integer arrayLength;
 		private String typeName;
 		public final long thisId;
-		private NamedValue[] children;
 		private String longName;
 		
 		public ObjectSnapshot() {
@@ -122,68 +243,109 @@ public abstract class Value extends ModelBase {
 		}
 		
 		@Override
-		protected void lazyInitialize() throws Exception {
+		protected NamedValue[] fetchChildren() throws Exception {
 			if (arrayLength == null) {
-				children = DatabaseConnector.cnn()
+				return DatabaseConnector.cnn()
 						.select().from(NamedValue.FIELD_VIEW)
-						.where().objectAtStep(testId, thisId, step)
-						.asArray()._execute();
+						.where().atStep(testId, thisId, step)
+						.asArray().execute();
 			} else {
-				children = DatabaseConnector.cnn()
-						.select().from(NamedValue.ITEM_VIEW)
-						.where().objectAtStep(testId, thisId, step)
-						.asArray()._execute();
+				return DatabaseConnector.cnn()
+						.select().from(NamedValue.ARRAY_ITEM_VIEW)
+						.where().atStep(testId, thisId, step)
+						.asArray().execute();
 			}
-			longName = ValueToString.getLongName(this, children);
 		}
 		
 		@Override
-		public NamedValue[] getChildren() {
-			if (!beInitialized() || !isInitSuccess()) {
-				Throwable t = getInitException();
-				if (t != null) {
-					t.printStackTrace(System.err);
-					NamedValue nv = new NamedValue(t.getMessage());
-					children = new NamedValue[]{nv};
-				} else {
-					children = new NamedValue[]{new NamedValue("-no data-")};
-				}
+		protected void lazyInitialize() throws Exception {
+			super.lazyInitialize();
+			longName = ValueToString.getLongName(this, children);
+		}
+		@Override
+		public boolean needsUpdate(long step) {
+			this.step = step;
+			return super.needsUpdate(step);
+		}
+		@Override
+		public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
+			this.step = step;
+			super.updateChildren(step, updateCallback);
+		}
+		
+	}
+	
+	public static class MethodSnapshot extends ValueWithChildren {
+
+		private int testId;
+		private long callStep;
+		private long step;
+		
+		public MethodSnapshot(int testId, long callStep, long step) {
+			super();
+			this.testId = testId;
+			this.callStep = callStep;
+			this.step = step;
+		}
+
+		@Override
+		public String getShortString() {
+			return "-";
+		}
+
+		@Override
+		public String getLongString() {
+			return "-";
+		}
+
+		@Override
+		protected NamedValue[] fetchChildren() throws Exception {
+			Value thisValue = cnn().select()
+					.from(THIS_VIEW)
+					.where().atStep(testId, callStep)
+					.withCurrentStep(step)
+					.getSingle().execute();
+			NamedValue[] c = cnn().select()
+					.from(NamedValue.VARIABLE_VIEW)
+					.where().atStep(testId, callStep, step)
+					.asArray().execute();
+			if (!(thisValue instanceof ObjectSnapshot)) {
+				// static method: `this` is null
+				return c;
 			}
-			return children;
+			NamedValue[] c2 = new NamedValue[c.length+1];
+			c2[0] = new NamedValue("this", thisValue);
+			System.arraycopy(c, 0, c2, 1, c.length);
+			return c2;
+		}
+		@Override
+		public boolean needsUpdate(long step) {
+			this.step = step;
+			return super.needsUpdate(step);
+		}		
+		@Override
+		public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
+			this.step = step;
+			super.updateChildren(step, updateCallback);
 		}
 	}
 	
-	public static Value newValue(char primType, long valueId, int testId) {
-		if (primType == 'L') {
-			if (valueId == 0) return new Primitive('V', 0);
-			Value v = DatabaseConnector.cnn()
-					.select().from(VIEW)
-					.byId(testId, valueId)
-					.getSingle()._execute();
-			if (v == null) {
-				new Exception("no data: " + testId + " #" + valueId).printStackTrace(System.err);
-				v = new Primitive("-no data-");
-			}
-			return v;
+	private static Value newValue(int testId, char primType, long valueId) {
+		if (primType == 'L' && valueId != 0) {
+			return new ObjectSnapshot(testId, valueId);
 		} else {
 			return new Primitive(primType, valueId);
 		}
-	};
+	}
 
-	public static Value newValue(char primType, long valueId, int testId, long step) {
-		Value v = newValue(primType, valueId, testId);
-		if (v instanceof ObjectSnapshot) {
-			ObjectSnapshot o = (ObjectSnapshot) v;
-			o.testId = testId;
-			o.step = step;
-		}
-		return v;
-	};
-
+	public static final View<ValueQuery> VARIABLE_VIEW = (View) new QueryFactoryView<>(VarQuery.class);
+	public static final View<ValueQuery> PUT_VIEW = (View) new QueryFactoryView<>(PutQuery.class);
+	public static final View<ValueQuery> GET_VIEW = (View) new QueryFactoryView<>(GetQuery.class);
+	public static final View<ValueQuery> ARRAY_PUT_VIEW = (View) new QueryFactoryView<>(APutQuery.class);
+	public static final View<ValueQuery> ARRAY_GET_VIEW = (View) new QueryFactoryView<>(AGetQuery.class);
+	public static final View<ValueQuery> THIS_VIEW = (View) new QueryFactoryView<>(ThisQuery.class);
 	
-	public static final View<Query> VIEW = new QueryFactoryView<>(Query.class);
-	
-	private static final String[] C_PARAMS = {"thisId", "testId"};
+	private static final String[] C_PARAMS = {"testId", "primType", "valueId"};
 	
 	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>((Class) ObjectSnapshot.class) {
 		
@@ -191,36 +353,177 @@ public abstract class Value extends ModelBase {
 			return C_PARAMS;
 		};
 		protected Value newRecord(Object[] args) {
-			long valueId = (Long) args[0];
-			int testId = (Integer) args[1];
-			return new ObjectSnapshot(testId, valueId);
+			int testId = (Integer) args[0];
+			char primType = ((String) args[1]).charAt(0);
+			long valueId = (Long) args[2];
+			return newValue(testId, primType, valueId);
 		}
+		protected void injectField(Value record, String field, Object value) throws SQLException {
+			if (record instanceof Primitive) return;
+			for (String s: C_PARAMS) {
+				if (field.equals(s)) return;
+			}
+			super.injectField(record, field, value);
+		};
 	};
 	
-	private static GraphQueryTemplate<Value> TEMPLATE = new GraphQueryTemplate<Value>() {{
-		keys("testId", "t.id");
-		select("t.testId, t.id AS thisId, t.typeId, t.arrayLength, m.name AS typeName");
-		from("ObjectTrace t");
-		join("Type m ON t.typeId = m.id");
-		where("this_EQ", "testId = ? AND t.id = ?");
+	private static abstract class ValueQueryTemplate extends GraphQueryTemplate<Value> {{
+		select("t.testId, t.primType, t.valueId, o.arrayLength, y.name AS typeName");
+		join("LEFT OUTER JOIN ObjectTrace o " +
+			 "ON t.primType = 'L' AND t.testId = o.testId AND t.valueId = o.id");
+		join("LEFT OUTER JOIN Type y " +
+			 "ON y.id = o.typeId");
+		where("step_EQ", "t.testId = ? AND t.step = ?");
 	}};
 	
-	public static class Query extends GraphQuery<Value> {
+	private static final ValueQueryTemplate VAR_TEMPLATE = new ValueQueryTemplate() {{
+		from("VariableTrace t");
+		where("id_EQ", "t.variableId = ?");
+		always().orderBy("t.variableId");
+	}};
+	
+	private static final ValueQueryTemplate PUT_TEMPLATE = new ValueQueryTemplate() {{
+		from("PutTrace t");
+		where("id_EQ", "t.fieldId = ?");
+		always().orderBy("t.fieldId");
+	}};
+	
+	private static final ValueQueryTemplate GET_TEMPLATE = new ValueQueryTemplate() {{
+		from("GetTrace t");
+		where("id_EQ", "t.fieldId = ?");
+		always().orderBy("t.fieldId");
+	}};
+	
+	private static final ValueQueryTemplate A_PUT_TEMPLATE = new ValueQueryTemplate() {{
+		from("ArrayPutTrace t");
+		where("id_EQ", "t.`index` = ?");
+		always().orderBy("t.`index`");
+	}};
+	
+	private static final ValueQueryTemplate A_GET_TEMPLATE = new ValueQueryTemplate() {{
+		from("ArrayGetTrace t");
+		where("id_EQ", "t.`index` = ?");
+		always().orderBy("t.`index`");
+	}};
+	
+	private static final GraphQueryTemplate<Value> THIS_TEMPLATE = new GraphQueryTemplate<Value>() {{
+		select("t.testId, 'L' AS primType, COALESCE(t.thisId, 0) AS valueId, o.arrayLength, y.name AS typeName");
+		from("CallTrace t");
+		join("LEFT OUTER JOIN ObjectTrace o " +
+			 "ON t.testId = o.testId AND t.thisId = o.id");
+		join("LEFT OUTER JOIN Type y " +
+			 "ON y.id = o.typeId");
+		where("step_EQ", "t.testId = ? AND t.step = ?");
+	}};
+	
+	public static class ValueQuery extends GraphQuery<Value> {
 
-		public Query(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, TEMPLATE, view);
-			select_keys(fields);
+		public ValueQuery(MiConnection cnn, Mapping<Value> mapping, GraphQueryTemplate<Value> template, View<? extends SelectByKey<?>> view) {
+			super(cnn, mapping, template, view);
 		}
 		
-		public Query where() {
+		public ValueQuery where() {
 			return this;
 		}
 		
-		public Query byId(int testId, long thisId) {
-			where_key("this_EQ", testId, thisId);
+		public ValueQuery id(long id) {
+			where_key("id_EQ", id);
+			return this;
+		}
+		
+		public ValueQuery atStep(int testId, long step) {
+			where_key("step_EQ", testId, step);
+			return this;
+		}
+		
+		public ValueQuery withCurrentStep(long step) {
+			adapter(new SetStepAdapter(step));
 			return this;
 		}
 		
 	}
 	
+	public static class VarQuery extends ValueQuery {
+		
+		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, VAR_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	public static class PutQuery extends ValueQuery {
+		
+		public PutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, PUT_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	public static class GetQuery extends ValueQuery {
+		
+		public GetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, GET_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	public static class APutQuery extends ValueQuery {
+		
+		public APutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, A_PUT_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	public static class AGetQuery extends ValueQuery {
+		
+		public AGetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, A_GET_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	public static class ThisQuery extends ValueQuery {
+		
+		public ThisQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, MAPPING, THIS_TEMPLATE, view);
+			select_keys(fields);
+		}
+		
+	}
+	
+	private static class SetStepAdapter implements ValueAdapter<Value> {
+		
+		private final long step;
+		
+		public SetStepAdapter(long step) {
+			this.step = step;
+		}
+
+		@Override
+		public void initialize(ResultSet rs) throws SQLException {
+		}
+
+		@Override
+		public void apply(Value entity) throws SQLException {
+			if (entity instanceof ObjectSnapshot) {
+				((ObjectSnapshot) entity).step = step;
+			}
+		}
+
+		@Override
+		public void complete() throws SQLException {
+		}
+
+		@Override
+		public void close() throws SQLException {
+		}
+		
+	}
+
 }

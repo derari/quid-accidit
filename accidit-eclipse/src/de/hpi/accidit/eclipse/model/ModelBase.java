@@ -2,25 +2,21 @@ package de.hpi.accidit.eclipse.model;
 
 import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
+import org.cthul.miro.util.LazyAction;
 import org.cthul.miro.util.LazyFuture;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 
 public class ModelBase {
 	
-	private final MiFuture<ModelBase> fInit = new LazyFuture<ModelBase>() {
-		@Override
-		protected MiFuture<ModelBase> initialize() throws Exception {
-			return DatabaseConnector.cnn().submit(A_INIT, ModelBase.this);
-		}
-	};
+	private final LazyAction<ModelBase> fInit = new LazyAction<ModelBase>(DatabaseConnector.cnn(), this, A_INIT);
 	
 	public boolean isInitialized() {
 		return fInit.isDone();
 	}
 	
 	public boolean beInitialized() {
-		return fInit.beDone();
+		return fInit.beDoneNow();
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -34,6 +30,11 @@ public class ModelBase {
 	
 	protected Throwable getInitException() {
 		return fInit.getException();
+	}
+	
+	protected void reInitialize() {
+		fInit.cancel(true);
+		fInit.reset();
 	}
 
 	protected void lazyInitialize() throws Exception {

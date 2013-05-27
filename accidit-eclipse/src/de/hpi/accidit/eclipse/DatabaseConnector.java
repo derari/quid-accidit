@@ -52,16 +52,16 @@ public class DatabaseConnector {
 	
 	public static synchronized MiConnection getValidOConnection() {
 		String dbString = getDBString();
-		if (!dbString.equals(lastDbString)) {
-			try {
-				if (cnn != null) {
-					cnn.close();
-				}
-				lastDbString = dbString;
-				cnn = new MiConnection(getValidConnection());
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
+		try {
+			if (cnn == null || !dbString.equals(lastDbString) || cnn.isClosed()) {
+					if (cnn != null && !cnn.isClosed()) {
+						cnn.close();
+					}
+					lastDbString = dbString;
+					cnn = new MiConnection(getValidConnection());
 			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		}
 		return cnn;
 	}

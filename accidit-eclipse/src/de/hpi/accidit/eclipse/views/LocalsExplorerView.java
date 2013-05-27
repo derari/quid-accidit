@@ -38,7 +38,6 @@ public class LocalsExplorerView extends ViewPart {
 		contentProvider = new LocalsContentProvider(viewer);		
 		viewer.setContentProvider(contentProvider);
 		viewer.setLabelProvider(new LocalsLabelProvider());
-		viewer.setInput(contentProvider);	
 		
 		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
 		ui.setLocalsExprorer(this);
@@ -51,7 +50,7 @@ public class LocalsExplorerView extends ViewPart {
 	
 	public void setStep(int testId, long call, long step) {
 		contentProvider.setStep(testId, call, step);
-		viewer.refresh();
+//		viewer.refresh();
 	}
 	
 }
