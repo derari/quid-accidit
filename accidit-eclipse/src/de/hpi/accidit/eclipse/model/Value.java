@@ -155,6 +155,7 @@ public abstract class Value extends ModelBase {
 			boolean valueUpdate = false;
 			if (!isInitialized()) return false;
 			if (!hasChildren()) return false;
+			if (updateNeeded == null) return true;
 			for (int i = 0; i < children.length; i++) {
 				boolean u = children[i].needsUpdate(step);
 				updateNeeded[i] = u;

@@ -90,10 +90,6 @@ public class NamedValue extends ModelBase {
 			// some dummy value, assume active
 			return true;
 		}
-		if (valueStep == -1 || valueStep > step) {
-			// value step is in future
-			return isActiveBeforeValueStep();
-		}
 		if (isGetTraced()) {
 			if (nextGetStep == -1) {
 				// value is never read again
@@ -103,6 +99,10 @@ public class NamedValue extends ModelBase {
 				// value is changed before next read
 				return false;
 			}
+		}
+		if (valueStep == -1 || valueStep > step) {
+			// value is in future
+			return isActiveBeforeValueStep();
 		}
 		return true;
 	}
