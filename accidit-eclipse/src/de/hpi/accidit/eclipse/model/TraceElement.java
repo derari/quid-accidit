@@ -2,14 +2,9 @@ package de.hpi.accidit.eclipse.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
-import org.cthul.miro.MiConnection;
 import org.cthul.miro.dsl.QueryTemplate;
-import org.cthul.miro.dsl.ValueAdapterFactory;
-import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ResultBuilder;
-import org.cthul.miro.map.ResultBuilder.ValueAdapter;
 
 
 public class TraceElement extends ModelBase implements Comparable<TraceElement> {

@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.views;
 
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;

@@ -4,7 +4,6 @@ import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 
 import org.cthul.miro.MiConnection;
 import org.cthul.miro.dsl.View;

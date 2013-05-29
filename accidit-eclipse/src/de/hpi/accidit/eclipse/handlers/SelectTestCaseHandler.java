@@ -13,7 +13,6 @@ import de.hpi.accidit.eclipse.handlers.util.TestCase;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionDialog;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionLabelProvider;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 
 public class SelectTestCaseHandler extends AbstractHandler {

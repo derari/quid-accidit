@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.model;
 import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
 import org.cthul.miro.util.LazyAction;
-import org.cthul.miro.util.LazyFuture;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 

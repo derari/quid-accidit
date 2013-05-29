@@ -7,14 +7,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.cthul.miro.MiConnection;
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
-import org.cthul.miro.dsl.QueryBuilder;
 import org.cthul.miro.dsl.QueryTemplate;
 import org.cthul.miro.dsl.QueryWithTemplate;
 import org.cthul.miro.dsl.View;
 import org.cthul.miro.map.Mapping;
-import org.cthul.miro.util.LazyFuture;
 import org.cthul.miro.util.QueryFactoryView;
 import org.cthul.miro.util.ReflectiveMapping;
 

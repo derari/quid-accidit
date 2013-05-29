@@ -14,7 +14,6 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
@@ -23,7 +22,6 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		ISelectionService selectionService = HandlerUtil.getActiveWorkbenchWindow(event).getSelectionService();
-		ITreeSelection selectedMethods = (ITreeSelection) selectionService.getSelection(MethodExplorerView.ID);
 		ITreeSelection selectedLocals = (ITreeSelection) selectionService.getSelection(LocalsExplorerView.ID);
 
 		Object method = null;//(Method) selectedMethods.getFirstElement();
