@@ -49,8 +49,16 @@ public class TracerTransformer implements ClassFileTransformer {
     };
     
     private static String[] do_details = {
-//        "java/lang",
-//        "java/util",
+        "java/lang/Boolean",
+        "java/lang/Byte",
+        "java/lang/Character",
+        "java/lang/Double",
+        "java/lang/Float",
+        "java/lang/Integer",
+        "java/lang/Long",
+        "java/lang/Short",
+        "java/lang/String",
+        "java/util",
     };
     
     private static int classCounter = 0;
@@ -139,7 +147,6 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-//            System.out.println("+ " + name);
             super.visit(version, access, name, signature, superName, interfaces);
             isTestClass = name.endsWith("Test");
             type = model.getType(name.replace('/', '.'), cl);
@@ -193,9 +200,9 @@ public class TracerTransformer implements ClassFileTransformer {
             if (name.equals("finalize") || name.equals("<clinit>")) { //  || name.equals("uncaughtException")
                 return sup;
             }
-            if (noDetails && (access & ACC_PUBLIC) == 0) {
-                return sup;
-            }
+//            if (noDetails && (access & ACC_PUBLIC) == 0) {
+//                return sup;
+//            }
             if (!hasSource) {
                 return sup;
             }
@@ -265,6 +272,7 @@ public class TracerTransformer implements ClassFileTransformer {
         
         public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
+//            DEBUG = type.getName().endsWith("String;") || type.getName().endsWith("String");
             this.name = name;
             this.descriptor = desc;
             this.model = model;

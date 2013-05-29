@@ -40,11 +40,6 @@ public class SelectTestCaseHandler extends AbstractHandler {
 
 			methodExplorerView.setTestCaseId(newTestCase.id);
 			methodExplorerView.refresh();
-			
-			// TODO remove localsExplorer here and add refresh to methodExplorer ...
-			LocalsExplorerView localsExplorerView = 
-					(LocalsExplorerView) HandlerUtil.getActiveWorkbenchWindow(event).getActivePage().findView(LocalsExplorerView.ID);
-			localsExplorerView.selectedMethodChanged(null);
 		}
 
 		return null;

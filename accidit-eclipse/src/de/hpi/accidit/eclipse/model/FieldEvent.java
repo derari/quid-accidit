@@ -1,12 +1,13 @@
 package de.hpi.accidit.eclipse.model;
 
-import de.hpi.accidit.orm.OConnection;
-import de.hpi.accidit.orm.dsl.QueryBuilder;
-import de.hpi.accidit.orm.dsl.QueryTemplate;
-import de.hpi.accidit.orm.dsl.View;
-import de.hpi.accidit.orm.map.Mapping;
-import de.hpi.accidit.orm.util.QueryFactoryView;
-import de.hpi.accidit.orm.util.ReflectiveMapping;
+import org.cthul.miro.MiConnection;
+import org.cthul.miro.dsl.QueryTemplate;
+import org.cthul.miro.dsl.QueryWithTemplate;
+import org.cthul.miro.dsl.View;
+import org.cthul.miro.map.Mapping;
+import org.cthul.miro.util.QueryFactoryView;
+import org.cthul.miro.util.ReflectiveMapping;
+
 
 public class FieldEvent extends TraceElement {
 
@@ -22,18 +23,18 @@ public class FieldEvent extends TraceElement {
 		from("PutTrace f");
 	}};
 	
-	public static class PutQuery extends QueryBuilder<FieldEvent> {
-		public PutQuery(OConnection cnn, String[] select) {
-			super(cnn, PUT_TEMPLATE, MAPPING);
-			select(select);
+	public static class PutQuery extends QueryWithTemplate<FieldEvent> {
+		public PutQuery(MiConnection cnn, String[] select) {
+			super(cnn, MAPPING, PUT_TEMPLATE);
+			select_keys(select);
 		}
 		public PutQuery where() {
 			return this;
 		}
 		public PutQuery inInvocation(int testId, long callStep) {
-			where("testId_EQ", testId);
-			where("callStep_EQ", callStep);
-			orderBy("o_step");
+			where_key("testId_EQ", testId);
+			where_key("callStep_EQ", callStep);
+			orderBy_key("o_step");
 			return this;
 		}
 	}

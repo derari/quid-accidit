@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.cthul.miro.MiFuture;
+import org.cthul.miro.MiFutureAction;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
@@ -48,18 +50,12 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		treeViewer.getTree().setHeaderVisible(true);
 		treeViewer.setUseHashlookup(true);
 		
-		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
+		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT | SWT.FILL);
 		column0.setText("Method");
 		column0.setWidth(500);
 		TreeColumn column1 = new TreeColumn(treeViewer.getTree(), SWT.RIGHT);
 		column1.setText("Call Step");
 		column1.setWidth(60);
-		TreeColumn column2 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
-		column2.setText("Call Location");
-		column2.setWidth(200);
-		TreeColumn column3 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
-		column3.setText("Method Id");
-		column3.setWidth(50);
 		
 		treeViewer.setContentProvider(new TraceContentProvider(treeViewer));
 		treeViewer.setLabelProvider(new MethodsLabelProvider());
@@ -218,6 +214,17 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		
 		private TreeViewer viewer;
 		private Trace trace = null;
+		private DoInUiThread<Invocation> updateInvocation = new DoInUiThread<Invocation>() {
+			@Override
+			protected void run(Invocation inv, Throwable error) {
+				if (error != null) {
+					error.printStackTrace(System.err);
+				}
+				viewer.setChildCount(inv, 0);
+				viewer.setChildCount(inv, inv.getChildren().length);
+				viewer.update(inv, null);
+			}
+		};
 		
 		public TraceContentProvider(TreeViewer viewer) {
 			this.viewer = viewer;
@@ -243,23 +250,12 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			}
 			if (element instanceof Invocation) {
 				final Invocation inv = (Invocation) element;
-				if (inv.asyncChildren().isDone()) {
+				if (inv.isInitialized()) {
 					viewer.setChildCount(inv, inv.getChildren().length);
 				} else {
 					viewer.setChildCount(inv, 1);
-					inv.asyncChildren().onComplete(new DoInUiThread<TraceElement[]>() {
-						
-						@Override
-						protected void run(TraceElement[] value, Throwable error) {
-							viewer.setChildCount(inv, 0);
-							if (error != null) {
-								error.printStackTrace(System.err);
-							} else {
-								viewer.setChildCount(inv, value.length);
-							}
-							viewer.update(inv, null);
-						}
-					});
+					viewer.replace(inv, 0, new Pending());
+					inv.onInitialized(updateInvocation);
 				}
 			}
 		}
@@ -273,16 +269,13 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 			}
 			if (parent instanceof Invocation) {
 				final Invocation inv = (Invocation) parent;
-				if (inv.asyncChildren().isDone()) {
-					viewer.replace(inv, index, inv.getChildren()[index]);
-					updateChildCount(inv.getChildren()[index], -1);
-				} else {
-					Pending p = new Pending();
-					viewer.replace(inv, index, p);
-					viewer.setChildCount(p, 0);
+				if (!inv.isInitialized()) {
+					System.out.println(" --- should not happen --- ");
+					inv.beInitialized();
 				}
+				viewer.replace(inv, index, inv.getChildren()[index]);
+				updateChildCount(inv.getChildren()[index], -1);
 			}
 		}
-		
 	}
 }

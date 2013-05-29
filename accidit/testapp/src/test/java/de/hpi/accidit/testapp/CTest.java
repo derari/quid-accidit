@@ -14,8 +14,15 @@ public class CTest {
         String s = c().get('h', 'e', 'l', 'l', 'o');
         assertThat(s, is("hello"));
     }
+    
+    @Test
+    public void test_split() {
+        int i = "abcdef".split(",").length;
+        assertThat(i, is(1));
+    }
 
     public C c() {
         return new C();
     }
+    
 }

@@ -1,36 +1,60 @@
 package de.hpi.accidit.eclipse.views.provider;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.LinkedList;
-import java.util.List;
+import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
-import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.cthul.miro.MiFuture;
+import org.eclipse.jface.viewers.ILazyTreeContentProvider;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.eclipse.views.dataClasses.Method;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalObject;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalPrimitive;
+import de.hpi.accidit.eclipse.model.Callback;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.Pending;
+import de.hpi.accidit.eclipse.model.Value;
+import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
-public class LocalsContentProvider implements ITreeContentProvider {
+public class LocalsContentProvider implements ILazyTreeContentProvider {
 		
-	private Connection dbConnection;
-	
-	private int selectedTestCaseId;
-	private Method selectedMethod;
-	
-	public LocalsContentProvider() {
-		try {
-			dbConnection = DatabaseConnector.getValidConnection();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			System.err.println("No database connection available. Exiting.");
-			System.exit(0);
+	private final TreeViewer viewer;
+	private int testId = -1;
+	private long callStep = -1;
+	private long step;
+	private NamedValue root;
+	private final DoInUiThread<NamedValue> updateNamedValue = new DoInUiThread<NamedValue>() {
+		@Override
+		public Void call(MiFuture<NamedValue> param) throws Exception {
+			return super.call(param);
 		}
+		@Override
+		protected void run(NamedValue value, Throwable error) {
+			System.out.println("do in ui " + value);
+			if (error != null) {
+				error.printStackTrace(System.err);
+			}
+			if (value != null) {
+//				viewer.setChildCount(value, 0);
+//				viewer.setChildCount(value, value.getValue().getChildren().length);
+//				updateChildCount(value, -1);
+				
+				viewer.update(value, null);
+				updateChildCount(value, -1);
+				if (value == root) viewer.refresh();
+			}
+		}
+	};
+	private final Callback<NamedValue> cbUpdateNamedValue = new Callback<NamedValue>() {
+		@Override
+		public void call(NamedValue value) {
+//			viewer.setChildCount(value, 0);
+			System.out.println("call update " + value);
+			viewer.update(value, null);
+//			if (value == root) 
+				viewer.refresh();
+		}
+	};
+	
+	public LocalsContentProvider(TreeViewer viewer) {
+		this.viewer = viewer;
 	}
 
 	@Override
@@ -39,59 +63,21 @@ public class LocalsContentProvider implements ITreeContentProvider {
 	@Override
 	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
 	
-	public void setSelectedMethod(Method method) {
-		// TODO refactor into setSelectedMethod and setTestId
+	public void setStep(int testId, long call, long step) {
+		if (testId != this.testId || call != this.callStep) {
+			root = new NamedValue.MethodFrameValue(testId, call, step);
+			viewer.setInput(root);
+		} else {
+			root.updateValue(step, cbUpdateNamedValue);
+			if (!root.isInitialized()) {
+				viewer.update(root, null);
+			}
+		}
 		
-		this.selectedMethod = method;
-		
-		if(method != null) this.selectedTestCaseId = method.testId;		
-	}
-
-	@Override
-	public Object[] getElements(Object inputElement) {
-		if(selectedMethod == null) return new Object[0];
-		if(selectedMethod.parentMethod == null) return new Object[0];
-		
-		// TODO: fix, currently not the actual type but the declared one.
-		// TODO: evaluate if callStep or exitStep is interesting here!
-		
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT v.id, v.name, vt.primType, vt.valueId, vt.step, t.id, t.name ");
-		query.append("FROM VariableTrace vt ");
-		query.append("JOIN Variable v ON v.id = vt.variableId ");
-		query.append("JOIN Type t ON t.id = v.typeId ");
-		query.append("WHERE vt.testId = " + selectedTestCaseId + " ");
-		query.append("AND vt.step <= " + selectedMethod.callStep + " ");
-		query.append("AND vt.methodId = " + selectedMethod.parentMethod.methodId + " ");
-		query.append("AND v.methodId = " + selectedMethod.parentMethod.methodId + " ");
-		query.append("ORDER BY v.name");
-		
-		System.out.println("Querying getElements: " + query.toString());
-		
-		return queryForLocals(query.toString(), true).toArray();
-	}
-
-	@Override
-	public Object[] getChildren(Object parentElement) {
-		if (!(parentElement instanceof LocalObject)) return null;
-		
-		LocalObject local = (LocalObject) parentElement;
-		StringBuilder query = new StringBuilder();
-		query.append("SELECT f.Id, f.name, pt.primType, pt.valueId, pt.step, t.id, t.name ");
-		query.append("FROM Field f ");
-		query.append("LEFT OUTER JOIN (");
-		query.append("	SELECT step, fieldId, primType, valueId ");
-		query.append("	FROM PutTrace ");
-		query.append("	WHERE testId = " + selectedTestCaseId + " ");
-		query.append("	AND thisId = " + local.objectId + " ");
-		query.append("	AND step <= " + selectedMethod.callStep + " ");
-		query.append(") pt ON pt.fieldId = f.id ");
-		query.append("JOIN Type t ON t.id = f.typeId ");
-		query.append("WHERE f.declaringTypeID = " + local.typeId);
-		
-		System.out.println("Querying getChildren: " + query.toString());
-		
-		return queryForLocals(query.toString(), false).toArray();
+		this.testId = testId;
+		this.callStep = call;
+		this.step = step;
+//		viewer.setInput(root);
 	}
 
 	@Override
@@ -100,67 +86,50 @@ public class LocalsContentProvider implements ITreeContentProvider {
 	}
 
 	@Override
-	public boolean hasChildren(Object element) {
-		LocalBase local = (LocalBase) element;
-		return local.isObject();
-	}
-	
-	private List<LocalBase> queryForLocals(String query, boolean areLocalVariables) {
-		List<LocalBase> locals = new LinkedList<LocalBase>();
-		
-		ResultSet result = null;
-		try {
-			Statement statement = dbConnection.createStatement();
-			result = statement.executeQuery(query);
-		} catch (SQLException e) {
-			System.err.println("Locals not retrievable. Exiting.");
-			e.printStackTrace();
-			System.exit(0);
+	public void updateChildCount(Object element, int currentCount) {
+		NamedValue v = (NamedValue) element;
+		if (!v.isInitialized()) {
+			updateLazy(v);
+//			return;
 		}
-		
-		try {
-			while(result.next()) locals.add(buildLocal(result, areLocalVariables));
-		} catch (SQLException e) {
-			System.err.println("Failed to process result set. Exiting.");
-			e.printStackTrace();
-			System.exit(0);
+		NamedValue[] c = v.previewChildren();
+		if (c == null) {
+			viewer.setChildCount(v, 0);
+		} else {
+			viewer.setChildCount(v, c.length);
 		}
-		
-		return locals;
-	}
-	
-	private LocalBase buildLocal(ResultSet result, boolean isLocalVariable) throws SQLException {
-		LocalBase local = createLocal(result);
-		setLocalBaseFields(local, result);
-		local.isLocalVariable = isLocalVariable;
-		return local;
-	}
-	
-	private LocalBase createLocal(ResultSet result) throws SQLException {
-		if(result.getString(3) == null) return new LocalPrimitive("null");
-		
-		char primType = result.getString(3).charAt(0);
-		long valueId = result.getLong(4);
-		if(primType == 'L') return new LocalObject(valueId);
-		
-		switch(primType) {
-		case 'Z': return new LocalPrimitive(String.valueOf(valueId == 1)); // boolean
-		case 'B': return new LocalPrimitive(String.valueOf((byte) valueId)); // byte
-		case 'C': return new LocalPrimitive(String.valueOf((char) valueId)); // char
-		case 'D': return new LocalPrimitive(String.valueOf(Double.longBitsToDouble(valueId))); // double
-		case 'F': return new LocalPrimitive(String.valueOf(Float.intBitsToFloat((int) valueId))); // float
-		case 'I': return new LocalPrimitive(String.valueOf(valueId)); // int
-		case 'J': return new LocalPrimitive(String.valueOf(valueId)); // long
-		case 'S': return new LocalPrimitive(String.valueOf((short) valueId)); // short
-		default: return null;
-		}
+//		if (!v.getValue().hasChildren()) {
+//			viewer.setChildCount(v, 0);
+//			return;
+//		}
+//		viewer.setChildCount(v, v.getValue().getChildren().length);
 	}
 
-	private void setLocalBaseFields(LocalBase local, ResultSet result) throws SQLException {		
-		local.id		= result.getInt(1);
-		local.name		= result.getString(2);
-		local.step		= result.getInt(5);
-		local.typeId	= result.getInt(6);
-		local.type		= result.getString(7);
+	@Override
+	public void updateElement(Object parent, int index) {
+		NamedValue v = (NamedValue) parent;
+		if (!v.isInitialized()) {
+			if (index == 0) updateLazy(v);
+//			return;
+		}
+		NamedValue[] c = v.previewChildren();
+		NamedValue nv = c != null && c.length > index ? c[index] : null;
+		if (nv == null) {
+			Pending p = new Pending();
+			viewer.replace(parent, index, p);
+			viewer.setChildCount(p, 0);
+		} else {
+			System.out.println("set " + nv);
+			viewer.replace(parent, index, nv);
+			updateChildCount(nv, -1);
+		}
+//		viewer.replace(v, index, v.getValue().getChildren()[index]);
+//		updateChildCount(v.getValue().getChildren()[index], -1);
 	}
+
+	private void updateLazy(NamedValue v) {
+		System.out.println("lazy " + v);
+		v.onInitialized(updateNamedValue);
+	}
+	
 }

@@ -1,33 +1,36 @@
 package de.hpi.accidit.eclipse.views.util;
 
+import org.cthul.miro.MiFuture;
+import org.cthul.miro.MiFutureAction;
 import org.eclipse.swt.widgets.Display;
 
-import de.hpi.accidit.orm.OFuture;
-import de.hpi.accidit.orm.OFutureAction;
-
-public abstract class DoInUiThread<T> implements OFutureAction<OFuture<T>, Void>, Runnable {
-
-	
-	private T value;
-	private Throwable error;
+public abstract class DoInUiThread<T> implements MiFutureAction<MiFuture<T>, Void> {
 
 	@Override
-	public Void call(OFuture<T> param) throws Exception {
-		value = param.getResult();
-		error = param.getException();
-		
-		// TODO rm
-		System.out.println("DoInUiThread<T> #call (async)");
-		
-		Display.getDefault().asyncExec(this);
+	public Void call(MiFuture<T> param) throws Exception {
+		T value = param.getResult();
+		Throwable error = param.getException();
+		Display.getDefault().asyncExec(new UiThreadRunnable(value, error));
 		return null;
-	}
-
-	@Override
-	public void run() {
-		run(value, error);
 	}
 	
 	protected abstract void run(T value, Throwable error);
+	
+	private class UiThreadRunnable implements Runnable {
+		
+		private T value;
+		private Throwable error;
+		
+		public UiThreadRunnable(T value, Throwable error) {
+			this.value = value;
+			this.error = error;
+		}
+		
+		@Override
+		public void run() {
+			DoInUiThread.this.run(value, error);
+		}
+		
+	}
 
 }

@@ -4,10 +4,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import org.cthul.miro.MiConnection;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
-import de.hpi.accidit.orm.OConnection;
 
 public class DatabaseConnector {
 	
@@ -48,25 +48,25 @@ public class DatabaseConnector {
 	}
 	
 	private static String lastDbString = null;
-	private static OConnection cnn = null;
+	private static MiConnection cnn = null;
 	
-	public static synchronized OConnection getValidOConnection() {
+	public static synchronized MiConnection getValidOConnection() {
 		String dbString = getDBString();
-		if (!dbString.equals(lastDbString)) {
-			try {
-				if (cnn != null) {
-					cnn.close();
-				}
-				lastDbString = dbString;
-				cnn = new OConnection(getValidConnection());
-			} catch (SQLException e) {
-				throw new RuntimeException(e);
+		try {
+			if (cnn == null || !dbString.equals(lastDbString) || cnn.isClosed()) {
+					if (cnn != null && !cnn.isClosed()) {
+						cnn.close();
+					}
+					lastDbString = dbString;
+					cnn = new MiConnection(getValidConnection());
 			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		}
 		return cnn;
 	}
 	
-	public static OConnection cnn() {
+	public static MiConnection cnn() {
 		return getValidOConnection();
 	}
 	

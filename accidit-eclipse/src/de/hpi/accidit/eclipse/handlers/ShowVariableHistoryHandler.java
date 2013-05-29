@@ -15,7 +15,6 @@ import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
-import de.hpi.accidit.eclipse.views.dataClasses.Method;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
@@ -27,11 +26,11 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		ITreeSelection selectedMethods = (ITreeSelection) selectionService.getSelection(MethodExplorerView.ID);
 		ITreeSelection selectedLocals = (ITreeSelection) selectionService.getSelection(LocalsExplorerView.ID);
 
-		Method method = (Method) selectedMethods.getFirstElement();
+		Object method = null;//(Method) selectedMethods.getFirstElement();
 		if (selectedLocals.size() < 1) return null;
 		LocalBase local = (LocalBase) selectedLocals.getFirstElement();
 		
-		ITreeContentProvider contentProvider = new LocalsHistoryContentProvider(method.testId, method, local);
+		ITreeContentProvider contentProvider = new LocalsHistoryContentProvider(0, method, local);
 		ILabelProvider labelProvider = new LocalsLabelProvider();
 		
 		ElementTreeSelectionDialog dialog = 

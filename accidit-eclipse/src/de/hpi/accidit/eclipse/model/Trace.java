@@ -16,7 +16,7 @@ public class Trace {
 			.select()
 			.from(Invocation.VIEW)
 			.where().rootOfTest(id)
-			.asArray()._run();
+			.asArray()._execute();
 	}
 	
 }
