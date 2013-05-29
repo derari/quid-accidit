@@ -293,5 +293,15 @@
             name="Accidit">
       </perspective>
    </extension>
+   <extension
+         point="org.eclipse.ui.propertyPages">
+      <page
+            class="de.hpi.accidit.eclipse.properties.DatabaseInformation"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.properties.databaseInformation"
+            name="Accidit Database Info"
+            objectClass="org.eclipse.core.resources.IProject">
+      </page>
+   </extension>
 
 </plugin>
