@@ -99,7 +99,8 @@ public class TraceNavigatorUI {
 		if (le.parent != null) {
 			callStep = le.parent.step;
 			String filePath = le.parent.type;
-			srcFilesLocator.open(filePath, le.line, mainPage);
+			srcFilesLocator.open(filePath, le.line, mainPage, traceExplorer);
+
 			if (localsExplorer != null) {
 				localsExplorer.setStep(le.parent.testId, le.parent.step, le.step);
 			}

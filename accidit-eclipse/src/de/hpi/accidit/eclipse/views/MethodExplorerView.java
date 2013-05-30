@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.views;
 
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
@@ -76,10 +74,6 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 	
 	public TreeViewer getTreeViewer() {
 		return treeViewer;
-	}
-	
-	public int getTestCaseId() {
-		return 0;
 	}
 	
 	public void setTestCaseId(int id) {

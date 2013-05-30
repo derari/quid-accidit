@@ -18,7 +18,6 @@ import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 

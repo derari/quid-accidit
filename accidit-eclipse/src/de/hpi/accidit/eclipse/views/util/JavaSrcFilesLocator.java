@@ -8,6 +8,10 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
@@ -15,9 +19,12 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.ide.IDE;
+import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 public class JavaSrcFilesLocator {
@@ -55,7 +62,58 @@ public class JavaSrcFilesLocator {
 		return projects;
 	}
 	
-	public void open(String filePath, int line, IWorkbenchPage dPage) {
+	public void open(final String filePath,final int line, final IWorkbenchPage dPage, final ViewPart activeView) {
+		if (dPage == null) return;
+		
+		Job job = new Job("My Job") {
+			@Override
+			protected IStatus run(IProgressMonitor monitor) {
+				final IFile file = getFile(filePath);
+				if (file == null) return Status.OK_STATUS;
+				
+				// Update the UI
+				Display.getDefault().asyncExec(new Runnable() {
+					@Override
+					public void run() {
+						IEditorPart textEditor;
+						try {
+							textEditor = IDE.openEditor(dPage, file, true);
+							highlightLine(textEditor, line);
+							activeView.setFocus();
+						} catch (PartInitException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+
+				return Status.OK_STATUS;
+			}
+		};
+
+		// Start the Job
+		job.schedule(); 
+	}
+	
+	private IFile getFile(String filePath) {
+		for(IJavaProject javaProject : getProjects()) {
+			IType javaFileType;
+			try {
+				javaFileType = javaProject.findType(filePath);
+			} catch (JavaModelException e) {
+				e.printStackTrace();
+				continue;
+			}
+			if(javaFileType == null) continue;
+			
+			IResource iResource = javaFileType.getResource();
+			if (iResource == null) continue;
+
+			return ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+		}
+		return null;
+	}
+	
+	public void open_old(String filePath, int line, IWorkbenchPage dPage) {
 		for(IJavaProject javaProject : getProjects()) {
 			IType javaFileType;
 			try {
