@@ -15,11 +15,11 @@ import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class LocalsContentProvider implements ILazyTreeContentProvider {
 		
-	private final TreeViewer viewer;
+	protected TreeViewer viewer;
 	private int testId = -1;
 	private long callStep = -1;
 	private long step;
-	private NamedValue root;
+	protected NamedValue root;
 	private final DoInUiThread<NamedValue> updateNamedValue = new DoInUiThread<NamedValue>() {
 		@Override
 		public Void call(MiFuture<NamedValue> param) throws Exception {
@@ -61,7 +61,9 @@ public class LocalsContentProvider implements ILazyTreeContentProvider {
 	public void dispose() { }
 
 	@Override
-	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { }
+	public void inputChanged(Viewer viewer, Object oldInput, Object newInput) { 
+		this.viewer = (TreeViewer) viewer;
+	}
 	
 	public void setStep(int testId, long call, long step) {
 		if (testId != this.testId || call != this.callStep) {

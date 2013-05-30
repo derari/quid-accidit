@@ -10,5 +10,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/accidit-eclipse/lib/miro-1.0-SNAPSHOT-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/ngdbc.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

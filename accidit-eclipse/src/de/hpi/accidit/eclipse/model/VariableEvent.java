@@ -15,13 +15,13 @@ public class VariableEvent extends TraceElement {
 	private static final Mapping<VariableEvent> MAPPING = new ReflectiveMapping<>(VariableEvent.class);
 	
 	private static final QueryTemplate<VariableEvent> TEMPLATE = new TETemplate<VariableEvent>() {{
-		from("VariableTrace f");
+		from("`VariableTrace` f");
 	}};
 	
 	public static class Query extends QueryWithTemplate<VariableEvent> {
 		public Query(MiConnection cnn, String[] select) {
 			super(cnn, MAPPING, TEMPLATE);
-			select(select);
+			select_keys(select);
 		}
 		public Query where() {
 			return this;

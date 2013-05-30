@@ -16,4 +16,5 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: lib/mysql-connector-java-5.1.22-bin.jar,
  lib/miro-1.0-SNAPSHOT.jar,
+ lib/ngdbc.jar,
  .

@@ -4,6 +4,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.viewers.ILabelProvider;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.window.Window;
@@ -11,8 +12,11 @@ import org.eclipse.ui.ISelectionService;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
@@ -22,23 +26,29 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ISelectionService selectionService = HandlerUtil.getActiveWorkbenchWindow(event).getSelectionService();
-		ITreeSelection selectedMethods = (ITreeSelection) selectionService.getSelection(MethodExplorerView.ID);
-		ITreeSelection selectedLocals = (ITreeSelection) selectionService.getSelection(LocalsExplorerView.ID);
-
-		Object method = null;//(Method) selectedMethods.getFirstElement();
-		if (selectedLocals.size() < 1) return null;
-		LocalBase local = (LocalBase) selectedLocals.getFirstElement();
+		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
 		
-		ITreeContentProvider contentProvider = new LocalsHistoryContentProvider(0, method, local);
-		ILabelProvider labelProvider = new LocalsLabelProvider();
+		ITreeSelection selectedLocals = (ITreeSelection) sel;
+
+		if (selectedLocals.size() < 1) return null;
+		NamedValue var = (NamedValue) selectedLocals.getFirstElement();
+		
+		LocalsHistoryContentProvider cp = new LocalsHistoryContentProvider(null);
 		
 		ElementTreeSelectionDialog dialog = 
-				new LocalsHistorySelectionDialog(HandlerUtil.getActiveShell(event), labelProvider, contentProvider);
-		dialog.setTitle("Varible History");
+				new LocalsHistorySelectionDialog(HandlerUtil.getActiveShell(event), var, cp);
+		
+		NamedValue root = null;
+		cp.setStep(TraceNavigatorUI.getGlobal().getTestId(), TraceNavigatorUI.getGlobal().getCallStep(), -1);
+		if (var instanceof NamedValue.VariableValue) {
+			root = new NamedValue.VariableHistory(TraceNavigatorUI.getGlobal().getTestId(), TraceNavigatorUI.getGlobal().getCallStep(), var.getId());
+		}
+		
+		cp.setRoot(root);
+		dialog.setTitle(var.getName() + " History");
 		dialog.setBlockOnOpen(true);
-		dialog.setInput(HandlerUtil.getActiveEditorInput(event));
-		dialog.setEmptyListMessage("The selected variable wasn't set in the traced context at all.");
+		dialog.setInput(root);
+		dialog.setEmptyListMessage("No Data.");
 		
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();

@@ -9,6 +9,7 @@ import org.eclipse.jface.window.Window;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.TestCase;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionDialog;
@@ -38,7 +39,7 @@ public class SelectTestCaseHandler extends AbstractHandler {
 			if (result == null || result.length < 1) return null;
 			TestCase newTestCase = (TestCase) result[0];
 
-			methodExplorerView.setTestCaseId(newTestCase.id);
+			TraceNavigatorUI.getGlobal().setTestId(newTestCase.id);
 			methodExplorerView.refresh();
 		}
 

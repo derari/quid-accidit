@@ -71,7 +71,7 @@ public class Invocation extends TraceElement {
 				.where().inInvocation(Invocation.this)
 				.asList().execute();
 		List<ExceptionEvent> thrown = cnn
-				.select("line", "step").from(ExceptionEvent.CATCH_VIEW)
+				.select("line", "step").from(ExceptionEvent.THROW_VIEW)
 				.where().inInvocation(Invocation.this)
 				.asList().execute();
 		List<FieldEvent> fields = cnn
@@ -98,15 +98,15 @@ public class Invocation extends TraceElement {
 		Iterator<TraceElement> mnIt = minor.iterator();
 		TraceElement mn = mnIt.hasNext() ? mnIt.next() : null;
 		for (TraceElement mj: major) {
-//			while (mn != null && mn.line < mj.line) {
-//				if (mn.line > line) {
-//					result.add(new LineElement(this, mn.step, mn.line));
-//					line = mn.line;
-//				}
-//				while (mn != null && mn.line <= line) {
-//					mn = mnIt.hasNext() ? mnIt.next() : null;
-//				}
-//			}
+			while (mn != null && mn.line < mj.line) {
+				if (mn.line > line) {
+					result.add(new LineElement(this, mn.step, mn.line));
+					line = mn.line;
+				}
+				while (mn != null && mn.line <= line) {
+					mn = mnIt.hasNext() ? mnIt.next() : null;
+				}
+			}
 			result.add(mj);
 			line = mj.line;
 		}
@@ -127,25 +127,32 @@ public class Invocation extends TraceElement {
 	
 	public static final View<Query> VIEW = new QueryFactoryView<>(Query.class);
 	
-	private static final Mapping<Invocation> MAPPING = new ReflectiveMapping<>(Invocation.class);
+	private static final Mapping<Invocation> MAPPING = new ReflectiveMapping<Invocation>(Invocation.class) {
+		protected void injectField(Invocation record, String field, java.sql.ResultSet rs, int i) throws java.sql.SQLException {
+			if (field.equals("returned")) {
+				injectField(record, field, rs.getInt(i) == 1);
+				return;
+			}
+			super.injectField(record, field, rs, i);
+		};
+	};
 	
 	private static final QueryTemplate<Invocation> TEMPLATE = new QueryTemplate<Invocation>(){{
-		select("i.testId", "i.callStep AS step", "i.exitStep", 
-			   "i.depth", "i.callLine AS line",
-			   "i.returned", "i.exitLine");
-		from("InvocationTrace i");
-		join("Method m ON i.methodId = m.id");
+		select("c.`testId`", "c.`step` AS `step`", "e.`step` AS `exitStep`", 
+			   "c.`depth`", "c.`line` AS `line`",
+			   "e.`returned`", "e.`line` AS `exitLine`",
+			   "m.`name` AS `method`", "t.`name` AS `type`");
+		from("`CallTrace` c");
+		join("LEFT OUTER JOIN `ExitTrace` e ON c.`testId` = e.`testId` AND c.`step` = e.`callStep`");
+		join("`Method` m ON c.`methodId` = m.`id`");
 		using("m")
-			.select("m.name AS method")
-			.join("Type t ON m.declaringTypeId = t.id");
-		using("t")
-			.select("t.name AS type");
+			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
 		
-		where("test_EQ", "i.testId = ?",
-			  "depth_EQ", "i.depth = ?",
-			  "step_BETWEEN", "i.callStep > ? AND i.callStep < ?");
+		where("test_EQ", "c.`testId` = ?",
+			  "depth_EQ", "c.`depth` = ?",
+			  "step_BETWEEN", "c.`step` > ? AND c.`step` < ?");
 		
-		orderBy("o_callStep", "callStep");
+		orderBy("o_callStep", "`callStep`");
 	}};
 
 	

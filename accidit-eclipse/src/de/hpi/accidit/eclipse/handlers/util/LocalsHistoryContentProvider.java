@@ -8,32 +8,63 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalObject;
 import de.hpi.accidit.eclipse.views.dataClasses.LocalPrimitive;
+import de.hpi.accidit.eclipse.views.provider.LocalsContentProvider;
 
-public class LocalsHistoryContentProvider implements ITreeContentProvider {
+public class LocalsHistoryContentProvider extends LocalsContentProvider
+		 implements ITreeContentProvider {
 	
-	private Connection dbConnection;
+	private int testId;
+	private long call;
+
+	public LocalsHistoryContentProvider(TreeViewer viewer) {
+		super(viewer);
+	}
 	
-	private int selectedTestCaseId;
+	@Override
+	public void setStep(int testId, long call, long step) {
+		this.testId = testId;
+		this.call = call;
+	}
+	
+	public void setRoot(NamedValue root) {
+		this.root = root;
+	}
+
+	@Override
+	public Object[] getElements(Object inputElement) {
+		return new Object[1];
+	}
+
+	@Override
+	public Object[] getChildren(Object parentElement) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public boolean hasChildren(Object element) {
+		throw new UnsupportedOperationException();
+	}
+	
+	/*
+	private int testId;
+	private long callStep;
+	private long step;
 //	private Method selectedMethod;
-	private LocalBase selectedLocal;
+	private NamedValue selectedLocal;
 	
-	public LocalsHistoryContentProvider(int selectedTestCaseId,	Object selectedMethod, LocalBase selectedLocal) {
-		try {
-			dbConnection = DatabaseConnector.getValidConnection();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			System.err.println("No database connection available. Exiting.");
-			System.exit(0);
-		}
-		
-		this.selectedTestCaseId = selectedTestCaseId;
-//		this.selectedMethod = selectedMethod;
+	public LocalsHistoryContentProvider(int selectedTestCaseId, NamedValue selectedLocal) {
+		this.testId = selectedTestCaseId;
+		this.callStep = TraceNavigatorUI.getGlobal().getCallStep();
+		this.step = TraceNavigatorUI.getGlobal().getStep();
 		this.selectedLocal = selectedLocal;
 	}
 
@@ -102,69 +133,5 @@ public class LocalsHistoryContentProvider implements ITreeContentProvider {
 		LocalBase local = (LocalBase) element;
 		return local.isObject();
 	}
-	
-	/* *************************************************** */
-	
-	// TODO refactor. copy from LocalsContentProvider
-	
-	private List<LocalBase> queryForLocals(String query) {
-		List<LocalBase> locals = new LinkedList<LocalBase>();
-		
-		ResultSet result = null;
-		try {
-			Statement statement = dbConnection.createStatement();
-			result = statement.executeQuery(query);
-		} catch (SQLException e) {
-			System.err.println("Locals not retrievable.");
-			e.printStackTrace();
-		}
-		
-		try {
-			while(result.next()) locals.add(buildLocal(result));
-		} catch (SQLException e) {
-			System.err.println("Failed to process result set. Exiting.");
-			e.printStackTrace();
-			System.exit(0);
-		}
-		
-		return locals;
-	}
-	
-	private LocalBase buildLocal(ResultSet result) throws SQLException {
-		LocalBase local = createLocal(result);
-		setLocalBaseFields(local, result);
-		return local;
-	}
-	
-	private LocalBase createLocal(ResultSet result) throws SQLException {
-		if(result.getString(3) == null) return new LocalPrimitive("null");
-		
-		char primType = result.getString(3).charAt(0);
-		long valueId = result.getLong(4);
-		
-		//System.out.println("LocalsHistoryContentProvider: createLocal: valueId is " + valueId);
-		
-		if (primType == 'L') return new LocalObject(valueId);
-		
-		switch (primType) {
-		case 'Z': return new LocalPrimitive(String.valueOf(valueId == 1)); // boolean
-		case 'B': return new LocalPrimitive(String.valueOf((byte) valueId)); // byte
-		case 'C': return new LocalPrimitive(String.valueOf((char) valueId)); // char
-		case 'D': return new LocalPrimitive(String.valueOf(Double.longBitsToDouble(valueId))); // double
-		case 'F': return new LocalPrimitive(String.valueOf(Float.intBitsToFloat((int) valueId))); // float
-		case 'I': return new LocalPrimitive(String.valueOf(valueId)); // int
-		case 'J': return new LocalPrimitive(String.valueOf(valueId)); // long
-		case 'S': return new LocalPrimitive(String.valueOf((short) valueId)); // short
-		default: return null;
-		}
-	}
-
-	private void setLocalBaseFields(LocalBase local, ResultSet result) throws SQLException {
-		local.id		= result.getInt(1);
-		local.name		= result.getString(2);
-		local.step		= result.getInt(5);
-		local.typeId	= result.getInt(6);
-		local.type		= result.getString(7);
-	}
-
+*/
 }

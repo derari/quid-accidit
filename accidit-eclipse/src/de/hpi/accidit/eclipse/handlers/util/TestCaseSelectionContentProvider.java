@@ -39,13 +39,14 @@ public class TestCaseSelectionContentProvider implements ITreeContentProvider {
 	
 	private String getTestCaseQuery() {
 		StringBuilder query = new StringBuilder();
-		query.append("SELECT id, name ");
-		query.append("FROM TestTrace ");
-		query.append("ORDER BY id");
+		query.append("SELECT `id`, `name` ");
+		query.append("FROM `TestTrace` ");
+		query.append("ORDER BY `id`");
 		return query.toString();
 	}
 	
 	private ResultSet executeQuery(String query) throws SQLException {
+		query = DatabaseConnector.cnn().preProcess(query);
 		Connection dbConnection = DatabaseConnector.getValidConnection();
 		ResultSet result = null;
 		try {

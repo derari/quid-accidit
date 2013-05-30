@@ -38,7 +38,7 @@ public class ExceptionEvent extends TraceElement {
 	}};
 	
 	private static final QueryTemplate<ExceptionEvent> THROW_TEMPLATE = new EeTemplate() {{
-		from("ThrowTrace f");
+		from("`ThrowTrace` f");
 	}};
 	
 	public static class ThrowQuery extends QueryWithTemplate<ExceptionEvent> {
@@ -60,7 +60,7 @@ public class ExceptionEvent extends TraceElement {
 	}
 	
 	private static final QueryTemplate<ExceptionEvent> CATCH_TEMPLATE = new EeTemplate() {{
-		from("CatchTrace f");
+		from("`CatchTrace` f");
 	}};
 	
 	public static class CatchQuery extends QueryWithTemplate<ExceptionEvent> {

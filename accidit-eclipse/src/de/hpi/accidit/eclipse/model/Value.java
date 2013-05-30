@@ -331,6 +331,44 @@ public abstract class Value extends ModelBase {
 		}
 	}
 	
+	public static abstract class ValueHistory extends Value {
+		
+	}
+	
+	public static class VariableHistory extends ValueWithChildren {
+		
+		private int testId;
+		private long callStep;
+		private int varId;
+		
+		public VariableHistory(int testId, long callStep, int varId) {
+			super();
+			this.testId = testId;
+			this.callStep = callStep;
+			this.varId = varId;
+		}
+
+		@Override
+		public String getLongString() {
+			return "-";
+		}
+		
+		@Override
+		public String getShortString() {
+			return "-";
+		}
+		
+		@Override
+		protected NamedValue[] fetchChildren() throws Exception {
+			return DatabaseConnector.cnn()
+					.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+					.where().inCall(testId, callStep).byId(varId)
+					.asArray().execute();
+		}
+		
+	}
+	
+	
 	private static Value newValue(int testId, char primType, long valueId) {
 		if (primType == 'L' && valueId != 0) {
 			return new ObjectSnapshot(testId, valueId);
@@ -369,52 +407,52 @@ public abstract class Value extends ModelBase {
 	};
 	
 	private static abstract class ValueQueryTemplate extends GraphQueryTemplate<Value> {{
-		select("t.testId, t.primType, t.valueId, o.arrayLength, y.name AS typeName");
-		join("LEFT OUTER JOIN ObjectTrace o " +
-			 "ON t.primType = 'L' AND t.testId = o.testId AND t.valueId = o.id");
-		join("LEFT OUTER JOIN Type y " +
-			 "ON y.id = o.typeId");
-		where("step_EQ", "t.testId = ? AND t.step = ?");
+		select("t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName`");
+		join("LEFT OUTER JOIN `ObjectTrace` o " +
+			 "ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id`");
+		join("LEFT OUTER JOIN `Type` y " +
+			 "ON y.`id` = o.`typeId`");
+		where("step_EQ", "t.`testId` = ? AND t.`step` = ?");
 	}};
 	
 	private static final ValueQueryTemplate VAR_TEMPLATE = new ValueQueryTemplate() {{
-		from("VariableTrace t");
-		where("id_EQ", "t.variableId = ?");
-		always().orderBy("t.variableId");
+		from("`VariableTrace` t");
+		where("id_EQ", "t.`variableId` = ?");
+		always().orderBy("t.`variableId`");
 	}};
 	
 	private static final ValueQueryTemplate PUT_TEMPLATE = new ValueQueryTemplate() {{
-		from("PutTrace t");
-		where("id_EQ", "t.fieldId = ?");
-		always().orderBy("t.fieldId");
+		from("`PutTrace` t");
+		where("id_EQ", "t.`fieldId` = ?");
+		always().orderBy("t.`fieldId`");
 	}};
 	
 	private static final ValueQueryTemplate GET_TEMPLATE = new ValueQueryTemplate() {{
-		from("GetTrace t");
-		where("id_EQ", "t.fieldId = ?");
-		always().orderBy("t.fieldId");
+		from("`GetTrace` t");
+		where("id_EQ", "t.`fieldId` = ?");
+		always().orderBy("t.`fieldId`");
 	}};
 	
 	private static final ValueQueryTemplate A_PUT_TEMPLATE = new ValueQueryTemplate() {{
-		from("ArrayPutTrace t");
+		from("`ArrayPutTrace` t");
 		where("id_EQ", "t.`index` = ?");
 		always().orderBy("t.`index`");
 	}};
 	
 	private static final ValueQueryTemplate A_GET_TEMPLATE = new ValueQueryTemplate() {{
-		from("ArrayGetTrace t");
+		from("`ArrayGetTrace` t");
 		where("id_EQ", "t.`index` = ?");
 		always().orderBy("t.`index`");
 	}};
 	
 	private static final GraphQueryTemplate<Value> THIS_TEMPLATE = new GraphQueryTemplate<Value>() {{
-		select("t.testId, 'L' AS primType, COALESCE(t.thisId, 0) AS valueId, o.arrayLength, y.name AS typeName");
-		from("CallTrace t");
-		join("LEFT OUTER JOIN ObjectTrace o " +
-			 "ON t.testId = o.testId AND t.thisId = o.id");
-		join("LEFT OUTER JOIN Type y " +
-			 "ON y.id = o.typeId");
-		where("step_EQ", "t.testId = ? AND t.step = ?");
+		select("t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`");
+		from("`CallTrace` t");
+		join("LEFT OUTER JOIN `ObjectTrace` o " +
+			 "ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`");
+		join("LEFT OUTER JOIN `Type` y " +
+			 "ON y.`id` = o.`typeId`");
+		where("step_EQ", "t.`testId` = ? AND t.`step` = ?");
 	}};
 	
 	public static class ValueQuery extends GraphQuery<Value> {

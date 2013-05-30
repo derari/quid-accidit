@@ -20,7 +20,7 @@ public class FieldEvent extends TraceElement {
 	}};
 	
 	private static final QueryTemplate<FieldEvent> PUT_TEMPLATE = new FeTemplate() {{
-		from("PutTrace f");
+		from("`PutTrace` f");
 	}};
 	
 	public static class PutQuery extends QueryWithTemplate<FieldEvent> {

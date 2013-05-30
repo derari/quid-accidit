@@ -1,5 +1,6 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
@@ -41,6 +42,11 @@ public class LocalsExplorerView extends ViewPart {
 		
 		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
 		ui.setLocalsExprorer(this);
+		
+	}
+	
+	public ISelection getSelection() {
+		return viewer.getSelection();
 	}
 
 	@Override

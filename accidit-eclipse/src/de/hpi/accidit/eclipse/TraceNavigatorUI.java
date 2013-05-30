@@ -26,6 +26,7 @@ public class TraceNavigatorUI {
 	
 	// Trace
 	private int testId;
+	private long callStep;
 	private long step;
 	
 	public TraceNavigatorUI() {
@@ -53,6 +54,10 @@ public class TraceNavigatorUI {
 		}
 	}
 	
+	public LocalsExplorerView getLocalsExplorer() {
+		return localsExplorer;
+	}
+	
 	public MiConnection cnn() {
 		return DatabaseConnector.getValidOConnection();
 	}
@@ -73,6 +78,10 @@ public class TraceNavigatorUI {
 		return step;
 	}
 	
+	public long getCallStep() {
+		return callStep;
+	}
+	
 	public void setTestId(int testId) {
 		this.step = 0;
 		this.testId = testId;
@@ -86,7 +95,9 @@ public class TraceNavigatorUI {
 
 	public void setStep(TraceElement le) {
 		setStep(le.step);
+		callStep = 0;
 		if (le.parent != null) {
+			callStep = le.parent.step;
 			String filePath = le.parent.type;
 			srcFilesLocator.open(filePath, le.line, mainPage);
 			if (localsExplorer != null) {

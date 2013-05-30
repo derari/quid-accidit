@@ -68,7 +68,7 @@ public class MainPreferencePage extends FieldEditorPreferencePage implements IWo
 		
 		String errorMessage = connectionIsWorking ? null : "This database does not exist or is not available.";
 		setErrorMessage(errorMessage);
-		return super.performOk() && connectionIsWorking;
+		return super.performOk();// && connectionIsWorking;
 	}
 	
 	

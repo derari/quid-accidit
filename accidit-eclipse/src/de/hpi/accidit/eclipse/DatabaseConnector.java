@@ -11,7 +11,8 @@ import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
 
 public class DatabaseConnector {
 	
-	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
+	private final static String MYSQL_DATABASE_DRIVER = "com.sap.db.jdbc.Driver";
+//	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
 	
 	private volatile static boolean initialized = false;
 	
@@ -27,8 +28,8 @@ public class DatabaseConnector {
 		if (!initialized)
 			initializeDriver();
 		
-		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s", dbAddress, dbSchema, dbUser, dbPassword);
-		return DriverManager.getConnection(dbString);
+		String dbString = String.format("jdbc:mysql://%s/%s", dbAddress, dbSchema);
+		return DriverManager.getConnection(dbString, dbUser, dbPassword);
 	}
 	
 	private static String getDBString() {
@@ -38,7 +39,7 @@ public class DatabaseConnector {
 		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
 		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
 		
-		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s", dbAddress, dbSchema, dbUser, dbPassword);
+		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 		return dbString;
 	}
 	
@@ -59,6 +60,13 @@ public class DatabaseConnector {
 					}
 					lastDbString = dbString;
 					cnn = new MiConnection(getValidConnection());
+					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+					String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
+					if (dbString.startsWith("jdbc:sap")) {
+						cnn.addPreProcessor(new HanaPP(dbSchema));
+					} else if (dbString.startsWith("jdbc:mysql")) {
+						cnn.addPreProcessor(new MySqlPP(dbSchema));
+					}
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -83,6 +91,7 @@ public class DatabaseConnector {
 			Connection c = getConnection(dbAddress, dbSchema, dbUser, dbPassword);
 			c.close();
 		} catch (SQLException e) {
+			e.printStackTrace(System.err);
 			return false;
 		}
 		return true;
@@ -92,10 +101,40 @@ public class DatabaseConnector {
 		try {
 			Class.forName(MYSQL_DATABASE_DRIVER);
 		} catch (ClassNotFoundException e) {
-			System.err.println("Exiting as there is no database driver available.");
 			e.printStackTrace();
-			System.exit(0);
+//			throw new RuntimeException(e);
 		}
 		initialized = true;
 	}
+	
+	private static class HanaPP implements MiConnection.QueryPreProcessor {
+		private final String schema;
+		public HanaPP(String schema) {
+			super();
+			this.schema = schema;
+		}
+		@Override
+		public String apply(String sql) {
+			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
+					  .replace("`", "\"")
+					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "(LEAST(0, IFNULL($1, -1))+1)");
+			System.out.println(sql);
+			return sql;
+		}
+	};
+	
+	private static class MySqlPP implements MiConnection.QueryPreProcessor {
+		private final String schema;
+		public MySqlPP(String schema) {
+			super();
+			this.schema = schema;
+		}
+		@Override
+		public String apply(String sql) {
+			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
+					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
+			System.out.println(sql);
+			return sql;
+		}
+	};
 }

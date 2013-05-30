@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.handlers.util;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
@@ -10,18 +11,25 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+
 public class LocalsHistorySelectionDialog extends ElementTreeSelectionDialog {
 
+	private NamedValue var;
+	public Tree t;
+	
 	public LocalsHistorySelectionDialog(Shell parent,
-			ILabelProvider labelProvider, 
-			ITreeContentProvider contentProvider) {
+			NamedValue var, LocalsHistoryContentProvider cp) {
 		
-		super(parent, labelProvider, contentProvider);
+		super(parent, new LocalsLabelProvider(), cp);
+		this.var = var;
 	}
 	
 	@Override
 	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
-		TreeViewer viewer = super.doCreateTreeViewer(parent, style);
+		TreeViewer viewer = super.doCreateTreeViewer(parent, style | SWT.VIRTUAL);
 		extendTree(viewer);
 		return viewer;
 	}
@@ -30,22 +38,18 @@ public class LocalsHistorySelectionDialog extends ElementTreeSelectionDialog {
 		if (viewer == null || viewer.getTree() == null) {
 			return;
 		}
-		
+		viewer.setUseHashlookup(true);
 		Tree tree = viewer.getTree();
 		tree.setHeaderVisible(true);
+		t = tree;
 		
 		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
-		column0.setText("Local Name");
+		column0.setText("Key");
 		column0.setWidth(100);
 		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
 		column1.setText("Value");
-		column1.setWidth(100);
-		TreeColumn column2 = new TreeColumn(tree, SWT.RIGHT);
-		column2.setText("Change Step");
-		column2.setWidth(75);
-		TreeColumn column3 = new TreeColumn(tree, SWT.LEFT);
-		column3.setText("Type");
-		column3.setWidth(200);
+		column1.setWidth(100);		
+		
 	}
 
 }
