@@ -17,7 +17,10 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.part.ViewPart;
+
+import de.hpi.accidit.eclipse.Activator;
 
 public class NavigatorView extends ViewPart {
 
@@ -59,19 +62,22 @@ public class NavigatorView extends ViewPart {
 		outLabel.setLayoutData(layoutData);
 		
 		Label upArrow = new Label(parent, SWT.NONE);
-		upArrow.setText("A");
+		Image upImage = Activator.getImageDescriptor("icons/go-up.png").createImage();
+		upArrow.setImage(upImage);
 		layoutData = new GridData(SWT.CENTER, SWT.BOTTOM, false, false);
 		upArrow.setLayoutData(layoutData);
 		
 		Label leftArrow = new Label(parent, SWT.NONE);
-		leftArrow.setText("<");
+		Image leftImage = Activator.getImageDescriptor("icons/go-previous.png").createImage();
+		leftArrow.setImage(leftImage);
 		layoutData = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
 		leftArrow.setLayoutData(layoutData);
 		
 		Label placeHolder = new Label(parent, SWT.NONE);
 		
 		Label rightArrow = new Label(parent, SWT.NONE);
-		rightArrow.setText(">");
+		Image rightImage = Activator.getImageDescriptor("icons/go-next.png").createImage();
+		rightArrow.setImage(rightImage);
 		layoutData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
 		rightArrow.setLayoutData(layoutData);
 		
@@ -81,7 +87,8 @@ public class NavigatorView extends ViewPart {
 		resultLabel.setLayoutData(layoutData);
 		
 		Label downArrow = new Label(parent, SWT.NONE);
-		downArrow.setText("V");
+		Image downImage = Activator.getImageDescriptor("icons/go-down.png").createImage();
+		downArrow.setImage(downImage);
 		layoutData = new GridData(SWT.CENTER, SWT.TOP, false, false);
 		downArrow.setLayoutData(layoutData);
 		
