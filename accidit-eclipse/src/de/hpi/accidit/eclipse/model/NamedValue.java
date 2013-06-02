@@ -25,6 +25,7 @@ public class NamedValue extends ModelBase {
 	protected int id = -1;
 	protected String name;
 	protected Value value;
+	protected String method;
 	
 	public NamedValue() {
 	}
