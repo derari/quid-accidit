@@ -32,6 +32,15 @@ public class ASimpleTest {
         return s;
     }
     
+    public String splitTest() {
+        String s = "asdasd";
+        baz();
+        s.equals("1");
+        return s.split(",")[0].trim();
+    }
+    
+    public void baz() {}
+    
     private long getLong() {
         return new Access().get();
     }
@@ -133,6 +142,10 @@ public class ASimpleTest {
 
     @Override
     public String toString() {
+        return "";
+    }
+    
+    public String toString2() {
         return "" + aLong++;
     }
     

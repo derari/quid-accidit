@@ -44,18 +44,15 @@
             name="Locals and Fields"
             restorable="true">
       </view>
-   </extension>
-   <extension
-         point="org.eclipse.ui.perspectiveExtensions">
-      <perspectiveExtension
-            targetID="org.eclipse.jdt.ui.JavaPerspective">
-         <view
-               ratio="0.5"
-               relative="org.eclipse.ui.views.ProblemView"
-               relationship="right"
-               id="de.hpi.accidit.eclipse.views.MainView">
-         </view>
-      </perspectiveExtension>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.NavigatorView"
+            fastViewWidthRatio="0.3"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.NavigatorView"
+            name="Navigator"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.help.contexts">
@@ -73,6 +70,11 @@
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
             id="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
             name="Open Method Explorer">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
+            id="de.hpi.accidit.eclipse.commands.openNavigatorView"
+            name="Open Navigator">
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
@@ -170,14 +172,18 @@
             class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
       </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openNavigatorView">
+      </handler>
    </extension>
    <extension
          point="org.eclipse.ui.bindings">
       <key
-            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+            commandId="de.hpi.accidit.eclipse.commands.selectTestCase"
             contextId="org.eclipse.ui.contexts.window"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-            sequence="M1+6">
+            sequence="M1+1">
       </key>
    </extension>
    <extension
@@ -197,8 +203,16 @@
                   id="de.hpi.accidit.eclipse.menus.openLocalsExplorerView">
             </command>
             <command
+                  commandId="de.hpi.accidit.eclipse.commands.openNavigatorView"
+                  id="de.hpi.accidit.eclipse.menus.openNavigatorView">
+            </command>
+            <separator
+                  name="accidit-eclipse.separator1"
+                  visible="true">
+            </separator>
+            <command
                   commandId="de.hpi.accidit.eclipse.commands.selectTestCase"
-                  icon="icons/sample.gif"
+                  icon="icons/a_logo.png"
                   id="de.hpi.accidit.eclipse.menus.selectTestCase">
             </command>
          </menu>
@@ -269,6 +283,25 @@
                style="push">
          </command>
       </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            class="de.hpi.accidit.eclipse.AcciditPerspectiveFactory"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.AcciditPerspective"
+            name="Accidit">
+      </perspective>
+   </extension>
+   <extension
+         point="org.eclipse.ui.propertyPages">
+      <page
+            class="de.hpi.accidit.eclipse.properties.DatabaseInformation"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.properties.databaseInformation"
+            name="Accidit Database Info"
+            objectClass="org.eclipse.core.resources.IProject">
+      </page>
    </extension>
 
 </plugin>

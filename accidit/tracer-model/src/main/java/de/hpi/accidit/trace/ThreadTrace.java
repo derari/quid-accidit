@@ -196,6 +196,7 @@ public class ThreadTrace {
                     if (s > TRACE_MAX) {
                         System.out.println("--- enough ---");
                         endTrace();
+                        throw new AssertionError("enough---");
                     }
                 }
             }

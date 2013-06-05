@@ -97,6 +97,12 @@ public class AgentTest {
         Object result = runATest("basicTest");
         System.out.println(result);
     }
+    
+    @Test
+    public void test_string_internals() throws Exception {
+        Object result = runATest("splitTest");
+        System.out.println(result);
+    }
 
     @Test
     public void test_no_trace() throws Exception {
