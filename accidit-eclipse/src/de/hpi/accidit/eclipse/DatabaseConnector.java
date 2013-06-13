@@ -5,9 +5,14 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import org.cthul.miro.MiConnection;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
+import de.hpi.accidit.eclipse.properties.FieldEditorOverlayPage;
 
 public class DatabaseConnector {
 	
@@ -34,13 +39,21 @@ public class DatabaseConnector {
 	
 	private static String getDBString() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+
+		// TODO: get resource from property
+//		String foo = DatabaseSettingsRetriever.getOverlayedPreferenceValue(
+//				store, 
+//				resource, 
+//				PreferenceConstants.CONNECTION_ADDRESS);
+		
+		
+		
 		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
 		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
 		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
 		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
 		
-		String dbString = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
-		return dbString;
+		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
 	
 	public static Connection getValidConnection() throws SQLException {
@@ -102,17 +115,56 @@ public class DatabaseConnector {
 			Class.forName(MYSQL_DATABASE_DRIVER);
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
-//			throw new RuntimeException(e);
 		}
 		initialized = true;
 	}
 	
+	/* private class for property retrieving. */
+	
+	private static class DatabaseSettingsRetriever {
+		
+		private static final String DATABASE_SETTINGS_PREFEENCE_PAGE_ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
+		
+		public static String getOverlayedPreferenceValue(IPreferenceStore store, IResource resource, String key) {
+			IProject project = resource.getProject();
+			String value = null;
+			if (useProjectSettings(project, DATABASE_SETTINGS_PREFEENCE_PAGE_ID)) {
+				value = getProperty(resource, DATABASE_SETTINGS_PREFEENCE_PAGE_ID, key);
+			}
+			if (value != null)
+				return value;
+			return store.getString(key);
+		}
+		
+		private static boolean useProjectSettings(IResource resource, String pageId) {
+			String use = getProperty(resource, pageId, FieldEditorOverlayPage.USEPROJECTSETTINGS);
+			return "true".equals(use);
+		}
+		
+		private static String getProperty(IResource resource, 
+				String pageId, 
+				String key) {
+			try {
+				return resource.getPersistentProperty(
+						new QualifiedName(pageId, key));
+			} catch (CoreException e) {
+			}
+			return null;
+		}
+		
+	}
+
+	/* private classes for query preprocessing. */
+	
 	private static class HanaPP implements MiConnection.QueryPreProcessor {
+		
 		private final String schema;
+		
 		public HanaPP(String schema) {
 			super();
 			this.schema = schema;
 		}
+		
 		@Override
 		public String apply(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
@@ -124,11 +176,14 @@ public class DatabaseConnector {
 	};
 	
 	private static class MySqlPP implements MiConnection.QueryPreProcessor {
+		
 		private final String schema;
+		
 		public MySqlPP(String schema) {
 			super();
 			this.schema = schema;
 		}
+		
 		@Override
 		public String apply(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
