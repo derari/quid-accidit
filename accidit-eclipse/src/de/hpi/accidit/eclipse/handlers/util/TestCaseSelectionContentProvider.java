@@ -46,12 +46,12 @@ public class TestCaseSelectionContentProvider implements ITreeContentProvider {
 	}
 	
 	private ResultSet executeQuery(String query) throws SQLException {
-		query = DatabaseConnector.cnn().preProcess(query);
+		String preProcessedQuery = DatabaseConnector.cnn().preProcess(query);
 		Connection dbConnection = DatabaseConnector.getValidConnection();
 		ResultSet result = null;
 		try {
 			Statement statement = dbConnection.createStatement();
-			result = statement.executeQuery(query);
+			result = statement.executeQuery(preProcessedQuery);
 		} catch (SQLException e) {
 			System.err.println("Locals not retrievable.");
 			e.printStackTrace();

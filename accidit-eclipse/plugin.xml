@@ -5,11 +5,6 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
-            name="Accidit Preferences"
-            class="de.hpi.accidit.eclipse.preferences.MainPreferencePage"
-            id="de.hpi.accidit.eclipse.preferences.MainPreferencePage">
-      </page>
-      <page
             class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             id="de.hpi.accidit.eclipse.preferencePages.DatabaseSettings"
             name="Database Settings">

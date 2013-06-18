@@ -11,7 +11,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.jface.preference.IPreferenceStore;
 
-import de.hpi.accidit.eclipse.preferences.PreferenceConstants;
+import de.hpi.accidit.eclipse.properties.Configuration;
 import de.hpi.accidit.eclipse.properties.FieldEditorOverlayPage;
 
 public class DatabaseConnector {
@@ -30,28 +30,32 @@ public class DatabaseConnector {
 	 * @return The database connection.
 	 */
 	public static Connection getConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
-		if (!initialized)
+		if (!initialized) {
 			initializeDriver();
+		}
 		
 		String dbString = String.format("jdbc:mysql://%s/%s", dbAddress, dbSchema);
 		return DriverManager.getConnection(dbString, dbUser, dbPassword);
 	}
 	
+	private static IResource selectedProject = null; 
+	
 	private static String getDBString() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-
-		// TODO: get resource from property
-//		String foo = DatabaseSettingsRetriever.getOverlayedPreferenceValue(
-//				store, 
-//				resource, 
-//				PreferenceConstants.CONNECTION_ADDRESS);
 		
+		String dbAddress = DatabaseSettingsRetriever
+				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_ADDRESS);
+		String dbSchema	= DatabaseSettingsRetriever
+				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_SCHEMA);
+		String dbUser = DatabaseSettingsRetriever
+				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_USER);
+		String dbPassword = DatabaseSettingsRetriever
+				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_PASSWORD);
 		
-		
-		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
-		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
-		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
-		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
+//		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
+//		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
+//		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
+//		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
 		
 		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
@@ -71,10 +75,12 @@ public class DatabaseConnector {
 					if (cnn != null && !cnn.isClosed()) {
 						cnn.close();
 					}
+					
 					lastDbString = dbString;
 					cnn = new MiConnection(getValidConnection());
+					
 					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-					String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
+					String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
 					if (dbString.startsWith("jdbc:sap")) {
 						cnn.addPreProcessor(new HanaPP(dbSchema));
 					} else if (dbString.startsWith("jdbc:mysql")) {
@@ -125,7 +131,11 @@ public class DatabaseConnector {
 		
 		private static final String DATABASE_SETTINGS_PREFEENCE_PAGE_ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
 		
-		public static String getOverlayedPreferenceValue(IPreferenceStore store, IResource resource, String key) {
+		public static String getPreferenceValue(IPreferenceStore store, IResource resource, String key) {
+			if (resource == null) {
+				return store.getString(key);
+			}
+			
 			IProject project = resource.getProject();
 			String value = null;
 			if (useProjectSettings(project, DATABASE_SETTINGS_PREFEENCE_PAGE_ID)) {
@@ -141,14 +151,10 @@ public class DatabaseConnector {
 			return "true".equals(use);
 		}
 		
-		private static String getProperty(IResource resource, 
-				String pageId, 
-				String key) {
+		private static String getProperty(IResource resource, String pageId, String key) {
 			try {
-				return resource.getPersistentProperty(
-						new QualifiedName(pageId, key));
-			} catch (CoreException e) {
-			}
+				return resource.getPersistentProperty(new QualifiedName(pageId, key));
+			} catch (CoreException e) { }
 			return null;
 		}
 		
