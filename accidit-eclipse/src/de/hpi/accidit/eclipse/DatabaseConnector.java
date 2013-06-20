@@ -38,8 +38,16 @@ public class DatabaseConnector {
 		return DriverManager.getConnection(dbString, dbUser, dbPassword);
 	}
 	
-	private static IResource selectedProject = null; 
+	private static IProject selectedProject = null;
 	
+	public static IProject getSelectedProject() {
+		return selectedProject;
+	}
+
+	public static void setSelectedProject(IProject project) {
+		selectedProject = project;
+	}
+
 	private static String getDBString() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		
@@ -72,20 +80,20 @@ public class DatabaseConnector {
 		String dbString = getDBString();
 		try {
 			if (cnn == null || !dbString.equals(lastDbString) || cnn.isClosed()) {
-					if (cnn != null && !cnn.isClosed()) {
-						cnn.close();
-					}
-					
-					lastDbString = dbString;
-					cnn = new MiConnection(getValidConnection());
-					
-					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-					String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
-					if (dbString.startsWith("jdbc:sap")) {
-						cnn.addPreProcessor(new HanaPP(dbSchema));
-					} else if (dbString.startsWith("jdbc:mysql")) {
-						cnn.addPreProcessor(new MySqlPP(dbSchema));
-					}
+				if (cnn != null && !cnn.isClosed()) {
+					cnn.close();
+				}
+
+				lastDbString = dbString;
+				cnn = new MiConnection(getValidConnection());
+
+				IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+				String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
+				if (dbString.startsWith("jdbc:sap")) {
+					cnn.addPreProcessor(new HanaPP(dbSchema));
+				} else if (dbString.startsWith("jdbc:mysql")) {
+					cnn.addPreProcessor(new MySqlPP(dbSchema));
+				}
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);

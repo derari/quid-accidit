@@ -11,9 +11,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.TestCase;
-import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionContentProvider;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionDialog;
-import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionLabelProvider;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 
 public class SelectTestCaseHandler extends AbstractHandler {
@@ -23,8 +21,8 @@ public class SelectTestCaseHandler extends AbstractHandler {
 		MethodExplorerView methodExplorerView = 
 				(MethodExplorerView) HandlerUtil.getActiveWorkbenchWindow(event).getActivePage().findView(MethodExplorerView.ID);
 				
-		ITreeContentProvider contentProvider = new TestCaseSelectionContentProvider();
-		ILabelProvider labelProvider = new TestCaseSelectionLabelProvider();
+		ITreeContentProvider contentProvider = new TestCaseSelectionDialog.TestCaseSelectionContentProvider();
+		ILabelProvider labelProvider = new TestCaseSelectionDialog.TestCaseSelectionLabelProvider();
 		
 		ElementTreeSelectionDialog dialog = 
 				new TestCaseSelectionDialog(HandlerUtil.getActiveShell(event), labelProvider, contentProvider);

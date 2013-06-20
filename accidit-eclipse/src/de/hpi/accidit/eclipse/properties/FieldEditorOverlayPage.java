@@ -173,13 +173,6 @@ public abstract class FieldEditorOverlayPage extends FieldEditorPreferencePage i
 		for (FieldEditor editor : fieldEditors) {
 			editor.setEnabled(enabled, parent);
 		}
-		
-		//TODO: rm old impl
-//		Iterator<FieldEditor> iterator = fieldEditors.iterator();
-//		while (iterator.hasNext()) {
-//			FieldEditor editor = iterator.next();
-//			editor.setEnabled(enabled, parent);
-//		}
 	}
 	
 	@Override
