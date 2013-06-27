@@ -28,10 +28,12 @@ public class NavigatorView extends ViewPart {
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.NavigatorView";
 	
+	private Composite leftComposite;
+	private Composite intoComposite;
+	private Composite downLeftComposite;
 	private Composite overComposite;
-	private Label intoLabel, overLabel;
-	private Label upLabel, leftLabel, rightLabel, downLabel;
-	private Label upLabel2, leftLabel2;
+	
+	private boolean currentlyLeftFilled = false;
 	
 	public NavigatorView() { }
 
@@ -40,70 +42,58 @@ public class NavigatorView extends ViewPart {
 		GridLayout layout = new GridLayout(3, false);
 		parent.setLayout(layout);
 		
-		Label previousLabel = new Label(parent, SWT.NONE);
-		previousLabel.setText("Previous");
-		GridData layoutData = new GridData(SWT.LEFT, SWT.TOP, false, false);
-		layoutData.horizontalSpan = 2;
-		previousLabel.setLayoutData(layoutData);
+//		Label previousLabel = new Label(parent, SWT.NONE);
+//		previousLabel.setText("Previous");
+//		GridData layoutData = new GridData(SWT.LEFT, SWT.TOP, false, false);
+//		layoutData.horizontalSpan = 2;
+//		previousLabel.setLayoutData(layoutData);
 		
-		Composite intoComposite = new Group(parent, SWT.NONE);
+		leftComposite = new Group(parent, SWT.NONE);
 		RowLayout defaultLayout = new RowLayout();
-		intoComposite.setLayout(defaultLayout);
-		layoutData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		layoutData.verticalSpan = 2;
-		intoComposite.setLayoutData(layoutData);
-		intoLabel = new Label(intoComposite, SWT.NONE);
-		intoLabel.setText("Into");
-
-		Label outLabel = new Label(parent, SWT.NONE);
-		outLabel.setText("Out");
-		layoutData = new GridData(SWT.LEFT, SWT.BOTTOM, false, false);
-		outLabel.setLayoutData(layoutData);
+		leftComposite.setLayout(defaultLayout);
+		leftComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
+		Label leftLabel = new Label(leftComposite, SWT.NONE);
+		leftLabel.setText("left");
 		
 		Label upArrow = new Label(parent, SWT.NONE);
 		Image upImage = Activator.getImageDescriptor("icons/go-up.png").createImage();
 		upArrow.setImage(upImage);
-		layoutData = new GridData(SWT.CENTER, SWT.BOTTOM, false, false);
-		upArrow.setLayoutData(layoutData);
+		upArrow.setLayoutData(new GridData(SWT.CENTER, SWT.BOTTOM, false, false));
+		
+		intoComposite = new Group(parent, SWT.NONE);
+		intoComposite.setLayout(defaultLayout);
+		intoComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		Label intoLabel = new Label(intoComposite, SWT.NONE);
+		intoLabel.setText("Into");
 		
 		Label leftArrow = new Label(parent, SWT.NONE);
 		Image leftImage = Activator.getImageDescriptor("icons/go-previous.png").createImage();
 		leftArrow.setImage(leftImage);
-		layoutData = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
-		leftArrow.setLayoutData(layoutData);
+		leftArrow.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
 		
 		Label placeHolder = new Label(parent, SWT.NONE);
 		
 		Label rightArrow = new Label(parent, SWT.NONE);
 		Image rightImage = Activator.getImageDescriptor("icons/go-next.png").createImage();
 		rightArrow.setImage(rightImage);
-		layoutData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-		rightArrow.setLayoutData(layoutData);
-		
-		Label resultLabel = new Label(parent, SWT.NONE);
-		resultLabel.setText("Result");
-		layoutData = new GridData(SWT.LEFT, SWT.TOP, false, false);
-		resultLabel.setLayoutData(layoutData);
+		rightArrow.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+		downLeftComposite = new Group(parent, SWT.NONE);
+		downLeftComposite.setLayout(defaultLayout);
+		downLeftComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
+		Label downLeftLabel = new Label(downLeftComposite, SWT.NONE);
+		downLeftLabel.setText("Over");
 		
 		Label downArrow = new Label(parent, SWT.NONE);
 		Image downImage = Activator.getImageDescriptor("icons/go-down.png").createImage();
 		downArrow.setImage(downImage);
-		layoutData = new GridData(SWT.CENTER, SWT.TOP, false, false);
-		downArrow.setLayoutData(layoutData);
+		downArrow.setLayoutData(new GridData(SWT.CENTER, SWT.TOP, false, false));
 		
 		overComposite = new Group(parent, SWT.NONE);
 		overComposite.setLayout(defaultLayout);
-		layoutData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		layoutData.verticalSpan = 2;
-		overComposite.setLayoutData(layoutData);
-		overLabel = new Label(overComposite, SWT.NONE);
+		overComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		Label overLabel = new Label(overComposite, SWT.NONE);
 		overLabel.setText("Over");
-				
-		Label nextLabel = new Label(parent, SWT.NONE);
-		nextLabel.setText("Next");
-		layoutData = new GridData(SWT.LEFT, SWT.BOTTOM, false, false);
-		layoutData.horizontalSpan = 2;
-		nextLabel.setLayoutData(layoutData);
 		
 		parent.pack();
 				
@@ -120,14 +110,26 @@ public class NavigatorView extends ViewPart {
 				}
 			}	
 		});
-		
-//		hookListener(upComposite);
-//		hookListener(upLabel);
-//		hookListener(upLabel2);
-//		
-//		hookListener(leftLabel2);
-//		
-//		hookListener(downComposite);
+	}
+	
+	public void switchLayout() {
+		setFillLeftSide(!currentlyLeftFilled, leftComposite.getParent());
+		currentlyLeftFilled = !currentlyLeftFilled;
+	}
+	
+	public void setFillLeftSide(boolean leftSide, Composite parent) {
+		setHorizontalFill(leftComposite, leftSide);
+		setHorizontalFill(downLeftComposite, leftSide);
+		setHorizontalFill(intoComposite, !leftSide);
+		setHorizontalFill(overComposite, !leftSide);
+		parent.layout();
+	}
+	
+	private void setHorizontalFill(Composite composite, boolean grabExcessHorizontalSpace) {
+		GridData gridData = (GridData) composite.getLayoutData();
+		gridData.grabExcessHorizontalSpace = grabExcessHorizontalSpace;
+		gridData.horizontalAlignment = (grabExcessHorizontalSpace) ? SWT.FILL : SWT.LEFT;
+		composite.setLayoutData(gridData);
 	}
 	
 	private void hookListener(final Control control) {
@@ -138,23 +140,6 @@ public class NavigatorView extends ViewPart {
 				System.out.println("Event! - " + control);
 			}
 		});
-	}
-
-	private void createImage(Composite parent) {
-		Display compositeDisplay = parent.getDisplay();
-		Image image = new Image(compositeDisplay, 16, 16);
-		Color color = compositeDisplay.getSystemColor(SWT.COLOR_RED);
-		GC gc = new GC(image);
-		gc.setBackground(color);
-		gc.fillRectangle(image.getBounds());
-		gc.dispose();
-		
-		CLabel label = new CLabel(parent, SWT.BORDER);
-		Rectangle clientArea = parent.getClientArea();
-		label.setLocation(clientArea.x, clientArea.y);
-		label.setImage(image);
-		label.setText("the text");
-		label.pack();
 	}
 
 	@Override
