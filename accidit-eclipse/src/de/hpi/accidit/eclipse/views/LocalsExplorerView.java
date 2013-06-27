@@ -5,9 +5,11 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.provider.LocalsContentProvider;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
@@ -42,7 +44,6 @@ public class LocalsExplorerView extends ViewPart {
 		
 		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
 		ui.setLocalsExprorer(this);
-		
 	}
 	
 	public ISelection getSelection() {
@@ -57,6 +58,18 @@ public class LocalsExplorerView extends ViewPart {
 	public void setStep(int testId, long call, long step) {
 		contentProvider.setStep(testId, call, step);
 //		viewer.refresh();
+	}
+	
+	public NamedValue[] getRootElements() {
+		TreeItem[] treeItems = viewer.getTree().getItems();
+		NamedValue[] rootElements = new NamedValue[treeItems.length];
+		for (int i = 0; i < treeItems.length; i++) {
+			rootElements[i] = (NamedValue) treeItems[i].getData();
+			
+//			System.out.println(rootElements[i].getClass() + " ||| " + rootElements[i]);
+			
+		}
+		return rootElements;
 	}
 	
 }

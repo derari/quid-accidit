@@ -3,23 +3,15 @@ package de.hpi.accidit.eclipse.handlers;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.window.Window;
-import org.eclipse.ui.ISelectionService;
-import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryContentProvider;
-import de.hpi.accidit.eclipse.handlers.util.LocalsHistorySelectionDialog;
+import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
-import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {
 
@@ -28,26 +20,31 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
 		
 		ITreeSelection selectedLocals = (ITreeSelection) sel;
-
 		if (selectedLocals.size() < 1) return null;
-		NamedValue var = (NamedValue) selectedLocals.getFirstElement();
-		
-		LocalsHistoryContentProvider cp = new LocalsHistoryContentProvider(null);
-		
-		ElementTreeSelectionDialog dialog = 
-				new LocalsHistorySelectionDialog(HandlerUtil.getActiveShell(event), var, cp);
-		
-		NamedValue root = null;
-		cp.setStep(TraceNavigatorUI.getGlobal().getTestId(), TraceNavigatorUI.getGlobal().getCallStep(), -1);
-		if (var instanceof NamedValue.VariableValue) {
-			root = new NamedValue.VariableHistory(TraceNavigatorUI.getGlobal().getTestId(), TraceNavigatorUI.getGlobal().getCallStep(), var.getId());
+		NamedValue selectedLocal = (NamedValue) selectedLocals.getFirstElement();
+
+		// TODO eval: no treeViewerInput for NamedValue (this)
+		NamedValue treeViewerInput = null;
+		if (selectedLocal instanceof NamedValue.VariableValue) {
+			treeViewerInput = new NamedValue.VariableHistory(
+					TraceNavigatorUI.getGlobal().getTestId(), 
+					TraceNavigatorUI.getGlobal().getCallStep(), 
+					selectedLocal.getId());
 		}
 		
-		cp.setRoot(root);
-		dialog.setTitle(var.getName() + " History");
-		dialog.setBlockOnOpen(true);
-		dialog.setInput(root);
-		dialog.setEmptyListMessage("No Data.");
+		LocalsHistoryContentProvider treeViewerContentProvider = new LocalsHistoryContentProvider(null);
+		treeViewerContentProvider.setStep(TraceNavigatorUI.getGlobal().getTestId(), TraceNavigatorUI.getGlobal().getCallStep(), -1);
+		
+		NamedValue[] comboViewerInput = TraceNavigatorUI.getGlobal().getLocalsExplorer().getRootElements();
+		
+		LocalsHistoryDialog dialog = new LocalsHistoryDialog(
+				HandlerUtil.getActiveShell(event), 
+				selectedLocal, 
+				treeViewerContentProvider,
+				treeViewerInput, 
+				comboViewerInput);
+		treeViewerContentProvider.setRoot(treeViewerInput);
+		dialog.setTreeViewerInput(treeViewerInput);
 		
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();
