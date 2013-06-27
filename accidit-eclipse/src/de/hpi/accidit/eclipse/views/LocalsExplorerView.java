@@ -60,10 +60,12 @@ public class LocalsExplorerView extends ViewPart {
 //		viewer.refresh();
 	}
 	
+	// TODO array list und dann daraus array
 	public NamedValue[] getRootElements() {
 		TreeItem[] treeItems = viewer.getTree().getItems();
 		NamedValue[] rootElements = new NamedValue[treeItems.length];
 		for (int i = 0; i < treeItems.length; i++) {
+			if (!(rootElements[i] instanceof NamedValue.VariableValue))
 			rootElements[i] = (NamedValue) treeItems[i].getData();
 			
 //			System.out.println(rootElements[i].getClass() + " ||| " + rootElements[i]);

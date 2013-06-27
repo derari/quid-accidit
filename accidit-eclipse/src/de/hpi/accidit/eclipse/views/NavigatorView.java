@@ -1,18 +1,11 @@
 package de.hpi.accidit.eclipse.views;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.CLabel;
-import org.eclipse.swt.events.MouseAdapter;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
@@ -42,12 +35,6 @@ public class NavigatorView extends ViewPart {
 		GridLayout layout = new GridLayout(3, false);
 		parent.setLayout(layout);
 		
-//		Label previousLabel = new Label(parent, SWT.NONE);
-//		previousLabel.setText("Previous");
-//		GridData layoutData = new GridData(SWT.LEFT, SWT.TOP, false, false);
-//		layoutData.horizontalSpan = 2;
-//		previousLabel.setLayoutData(layoutData);
-		
 		leftComposite = new Group(parent, SWT.NONE);
 		RowLayout defaultLayout = new RowLayout();
 		leftComposite.setLayout(defaultLayout);
@@ -71,6 +58,7 @@ public class NavigatorView extends ViewPart {
 		leftArrow.setImage(leftImage);
 		leftArrow.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
 		
+		@SuppressWarnings("unused")
 		Label placeHolder = new Label(parent, SWT.NONE);
 		
 		Label rightArrow = new Label(parent, SWT.NONE);
@@ -130,16 +118,6 @@ public class NavigatorView extends ViewPart {
 		gridData.grabExcessHorizontalSpace = grabExcessHorizontalSpace;
 		gridData.horizontalAlignment = (grabExcessHorizontalSpace) ? SWT.FILL : SWT.LEFT;
 		composite.setLayoutData(gridData);
-	}
-	
-	private void hookListener(final Control control) {
-		control.addMouseListener(new MouseAdapter() {
-			
-			@Override
-			public void mouseUp(MouseEvent e) {
-				System.out.println("Event! - " + control);
-			}
-		});
 	}
 
 	@Override
