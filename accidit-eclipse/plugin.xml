@@ -5,15 +5,15 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
-            name="Accidit Preferences"
-            class="de.hpi.accidit.eclipse.preferences.MainPreferencePage"
-            id="de.hpi.accidit.eclipse.preferences.MainPreferencePage">
+            class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
+            id="de.hpi.accidit.eclipse.preferencePages.DatabaseSettings"
+            name="Database Settings">
       </page>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
       <initializer
-            class="de.hpi.accidit.eclipse.preferences.PreferenceInitializer">
+            class="de.hpi.accidit.eclipse.properties.Configuration">
       </initializer>
    </extension>
    <extension
@@ -53,12 +53,6 @@
             name="Navigator"
             restorable="true">
       </view>
-   </extension>
-   <extension
-         point="org.eclipse.help.contexts">
-      <contexts
-            file="contexts.xml">
-      </contexts>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -129,6 +123,11 @@
             id="de.hpi.accidit.eclipse.commands.stepBackOver"
             name="Step Back Over">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
+            name="Select Test Case">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -175,6 +174,10 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
             commandId="de.hpi.accidit.eclipse.commands.openNavigatorView">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.SelectTestCaseForProjectHandler"
+            commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject">
       </handler>
    </extension>
    <extension
@@ -283,6 +286,33 @@
                style="push">
          </command>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
+         <separator
+               name="accidit-eclipse.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.project.selectTestCase"
+               label="Select Test Case"
+               style="push">
+            <visibleWhen>
+               <with
+                     variable="selection">
+                  <iterate
+                        ifEmpty="false"
+                        operator="or">
+                     <instanceof
+                           value="org.eclipse.core.resources.IProject">
+                     </instanceof>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.perspectives">
@@ -296,10 +326,10 @@
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
-            class="de.hpi.accidit.eclipse.properties.DatabaseInformation"
+            class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.properties.databaseInformation"
-            name="Accidit Database Info"
+            id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
+            name="Database Settings"
             objectClass="org.eclipse.core.resources.IProject">
       </page>
    </extension>
