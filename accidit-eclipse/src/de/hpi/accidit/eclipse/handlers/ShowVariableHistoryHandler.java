@@ -44,7 +44,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		}
 		
 		cp.setRoot(root);
-		dialog.setTitle(var.getName() + " History");
+		dialog.setTitle("History of \"" + var.getName() + "\"");
 		dialog.setBlockOnOpen(true);
 		dialog.setInput(root);
 		dialog.setEmptyListMessage("No Data.");
