@@ -49,7 +49,7 @@ public class LocalsHistoryDialog extends Dialog {
 	private IContentProvider comboViewerContentProvider;
 	private Object[] comboViewerInput;
 
-	private Label label;
+	private Label titleLabel;
 	
 	 /* The selection in the comboViewer and the element whose history is displayed in the treeViewer. */
 	private Object selectedObject;
@@ -81,9 +81,9 @@ public class LocalsHistoryDialog extends Dialog {
 		GridLayout gridLayout = (GridLayout) container.getLayout();
 		gridLayout.numColumns = 2;
 		
-		label = new Label(container, SWT.NONE);
-		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
-		label.setText("Select a variable to display its history:");
+		titleLabel = new Label(container, SWT.NONE);
+		titleLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+		refreshTitleLabel();
 		
 		comboViewer = new ComboViewer(container, SWT.READ_ONLY | SWT.V_SCROLL);
 		Combo combo = comboViewer.getCombo();
@@ -157,6 +157,13 @@ public class LocalsHistoryDialog extends Dialog {
 		return dialogResultCache;
 	}
 	
+	private void refreshTitleLabel() {
+		String title = (selectedObject != null) ?
+				"History of \"" + ((NamedValue) selectedObject).getName() + "\"" :
+				"Select a variable:";
+		titleLabel.setText(title);
+	}
+	
 	private void addColumns(Tree tree) {
 		if (tree == null) return;
 		
@@ -174,15 +181,17 @@ public class LocalsHistoryDialog extends Dialog {
 			IStructuredSelection selection = (IStructuredSelection) event.getSelection();
 			if (selection.isEmpty()) return;
 			
-			NamedValue selectedValue = (NamedValue) selection.getFirstElement();
+			NamedValue selectedObject = (NamedValue) selection.getFirstElement();
 			NamedValue treeViewerInput = null;
-			if (selectedValue instanceof NamedValue.VariableValue) {
+			if (selectedObject instanceof NamedValue.VariableValue) {
 				treeViewerInput = new NamedValue.VariableHistory(
 						TraceNavigatorUI.getGlobal().getTestId(), 
 						TraceNavigatorUI.getGlobal().getCallStep(), 
-						selectedValue.getId());
+						selectedObject.getId());
 			}
 			treeViewer.setInput(treeViewerInput);
+			LocalsHistoryDialog.this.selectedObject = selectedObject;
+			refreshTitleLabel();
 		}
 	}
 	

@@ -63,7 +63,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 					TraceNavigatorUI.getGlobal().getCallStep(), 
 					selectedLocal.getId());
 		}
-		
+
 		LocalsHistoryDialog dialog = new LocalsHistoryDialog(
 				HandlerUtil.getActiveShell(event), 
 				selectedLocal, 
