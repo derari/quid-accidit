@@ -37,9 +37,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 	private TraceNavigatorUI ui;
 	private TreeViewer treeViewer;
 
-	public MethodExplorerView() { 
-		System.out.println("");
-	}
+	public MethodExplorerView() { }
 
 	@Override
 	public void createPartControl(Composite parent) {

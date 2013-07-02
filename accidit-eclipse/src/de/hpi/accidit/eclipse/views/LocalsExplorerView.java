@@ -1,5 +1,8 @@
 package de.hpi.accidit.eclipse.views;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -57,21 +60,22 @@ public class LocalsExplorerView extends ViewPart {
 	
 	public void setStep(int testId, long call, long step) {
 		contentProvider.setStep(testId, call, step);
-//		viewer.refresh();
 	}
 	
-	// TODO array list und dann daraus array
-	public NamedValue[] getRootElements() {
+	/**
+	 * Returns an array of root elements. Their type is {@link NamedValue.VariableValue}.
+	 * 
+	 * @return
+	 */
+	public Object[] getRootElements() {
 		TreeItem[] treeItems = viewer.getTree().getItems();
-		NamedValue[] rootElements = new NamedValue[treeItems.length];
-		for (int i = 0; i < treeItems.length; i++) {
-			if (!(rootElements[i] instanceof NamedValue.VariableValue))
-			rootElements[i] = (NamedValue) treeItems[i].getData();
-			
-//			System.out.println(rootElements[i].getClass() + " ||| " + rootElements[i]);
-			
+		List<Object> rootElements = new ArrayList<Object>(treeItems.length - 1); // -1 as this gets removed
+		for (TreeItem item : treeItems) {
+			if (item.getData() instanceof NamedValue.VariableValue) {
+				rootElements.add(item.getData());
+			}
 		}
-		return rootElements;
+		return rootElements.toArray();
 	}
 	
 }

@@ -9,7 +9,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
 
 public class LocalsLabelProvider extends LabelProvider implements
 		ITableLabelProvider, ITableColorProvider {

@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.views.provider;
 
-import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
-
 import org.cthul.miro.MiFuture;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -10,7 +8,6 @@ import org.eclipse.jface.viewers.Viewer;
 import de.hpi.accidit.eclipse.model.Callback;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.Pending;
-import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class LocalsContentProvider implements ILazyTreeContentProvider {
@@ -42,6 +39,7 @@ public class LocalsContentProvider implements ILazyTreeContentProvider {
 			}
 		}
 	};
+	
 	private final Callback<NamedValue> cbUpdateNamedValue = new Callback<NamedValue>() {
 		@Override
 		public void call(NamedValue value) {
