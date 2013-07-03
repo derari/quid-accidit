@@ -29,8 +29,7 @@ public class TraceNavigatorUI {
 	private long callStep;
 	private long step;
 	
-	public TraceNavigatorUI() {
-	}
+	public TraceNavigatorUI() { }
 
 	public void setTraceExplorer(MethodExplorerView traceExplorer) {
 		this.mainPage = traceExplorer.getViewSite().getPage();
@@ -42,6 +41,10 @@ public class TraceNavigatorUI {
 		if (this.traceExplorer == traceExplorer) {
 			this.traceExplorer = null;
 		}
+	}
+	
+	public MethodExplorerView getTraceExplorer() {
+		return traceExplorer;
 	}
 	
 	public void setLocalsExprorer(LocalsExplorerView localsExprorer) {

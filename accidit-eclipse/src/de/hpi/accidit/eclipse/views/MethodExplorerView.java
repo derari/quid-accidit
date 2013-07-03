@@ -81,6 +81,11 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 	public void refresh() {
 		treeViewer.refresh();
 	}
+	
+	public TraceElement[] getRootElements() {
+		Trace trace = (Trace) treeViewer.getInput();
+		return trace.getRootElements();
+	}
 
 	@Override
 	public void selectionChanged(SelectionChangedEvent event) {
@@ -210,6 +215,11 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		
 		private TreeViewer viewer;
 		private Trace trace = null;
+		
+		public TraceContentProvider(TreeViewer viewer) {
+			this.viewer = viewer;
+		}
+		
 		private DoInUiThread<Invocation> updateInvocation = new DoInUiThread<Invocation>() {
 			@Override
 			protected void run(Invocation inv, Throwable error) {
@@ -221,10 +231,6 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 				viewer.update(inv, null);
 			}
 		};
-		
-		public TraceContentProvider(TreeViewer viewer) {
-			this.viewer = viewer;
-		}
 
 		@Override
 		public void dispose() { }

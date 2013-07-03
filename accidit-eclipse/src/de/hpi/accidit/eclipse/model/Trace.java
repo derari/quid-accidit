@@ -19,4 +19,7 @@ public class Trace {
 			.asArray()._execute();
 	}
 	
+	public TraceElement[] getRootElements() {
+		return root;
+	}
 }
