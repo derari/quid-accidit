@@ -3,12 +3,19 @@ package de.hpi.accidit.eclipse.views;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.commands.NotEnabledException;
+import org.eclipse.core.commands.NotHandledException;
+import org.eclipse.core.commands.common.NotDefinedException;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
@@ -47,6 +54,19 @@ public class LocalsExplorerView extends ViewPart {
 		
 		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
 		ui.setLocalsExprorer(this);
+		
+		viewer.addDoubleClickListener(new IDoubleClickListener() {
+			
+			@Override
+			public void doubleClick(DoubleClickEvent event) {
+				IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
+				try {
+					handlerService.executeCommand("de.hpi.accidit.eclipse.commands.showVariableHistory", null);
+				} catch (ExecutionException | NotDefinedException | NotEnabledException | NotHandledException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 	
 	public ISelection getSelection() {
