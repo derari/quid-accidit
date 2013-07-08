@@ -63,20 +63,20 @@ public class Invocation extends TraceElement {
 				.where().childOf(Invocation.this)
 				.asList().execute();
 		List<ExceptionEvent> catchs = cnn
-				.select("line", "step").from(ExceptionEvent.CATCH_VIEW)
-				.where().inInvocation(Invocation.this)
+				.select("line", "step")
+				.from(ExceptionEvent.catch_inInvocation(Invocation.this))
 				.asList().execute();
 		List<ExceptionEvent> thrown = cnn
-				.select("line", "step").from(ExceptionEvent.THROW_VIEW)
-				.where().inInvocation(Invocation.this)
+				.select("line", "step")
+				.from(ExceptionEvent.throw_inInvocation(Invocation.this))
 				.asList().execute();
 		List<FieldEvent> fields = cnn
-				.select("line", "step").from(FieldEvent.PUT_VIEW)
-				.where().inInvocation(testId, step)
+				.select("line", "step")
+				.from(FieldEvent.put_inInvocation(testId, step))
 				.asList().execute();
 		List<VariableEvent> vars = cnn
-				.select("line", "step").from(VariableEvent.VIEW)
-				.where().inInvocation(testId, step)
+				.select("line", "step")
+				.from(VariableEvent.inInvocation(testId, step))
 				.asList().execute();
 		
 		SortedSet<TraceElement> major = new TreeSet<>();
@@ -155,22 +155,22 @@ public class Invocation extends TraceElement {
 	public static class Query extends QueryWithTemplate<Invocation> {
 		public Query(MiConnection cnn, String[] fields) {
 			super(cnn, MAPPING, TEMPLATE);
-			select_keys(fields);
+			select(fields);
 		}
 		public Query where() {
 			return this;
 		}
 		public Query childOf(Invocation m) {
-			where_key("test_EQ", m.testId);
-			where_key("depth_EQ", m.depth+1);
-			where_key("step_BETWEEN", m.step, m.exitStep);
-			orderBy_key("o_callStep");
+			where("test_EQ", m.testId);
+			where("depth_EQ", m.depth+1);
+			where("step_BETWEEN", m.step, m.exitStep);
+			orderBy("o_callStep");
 			adapter(new SetParentAdapter(m));
 			return this;
 		}
 		public Query rootOfTest(int i) {
-			where_key("test_EQ", i);
-			where_key("depth_EQ", 0);
+			where("test_EQ", i);
+			where("depth_EQ", 0);
 			return this;
 		}
 	}

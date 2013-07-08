@@ -465,12 +465,12 @@ public abstract class Value extends ModelBase {
 		}
 		
 		public ValueQuery id(long id) {
-			where_key("id_EQ", id);
+			where("id_EQ", id);
 			return this;
 		}
 		
 		public ValueQuery atStep(int testId, long step) {
-			where_key("step_EQ", testId, step);
+			where("step_EQ", testId, step);
 			return this;
 		}
 		
@@ -485,7 +485,7 @@ public abstract class Value extends ModelBase {
 		
 		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, VAR_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}
@@ -494,7 +494,7 @@ public abstract class Value extends ModelBase {
 		
 		public PutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, PUT_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}
@@ -503,7 +503,7 @@ public abstract class Value extends ModelBase {
 		
 		public GetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, GET_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}
@@ -512,7 +512,7 @@ public abstract class Value extends ModelBase {
 		
 		public APutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, A_PUT_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}
@@ -521,7 +521,7 @@ public abstract class Value extends ModelBase {
 		
 		public AGetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, A_GET_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}
@@ -530,7 +530,7 @@ public abstract class Value extends ModelBase {
 		
 		public ThisQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, MAPPING, THIS_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 	}

@@ -329,7 +329,7 @@ public class NamedValue extends ModelBase {
 
 		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, VAR_MAPPING, VAR_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public VarQuery where() {
@@ -404,7 +404,7 @@ public class NamedValue extends ModelBase {
 
 		public FieldQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, FIELD_MAPPING, FIELD_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public FieldQuery where() {
@@ -475,7 +475,7 @@ public class NamedValue extends ModelBase {
 
 		public ItemQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_ITEM_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public ItemQuery where() {
@@ -507,7 +507,7 @@ public class NamedValue extends ModelBase {
 
 		public VarHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, VAR_MAPPING, VAR_HISTORY_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public VarHistoryQuery where() {
@@ -515,12 +515,12 @@ public class NamedValue extends ModelBase {
 		}
 		
 		public VarHistoryQuery inCall(int testId, long callStep) {
-			where_key("call_EQ", testId, callStep);
+			where("call_EQ", testId, callStep);
 			return this;
 		}
 		
 		public VarHistoryQuery byId(int id) {
-			where_key("id_EQ", id);
+			where("id_EQ", id);
 			return this;
 		}
 	};

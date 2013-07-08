@@ -9,7 +9,9 @@ import org.cthul.miro.dsl.QueryWithTemplate;
 import org.cthul.miro.dsl.View;
 import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ResultBuilder.ValueAdapter;
+import org.cthul.miro.util.MappedQuery;
 import org.cthul.miro.util.QueryFactoryView;
+import org.cthul.miro.util.QueryView;
 import org.cthul.miro.util.ReflectiveMapping;
 
 public class ExceptionEvent extends TraceElement {
@@ -29,57 +31,81 @@ public class ExceptionEvent extends TraceElement {
 		return isThrow ? "throw" : "catch";
 	}
 	
-	public static final View<CatchQuery> CATCH_VIEW = new QueryFactoryView<>(CatchQuery.class);
-	public static final View<ThrowQuery> THROW_VIEW = new QueryFactoryView<>(ThrowQuery.class);
-	
 	private static final Mapping<ExceptionEvent> MAPPING = new ReflectiveMapping<>(ExceptionEvent.class);
 	
-	private static class EeTemplate extends TETemplate<ExceptionEvent> {{
-	}};
-	
-	private static final QueryTemplate<ExceptionEvent> THROW_TEMPLATE = new EeTemplate() {{
-		from("`ThrowTrace` f");
-	}};
-	
-	public static class ThrowQuery extends QueryWithTemplate<ExceptionEvent> {
-		public ThrowQuery(MiConnection cnn, String[] select) {
-			super(cnn, MAPPING, THROW_TEMPLATE);
-			select_keys(select);
-			adapter(new SetIsThrow(true));
-		}
-		public ThrowQuery where() {
-			return this;
-		}
-		public ThrowQuery inInvocation(Invocation inv) {
-			where_key("testId_EQ", inv.testId);
-			where_key("callStep_EQ", inv.step);
-			orderBy_key("o_step");
-			adapter(new SetParentAdapter(inv));
-			return this;
-		}
+	public static View<MappedQuery<ExceptionEvent>> throw_inInvocation(Invocation inv) {
+		return new QueryView<>(MAPPING, 
+					"SELECT `line`, `step` " +
+					"FROM `ThrowTrace` " +
+					"WHERE `testId` = ? AND `callStep` = ? " +
+					"ORDER BY `step`", 
+					inv.testId, inv.step)
+				.adapters(
+					new SetIsThrow(true),
+					new SetParentAdapter(inv));
 	}
 	
-	private static final QueryTemplate<ExceptionEvent> CATCH_TEMPLATE = new EeTemplate() {{
-		from("`CatchTrace` f");
-	}};
-	
-	public static class CatchQuery extends QueryWithTemplate<ExceptionEvent> {
-		public CatchQuery(MiConnection cnn, String[] select) {
-			super(cnn, MAPPING, CATCH_TEMPLATE);
-			select_keys(select);
-			adapter(new SetIsThrow(false));
-		}
-		public CatchQuery where() {
-			return this;
-		}
-		public CatchQuery inInvocation(Invocation inv) {
-			where_key("testId_EQ", inv.testId);
-			where_key("callStep_EQ", inv.step);
-			orderBy_key("o_step");
-			adapter(new SetParentAdapter(inv));
-			return this;
-		}
+	public static View<MappedQuery<ExceptionEvent>> catch_inInvocation(Invocation inv) {
+		return new QueryView<>(MAPPING, 
+					"SELECT `line`, `step` " +
+					"FROM `CatchTrace` " +
+					"WHERE `testId` = ? AND `callStep` = ? " +
+					"ORDER BY `step`", 
+					inv.testId, inv.step)
+				.adapters(
+					new SetIsThrow(false),
+					new SetParentAdapter(inv));
 	}
+	
+//	public static final View<CatchQuery> CATCH_VIEW = new QueryFactoryView<>(CatchQuery.class);
+//	public static final View<ThrowQuery> THROW_VIEW = new QueryFactoryView<>(ThrowQuery.class);
+//	
+//	private static class EeTemplate extends TETemplate<ExceptionEvent> {{
+//	}};
+//	
+//	private static final QueryTemplate<ExceptionEvent> THROW_TEMPLATE = new EeTemplate() {{
+//		from("`ThrowTrace` f");
+//	}};
+//	
+//	public static class ThrowQuery extends QueryWithTemplate<ExceptionEvent> {
+//		public ThrowQuery(MiConnection cnn, String[] select) {
+//			super(cnn, MAPPING, THROW_TEMPLATE);
+//			select(select);
+//			adapter(new SetIsThrow(true));
+//		}
+//		public ThrowQuery where() {
+//			return this;
+//		}
+//		public ThrowQuery inInvocation(Invocation inv) {
+//			where("testId_EQ", inv.testId);
+//			where("callStep_EQ", inv.step);
+//			orderBy("o_step");
+//			adapter(new SetParentAdapter(inv));
+//			return this;
+//		}
+//	}
+//	
+//	private static final QueryTemplate<ExceptionEvent> CATCH_TEMPLATE = new EeTemplate() {{
+//		from("`CatchTrace` f");
+//	}};
+//	
+//	public static class CatchQuery extends QueryWithTemplate<ExceptionEvent> {
+//		public CatchQuery(MiConnection cnn, String[] select) {
+//			super(cnn, MAPPING, CATCH_TEMPLATE);
+//			select(select);
+//			adapter(new SetIsThrow(false));
+//		}
+//		public CatchQuery where() {
+//			return this;
+//		}
+//		public CatchQuery inInvocation(Invocation inv) {
+//			where("testId_EQ", inv.testId);
+//			where("callStep_EQ", inv.step);
+//			orderBy("o_step");
+//			adapter(new SetParentAdapter(inv));
+//			return this;
+//		}
+//	}
 	
 	private static class SetIsThrow implements ValueAdapter<ExceptionEvent> {
 
