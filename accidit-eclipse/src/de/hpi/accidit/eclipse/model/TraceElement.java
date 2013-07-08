@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.cthul.miro.dsl.QueryTemplate;
 import org.cthul.miro.map.ResultBuilder;
 
 

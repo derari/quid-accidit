@@ -194,9 +194,8 @@ public class NamedValue extends ModelBase {
 				return new Value.Primitive("--> " + nextChangeStep);
 			}
 			return DatabaseConnector.cnn()
-					.select().from(Value.VARIABLE_VIEW)
-					.where().id(id).atStep(testId, valueStep)
-					.withCurrentStep(step)
+					.select()
+					.from(Value.ofVariable(id, testId, valueStep, step))
 					.getSingle().execute();
 		}
 		
@@ -223,20 +222,18 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
+			
 			Value v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select()
+				.from(Value.ofField(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 			if (v != null) return v;
+			
 			System.err.println("TODO: fix this");
-			view = !valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
 			v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
-				.getSingle().execute();
+					.select()
+					.from(Value.ofField(!valueIsPut, id, testId, valueStep, step))
+					.getSingle().execute();
 			return v;
 		}
 		
@@ -268,11 +265,8 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.ARRAY_PUT_VIEW : Value.ARRAY_GET_VIEW;
 			return DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select().from(Value.ofArray(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 		}
 		
