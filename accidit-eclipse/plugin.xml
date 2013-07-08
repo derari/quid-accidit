@@ -128,6 +128,11 @@
             id="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
             name="Select Test Case">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
+            name="Switch Layout">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -178,6 +183,10 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.SelectTestCaseForProjectHandler"
             commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.SwitchNavigatorLayoutHandler"
+            commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout">
       </handler>
    </extension>
    <extension
@@ -311,6 +320,16 @@
                   </iterate>
                </with>
             </visibleWhen>
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.NavigatorView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.toolbars.switchNavigatorLayout"
+               style="push">
          </command>
       </menuContribution>
    </extension>
