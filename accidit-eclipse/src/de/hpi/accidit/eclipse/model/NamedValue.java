@@ -194,9 +194,8 @@ public class NamedValue extends ModelBase {
 				return new Value.Primitive("--> " + nextChangeStep);
 			}
 			return DatabaseConnector.cnn()
-					.select().from(Value.VARIABLE_VIEW)
-					.where().id(id).atStep(testId, valueStep)
-					.withCurrentStep(step)
+					.select()
+					.from(Value.ofVariable(id, testId, valueStep, step))
 					.getSingle().execute();
 		}
 		
@@ -223,20 +222,18 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
+			
 			Value v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select()
+				.from(Value.ofField(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 			if (v != null) return v;
+			
 			System.err.println("TODO: fix this");
-			view = !valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
 			v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
-				.getSingle().execute();
+					.select()
+					.from(Value.ofField(!valueIsPut, id, testId, valueStep, step))
+					.getSingle().execute();
 			return v;
 		}
 		
@@ -268,11 +265,8 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.ARRAY_PUT_VIEW : Value.ARRAY_GET_VIEW;
 			return DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select().from(Value.ofArray(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 		}
 		
@@ -329,7 +323,7 @@ public class NamedValue extends ModelBase {
 
 		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, VAR_MAPPING, VAR_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public VarQuery where() {
@@ -404,7 +398,7 @@ public class NamedValue extends ModelBase {
 
 		public FieldQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, FIELD_MAPPING, FIELD_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public FieldQuery where() {
@@ -475,7 +469,7 @@ public class NamedValue extends ModelBase {
 
 		public ItemQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_ITEM_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public ItemQuery where() {
@@ -507,7 +501,7 @@ public class NamedValue extends ModelBase {
 
 		public VarHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
 			super(cnn, VAR_MAPPING, VAR_HISTORY_TEMPLATE, view);
-			select_keys(fields);
+			select(fields);
 		}
 		
 		public VarHistoryQuery where() {
@@ -515,12 +509,12 @@ public class NamedValue extends ModelBase {
 		}
 		
 		public VarHistoryQuery inCall(int testId, long callStep) {
-			where_key("call_EQ", testId, callStep);
+			where("call_EQ", testId, callStep);
 			return this;
 		}
 		
 		public VarHistoryQuery byId(int id) {
-			where_key("id_EQ", id);
+			where("id_EQ", id);
 			return this;
 		}
 	};

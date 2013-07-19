@@ -5,14 +5,11 @@ import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.cthul.miro.MiConnection;
 import org.cthul.miro.dsl.View;
-import org.cthul.miro.graph.GraphQuery;
-import org.cthul.miro.graph.GraphQueryTemplate;
-import org.cthul.miro.graph.SelectByKey;
 import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ResultBuilder.ValueAdapter;
-import org.cthul.miro.util.QueryFactoryView;
+import org.cthul.miro.util.MappedQuery;
+import org.cthul.miro.util.QueryView;
 import org.cthul.miro.util.ReflectiveMapping;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
@@ -301,9 +298,7 @@ public abstract class Value extends ModelBase {
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
 			Value thisValue = cnn().select()
-					.from(THIS_VIEW)
-					.where().atStep(testId, callStep)
-					.withCurrentStep(step)
+					.from(this_inInvocation(testId, callStep, step))
 					.getSingle().execute();
 			NamedValue[] c = cnn().select()
 					.from(NamedValue.VARIABLE_VIEW)
@@ -375,14 +370,35 @@ public abstract class Value extends ModelBase {
 			return new Primitive(primType, valueId);
 		}
 	}
-
-	public static final View<ValueQuery> VARIABLE_VIEW = (View) new QueryFactoryView<>(VarQuery.class);
-	public static final View<ValueQuery> PUT_VIEW = (View) new QueryFactoryView<>(PutQuery.class);
-	public static final View<ValueQuery> GET_VIEW = (View) new QueryFactoryView<>(GetQuery.class);
-	public static final View<ValueQuery> ARRAY_PUT_VIEW = (View) new QueryFactoryView<>(APutQuery.class);
-	public static final View<ValueQuery> ARRAY_GET_VIEW = (View) new QueryFactoryView<>(AGetQuery.class);
-	public static final View<ValueQuery> THIS_VIEW = (View) new QueryFactoryView<>(ThisQuery.class);
 	
+	public static View<MappedQuery<Value>> this_inInvocation(int testId, long callStep, long step) {
+		return new QueryView<>(MAPPING, 
+					"SELECT t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
+					"FROM `CallTrace` t " +
+					"LEFT OUTER JOIN `ObjectTrace` o " +
+					  "ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`" +
+					"LEFT OUTER JOIN `Type` y " +
+					  "ON y.`id` = o.`typeId` " +
+					"WHERE t.`testId` = ? AND t.`step` = ?", 
+					testId, callStep)
+			.adapters(new SetStepAdapter(step));
+	}
+	
+	public static View<MappedQuery<Value>> ofVariable(int varId, int testId, long valueStep, long step) {
+		return new ValueQuery("VariableTrace", "variableId", varId, testId, valueStep)
+					.adapters(new SetStepAdapter(step));
+	}
+
+	public static View<MappedQuery<Value>> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
+		return new ValueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep)
+					.adapters(new SetStepAdapter(step));
+	}
+	
+	public static View<MappedQuery<Value>> ofArray(boolean put, int index, int testId, long valueStep, long step) {
+		return new ValueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep)
+					.adapters(new SetStepAdapter(step));
+	}
+
 	private static final String[] C_PARAMS = {"testId", "primType", "valueId"};
 	
 	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>((Class) ObjectSnapshot.class) {
@@ -405,136 +421,22 @@ public abstract class Value extends ModelBase {
 		};
 	};
 	
-	private static abstract class ValueQueryTemplate extends GraphQueryTemplate<Value> {{
-		select("t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName`");
-		join("LEFT OUTER JOIN `ObjectTrace` o " +
-			 "ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id`");
-		join("LEFT OUTER JOIN `Type` y " +
-			 "ON y.`id` = o.`typeId`");
-		where("step_EQ", "t.`testId` = ? AND t.`step` = ?");
-	}};
-	
-	private static final ValueQueryTemplate VAR_TEMPLATE = new ValueQueryTemplate() {{
-		from("`VariableTrace` t");
-		where("id_EQ", "t.`variableId` = ?");
-		always().orderBy("t.`variableId`");
-	}};
-	
-	private static final ValueQueryTemplate PUT_TEMPLATE = new ValueQueryTemplate() {{
-		from("`PutTrace` t");
-		where("id_EQ", "t.`fieldId` = ?");
-		always().orderBy("t.`fieldId`");
-	}};
-	
-	private static final ValueQueryTemplate GET_TEMPLATE = new ValueQueryTemplate() {{
-		from("`GetTrace` t");
-		where("id_EQ", "t.`fieldId` = ?");
-		always().orderBy("t.`fieldId`");
-	}};
-	
-	private static final ValueQueryTemplate A_PUT_TEMPLATE = new ValueQueryTemplate() {{
-		from("`ArrayPutTrace` t");
-		where("id_EQ", "t.`index` = ?");
-		always().orderBy("t.`index`");
-	}};
-	
-	private static final ValueQueryTemplate A_GET_TEMPLATE = new ValueQueryTemplate() {{
-		from("`ArrayGetTrace` t");
-		where("id_EQ", "t.`index` = ?");
-		always().orderBy("t.`index`");
-	}};
-	
-	private static final GraphQueryTemplate<Value> THIS_TEMPLATE = new GraphQueryTemplate<Value>() {{
-		select("t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`");
-		from("`CallTrace` t");
-		join("LEFT OUTER JOIN `ObjectTrace` o " +
-			 "ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`");
-		join("LEFT OUTER JOIN `Type` y " +
-			 "ON y.`id` = o.`typeId`");
-		where("step_EQ", "t.`testId` = ? AND t.`step` = ?");
-	}};
-	
-	public static class ValueQuery extends GraphQuery<Value> {
+	protected static class ValueQuery extends QueryView<Value> {
 
-		public ValueQuery(MiConnection cnn, Mapping<Value> mapping, GraphQueryTemplate<Value> template, View<? extends SelectByKey<?>> view) {
-			super(cnn, mapping, template, view);
+		public ValueQuery(String table, String idField, int id, int testId, long step) {
+			super(MAPPING, 
+					"SELECT t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
+					"FROM `" + table + "` t " +
+					"LEFT OUTER JOIN `ObjectTrace` o " +
+					"ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id` " +
+					"LEFT OUTER JOIN `Type` y " +
+					"ON y.`id` = o.`typeId` " +
+					"WHERE t.`" + idField + "` = ? " +
+					  "AND t.`testId` = ? AND t.`step` = ?", 
+				id, testId, step);
 		}
-		
-		public ValueQuery where() {
-			return this;
-		}
-		
-		public ValueQuery id(long id) {
-			where_key("id_EQ", id);
-			return this;
-		}
-		
-		public ValueQuery atStep(int testId, long step) {
-			where_key("step_EQ", testId, step);
-			return this;
-		}
-		
-		public ValueQuery withCurrentStep(long step) {
-			adapter(new SetStepAdapter(step));
-			return this;
-		}
-		
 	}
-	
-	public static class VarQuery extends ValueQuery {
 		
-		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, VAR_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
-	public static class PutQuery extends ValueQuery {
-		
-		public PutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, PUT_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
-	public static class GetQuery extends ValueQuery {
-		
-		public GetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, GET_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
-	public static class APutQuery extends ValueQuery {
-		
-		public APutQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, A_PUT_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
-	public static class AGetQuery extends ValueQuery {
-		
-		public AGetQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, A_GET_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
-	public static class ThisQuery extends ValueQuery {
-		
-		public ThisQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, MAPPING, THIS_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-	}
-	
 	private static class SetStepAdapter implements ValueAdapter<Value> {
 		
 		private final long step;

@@ -69,6 +69,12 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		
 		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
 	}
+	
+	@Override
+	public void dispose() {
+		TraceNavigatorUI.getGlobal().unsetTraceExplorer(this);
+		super.dispose();
+	}
 
 	@Override
 	public void setFocus() {

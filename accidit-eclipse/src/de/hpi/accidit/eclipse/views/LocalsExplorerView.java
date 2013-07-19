@@ -74,6 +74,12 @@ public class LocalsExplorerView extends ViewPart {
 		});
 	}
 	
+	@Override
+	public void dispose() {
+		TraceNavigatorUI.getGlobal().unsetLocalsExprorer(this);
+		super.dispose();
+	}
+	
 	public ISelection getSelection() {
 		return viewer.getSelection();
 	}

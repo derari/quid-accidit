@@ -88,6 +88,9 @@ public class TraceNavigatorUI {
 	public void setTestId(int testId) {
 		this.step = 0;
 		this.testId = testId;
+		if (traceExplorer == null) {
+			// TODO: open trace explorer
+		}
 		if (traceExplorer != null) traceExplorer.setTestCaseId(testId);
 		if (localsExplorer != null) localsExplorer.setStep(testId, 0, 0);
 	}

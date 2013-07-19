@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.cthul.miro.dsl.QueryTemplate;
 import org.cthul.miro.map.ResultBuilder;
 
 
@@ -33,12 +32,12 @@ public class TraceElement extends ModelBase implements Comparable<TraceElement> 
 	}
 
 	
-	protected static class TETemplate<V extends TraceElement> extends QueryTemplate<V> {{
-		select("f.`line`", "f.`step`");
-		where("testId_EQ", "f.`testId` = ?");
-		where("callStep_EQ", "f.`callStep` = ?");
-		orderBy("o_step", "f.`step`");
-	}};
+//	protected static class TETemplate<V extends TraceElement> extends QueryTemplate<V> {{
+//		select("f.`line`", "f.`step`");
+//		where("testId_EQ", "f.`testId` = ?");
+//		where("callStep_EQ", "f.`callStep` = ?");
+//		orderBy("o_step", "f.`step`");
+//	}};
 	
 	protected static class SetParentAdapter 
 					implements ResultBuilder.ValueAdapter<TraceElement> {
