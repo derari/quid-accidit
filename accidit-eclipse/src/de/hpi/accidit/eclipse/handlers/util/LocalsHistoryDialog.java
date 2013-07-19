@@ -125,6 +125,12 @@ public class LocalsHistoryDialog extends Dialog {
 		
 		return parent;
 	}
+
+	@Override
+	protected void configureShell(Shell shell) {
+		super.configureShell(shell);
+		shell.setText("Variable History");
+	}
 	
 	@Override
 	protected void createButtonsForButtonBar(Composite parent) {
