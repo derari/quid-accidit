@@ -7,6 +7,9 @@ import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.eclipse.jface.layout.TreeColumnLayout;
+import org.eclipse.jface.viewers.ColumnPixelData;
+import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -16,6 +19,7 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
@@ -39,25 +43,24 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 	
 	@Override
 	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
-		TreeViewer viewer = super.doCreateTreeViewer(parent, style);
-		extendTree(viewer);
-		return viewer;
-	}
-	
-	private void extendTree(TreeViewer viewer) {
-		if (viewer == null || viewer.getTree() == null) {
-			return;
-		}
+		Composite treeComposite = new Composite(parent, SWT.NONE);
+		treeComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
 		
+		TreeViewer viewer = super.doCreateTreeViewer(treeComposite, style);
 		Tree tree = viewer.getTree();
 		tree.setHeaderVisible(true);
+
+		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
+		column0.setText("Name");
+		TreeColumn column1 = new TreeColumn(tree, SWT.RIGHT);
+		column1.setText("Id");
 		
-		TreeColumn column0 = new TreeColumn(tree, SWT.RIGHT);
-		column0.setText("Id");
-		column0.setWidth(50);
-		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
-		column1.setText("Name");
-		column1.setWidth(650);
+		TreeColumnLayout layout = new TreeColumnLayout();
+		treeComposite.setLayout(layout);
+		layout.setColumnData(column0, new ColumnWeightData(90, 100));
+		layout.setColumnData(column1, new ColumnPixelData(50));
+		
+		return viewer;
 	}
 	
 	public static class TestCaseSelectionContentProvider implements ITreeContentProvider {
@@ -136,28 +139,28 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 	}
 	
 	public static class TestCaseSelectionLabelProvider 
-		extends LabelProvider implements ITableLabelProvider {
+			extends LabelProvider implements ITableLabelProvider {
 
-	@Override
-	public Image getColumnImage(Object element, int columnIndex) {
-		return null;
-	}
-
-	@Override
-	public String getColumnText(Object element, int columnIndex) {
-		if(!(element instanceof TestCase)) {
-			System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
+		@Override
+		public Image getColumnImage(Object element, int columnIndex) {
 			return null;
-		}			
-		
-		TestCase testCase = (TestCase) element;
-		switch(columnIndex) {
-		case 0: return String.valueOf(testCase.id);
-		case 1: return testCase.name;
-		default: return null;
 		}
-	}
 
-}
+		@Override
+		public String getColumnText(Object element, int columnIndex) {
+			if(!(element instanceof TestCase)) {
+				System.err.println("Invalid Object in tree of class: " + element.getClass().getName());
+				return null;
+			}			
+
+			TestCase testCase = (TestCase) element;
+			switch(columnIndex) {
+			case 1: return String.valueOf(testCase.id);
+			case 0: return testCase.name;
+			default: return null;
+			}
+		}
+
+	}
 
 }

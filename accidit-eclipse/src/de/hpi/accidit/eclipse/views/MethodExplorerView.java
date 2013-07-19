@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.jface.layout.TreeColumnLayout;
+import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
@@ -46,12 +48,15 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		treeViewer.getTree().setHeaderVisible(true);
 		treeViewer.setUseHashlookup(true);
 		
-		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT | SWT.FILL);
+		TreeColumn column0 = new TreeColumn(treeViewer.getTree(), SWT.LEFT);
 		column0.setText("Method");
-		column0.setWidth(500);
 		TreeColumn column1 = new TreeColumn(treeViewer.getTree(), SWT.RIGHT);
 		column1.setText("Call Step");
-		column1.setWidth(60);
+		
+		TreeColumnLayout layout = new TreeColumnLayout();
+		parent.setLayout(layout);
+		layout.setColumnData(column0, new ColumnWeightData(90));
+		layout.setColumnData(column1, new ColumnWeightData(10, 50));
 		
 		treeViewer.setContentProvider(new TraceContentProvider(treeViewer));
 		treeViewer.setLabelProvider(new MethodsLabelProvider());

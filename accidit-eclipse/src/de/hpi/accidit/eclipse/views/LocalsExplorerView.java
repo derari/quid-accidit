@@ -7,6 +7,8 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
 import org.eclipse.core.commands.common.NotDefinedException;
+import org.eclipse.jface.layout.TreeColumnLayout;
+import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
@@ -42,11 +44,14 @@ public class LocalsExplorerView extends ViewPart {
 		viewer.setUseHashlookup(true);
 		
 		TreeColumn column0 = new TreeColumn(viewer.getTree(), SWT.LEFT);
-		column0.setText("Local Name");
-		column0.setWidth(100);
-		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT | SWT.FILL);
+		column0.setText("Name");
+		TreeColumn column1 = new TreeColumn(viewer.getTree(), SWT.LEFT);
 		column1.setText("Value");
-		column1.setWidth(100);
+		
+		TreeColumnLayout layout = new TreeColumnLayout();
+		parent.setLayout(layout);
+		layout.setColumnData(column0, new ColumnWeightData(40, 50));
+		layout.setColumnData(column1, new ColumnWeightData(60, 50));
 		
 		contentProvider = new LocalsContentProvider(viewer);		
 		viewer.setContentProvider(contentProvider);

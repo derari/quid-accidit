@@ -2,8 +2,10 @@ package de.hpi.accidit.eclipse.handlers.util;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.BaseLabelProvider;
+import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.IBaseLabelProvider;
 import org.eclipse.jface.viewers.IContentProvider;
@@ -93,12 +95,24 @@ public class LocalsHistoryDialog extends Dialog {
 		StructuredSelection comboViewerSelection =
 				(selectedObject != null) ? new StructuredSelection(selectedObject) : null;
 		comboViewer.setSelection(comboViewerSelection);
+
+		Composite treeContainer = new Composite(container, SWT.NONE);
+		treeContainer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
 		
-		treeViewer = new TreeViewer(container, SWT.VIRTUAL | SWT.SINGLE);
+		treeViewer = new TreeViewer(treeContainer, SWT.VIRTUAL | SWT.SINGLE);
 		Tree tree = treeViewer.getTree();
-		tree.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
 		tree.setHeaderVisible(true);
-		addColumns(tree);
+		
+		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
+		column0.setText("Key");
+		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
+		column1.setText("Value");
+		
+		TreeColumnLayout layout = new TreeColumnLayout();
+		treeContainer.setLayout(layout);
+		layout.setColumnData(column0, new ColumnWeightData(30, 50));
+		layout.setColumnData(column1, new ColumnWeightData(70, 50));
+		
 		treeViewer.setUseHashlookup(true);
 		treeViewer.setContentProvider(treeViewerContentProvider);
 		treeViewer.setLabelProvider(treeViewerLabelProvider);
@@ -161,17 +175,6 @@ public class LocalsHistoryDialog extends Dialog {
 				"History of \"" + ((NamedValue) selectedObject).getName() + "\"" :
 				"Select a variable:";
 		titleLabel.setText(title);
-	}
-	
-	private void addColumns(Tree tree) {
-		if (tree == null) return;
-		
-		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
-		column0.setText("Key");
-		column0.setWidth(100);
-		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
-		column1.setText("Value");
-		column1.setWidth(100);
 	}
 	
 	private final class ComboViewerSelectionListener implements ISelectionChangedListener {
