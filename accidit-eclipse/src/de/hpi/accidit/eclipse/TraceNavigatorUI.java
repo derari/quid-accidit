@@ -5,7 +5,7 @@ import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
+import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 public class TraceNavigatorUI {
@@ -19,7 +19,7 @@ public class TraceNavigatorUI {
 	
 	// UI
 	private IWorkbenchPage mainPage = null;
-	private MethodExplorerView traceExplorer = null;
+	private TraceExplorerView traceExplorer = null;
 	private LocalsExplorerView localsExplorer = null;
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
@@ -31,19 +31,19 @@ public class TraceNavigatorUI {
 	
 	public TraceNavigatorUI() { }
 
-	public void setTraceExplorer(MethodExplorerView traceExplorer) {
+	public void setTraceExplorer(TraceExplorerView traceExplorer) {
 		this.mainPage = traceExplorer.getViewSite().getPage();
 		this.traceExplorer = traceExplorer;
 		traceExplorer.setTestCaseId(testId);
 	}
 	
-	public void unsetTraceExplorer(MethodExplorerView traceExplorer) {
+	public void unsetTraceExplorer(TraceExplorerView traceExplorer) {
 		if (this.traceExplorer == traceExplorer) {
 			this.traceExplorer = null;
 		}
 	}
 	
-	public MethodExplorerView getTraceExplorer() {
+	public TraceExplorerView getTraceExplorer() {
 		return traceExplorer;
 	}
 	
@@ -112,8 +112,8 @@ public class TraceNavigatorUI {
 			}
 			
 			/* 
-			 * TODO if (methodExplorer != null) {
-			 * 	methodExplorer.setStep(le.parent.testId, le.parent.step, le.step);
+			 * TODO if (traceExplorer != null) {
+			 * 	traceExplorer.setStep(le.parent.testId, le.parent.step, le.step);
 			 * 
 			 * ALSO: check if step is not equal to the current step (necessary to avoid infinite loop)
 			 */

@@ -30,10 +30,10 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.MethodExplorerView"
+            class="de.hpi.accidit.eclipse.views.TraceExplorerView"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.MethodExplorerView"
-            name="Method Explorer"
+            id="de.hpi.accidit.eclipse.views.TraceExplorerView"
+            name="Trace Explorer"
             restorable="true">
       </view>
       <view
@@ -62,8 +62,8 @@
       </category>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            id="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
-            name="Open Method Explorer">
+            id="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
+            name="Open Trace Explorer">
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
@@ -137,8 +137,8 @@
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="de.hpi.accidit.eclipse.handlers.OpenMethodExplorerViewHandler"
-            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView">
+            class="de.hpi.accidit.eclipse.handlers.OpenTraceExplorerViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView">
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenLocalsExplorerViewHandler"
@@ -207,8 +207,8 @@
                label="Accidit"
                mnemonic="M">
             <command
-                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
-                  id="de.hpi.accidit.eclipse.menus.openMethodExplorerView">
+                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
+                  id="de.hpi.accidit.eclipse.menus.openTraceExplorerView">
             </command>
             <command
                   commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
@@ -234,10 +234,10 @@
          <toolbar
                id="de.hpi.accidit.eclipse.toolbars.toolbar">
             <command
-                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
                   icon="icons/sample.gif"
-                  id="de.hpi.accidit.eclipse.toolbars.openMethodExplorerView"
-                  tooltip="Open the Method Explorer View">
+                  id="de.hpi.accidit.eclipse.toolbars.openTraceExplorerView"
+                  tooltip="Open the Trace Explorer View">
             </command>
          </toolbar>
       </menuContribution>
@@ -253,7 +253,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="toolbar:de.hpi.accidit.eclipse.views.MethodExplorerView">
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.TraceExplorerView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.stepInto"
                icon="icons/step_into.png"

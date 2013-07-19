@@ -13,7 +13,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.TestCase;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionDialog;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
+import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
 public class SelectTestCaseHandler extends AbstractHandler {
 	
@@ -45,10 +45,10 @@ public class SelectTestCaseHandler extends AbstractHandler {
 				e.printStackTrace();
 			}
 			
-			MethodExplorerView methodExplorerView = 
-				(MethodExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
-					.getActivePage().findView(MethodExplorerView.ID);
-			methodExplorerView.refresh();
+			TraceExplorerView traceExplorer = 
+				(TraceExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
+					.getActivePage().findView(TraceExplorerView.ID);
+			traceExplorer.refresh();
 		}
 
 		return null;

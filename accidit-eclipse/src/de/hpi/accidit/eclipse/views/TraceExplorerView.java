@@ -26,20 +26,20 @@ import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.provider.MethodsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.TraceLabelProvider;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
-public class MethodExplorerView extends ViewPart implements ISelectionChangedListener {
+public class TraceExplorerView extends ViewPart implements ISelectionChangedListener {
 
 	/**
 	 * The ID of the view as specified by the extension.
 	 */
-	public static final String ID = "de.hpi.accidit.eclipse.views.MethodExplorerView";
+	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
 
 	private TraceNavigatorUI ui;
 	private TreeViewer treeViewer;
 
-	public MethodExplorerView() { }
+	public TraceExplorerView() { }
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -59,7 +59,7 @@ public class MethodExplorerView extends ViewPart implements ISelectionChangedLis
 		layout.setColumnData(column1, new ColumnWeightData(10, 50));
 		
 		treeViewer.setContentProvider(new TraceContentProvider(treeViewer));
-		treeViewer.setLabelProvider(new MethodsLabelProvider());
+		treeViewer.setLabelProvider(new TraceLabelProvider());
 		
 		getSite().setSelectionProvider(treeViewer);
 		treeViewer.addSelectionChangedListener(this);

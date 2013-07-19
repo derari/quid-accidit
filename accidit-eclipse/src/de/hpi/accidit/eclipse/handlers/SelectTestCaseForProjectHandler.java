@@ -14,7 +14,7 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.util.TestCase;
 import de.hpi.accidit.eclipse.handlers.util.TestCaseSelectionDialog;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
+import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
 public class SelectTestCaseForProjectHandler extends AbstractHandler {
 
@@ -57,10 +57,10 @@ public class SelectTestCaseForProjectHandler extends AbstractHandler {
 			TestCase newTestCase = (TestCase) result[0];
 			TraceNavigatorUI.getGlobal().setTestId(newTestCase.id);
 			
-			MethodExplorerView methodExplorerView = 
-				(MethodExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
-					.getActivePage().findView(MethodExplorerView.ID);
-			methodExplorerView.refresh();
+			TraceExplorerView traceExplorer = 
+				(TraceExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
+					.getActivePage().findView(TraceExplorerView.ID);
+			traceExplorer.refresh();
 			
 			return true;
 		}

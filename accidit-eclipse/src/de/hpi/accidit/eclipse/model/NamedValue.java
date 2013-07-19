@@ -19,6 +19,7 @@ public class NamedValue extends ModelBase {
 	
 	protected int testId;
 	protected long step;
+//	protected long callStep;
 	protected long valueStep;
 	protected long nextChangeStep;
 	protected long nextGetStep = -1;
@@ -27,8 +28,7 @@ public class NamedValue extends ModelBase {
 	protected Value value;
 	protected String method;
 	
-	public NamedValue() {
-	}
+	public NamedValue() { }
 
 	public NamedValue(String name) {
 		super();
@@ -52,6 +52,10 @@ public class NamedValue extends ModelBase {
 	public long getStep() {
 		return step;
 	}
+	
+//	public long getCallStep() {
+//		return callStep;
+//	}
 	
 	public int getId() {
 		return id;
@@ -175,8 +179,7 @@ public class NamedValue extends ModelBase {
 		@Override
 		protected Value fetchValue() throws Exception {
 			return new Value.MethodSnapshot(testId, call, step);
-		}
-		
+		}	
 	}
 	
 	public static class VariableValue extends NamedValue { 
@@ -296,7 +299,7 @@ public class NamedValue extends ModelBase {
 		using("last_and_next")
 			.select("COALESCE(lastSet.`step`, -1) AS `valueStep`")
 			.select("COALESCE(nextSet.`step`, -1) AS `nextChangeStep`");
-		
+//			.select("COALESCE(nextSet.`callStep`, lastSet.`callStep`) AS `callStep`");
 		from("`Variable` m");
 		join("LEFT OUTER JOIN " +
 				 "(SELECT `methodId`, `variableId`, MAX(`step`) AS `step` " +

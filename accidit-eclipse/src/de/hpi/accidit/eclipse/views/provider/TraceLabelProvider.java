@@ -12,14 +12,14 @@ import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.TraceElement;
 
-public class MethodsLabelProvider extends LabelProvider implements
+public class TraceLabelProvider extends LabelProvider implements
 		ITableLabelProvider {
 
 	private static final Map<String, Image> images = new HashMap<>();
 	
 	private static void addImage(String s) {
 		Display d = Display.getDefault();
-		Image img = new Image(d, MethodsLabelProvider.class.getResourceAsStream("/" + s));
+		Image img = new Image(d, TraceLabelProvider.class.getResourceAsStream("/" + s));
 		images.put(s, img);
 	}
 	

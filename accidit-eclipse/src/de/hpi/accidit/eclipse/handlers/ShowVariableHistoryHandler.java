@@ -19,7 +19,7 @@ import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
+import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {
 	
@@ -56,7 +56,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		NamedValue.VariableValue variableValue = (NamedValue.VariableValue) result[0];
 		long step = variableValue.getStep();
 		
-		MethodExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
+		TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
 		TreeViewer treeViewer = traceExplorer.getTreeViewer();
 		
 		// targetElement
@@ -89,9 +89,6 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 				treeViewer.expandToLevel(new TreePath(pathSegments.toArray()), 1);
 				elements = ((Invocation) currentElement).getChildren();
 			} else {
-				
-				
-				
 				treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray()).getParentPath()));
 				return null;
 			}			
