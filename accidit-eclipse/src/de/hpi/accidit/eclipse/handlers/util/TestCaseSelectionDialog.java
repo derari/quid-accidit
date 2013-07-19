@@ -15,6 +15,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
@@ -28,14 +29,13 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 	public TestCaseSelectionDialog(Shell parent,
 			ILabelProvider labelProvider, 
 			ITreeContentProvider contentProvider) {
-		
 		super(parent, labelProvider, contentProvider);
 	}
 
-//	@Override
-//	protected Point getInitialSize() {
-//		return new Point(750, 500);
-//	}
+	@Override
+	protected Point getInitialSize() {
+		return new Point(750, 500);
+	}
 	
 	@Override
 	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {

@@ -4,9 +4,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
@@ -41,16 +39,16 @@ public class SelectTestCaseForProjectHandler extends AbstractHandler {
 		return null;
 	}
 
-	private boolean openTestCaseSelectionDialog(ExecutionEvent event) {				
-		ITreeContentProvider contentProvider = new TestCaseSelectionDialog.TestCaseSelectionContentProvider();
-		ILabelProvider labelProvider = new TestCaseSelectionDialog.TestCaseSelectionLabelProvider();
-		
+	private boolean openTestCaseSelectionDialog(ExecutionEvent event) {
 		ElementTreeSelectionDialog dialog = 
-				new TestCaseSelectionDialog(HandlerUtil.getActiveShell(event), labelProvider, contentProvider);
+				new TestCaseSelectionDialog(
+						HandlerUtil.getActiveShell(event), 
+						new TestCaseSelectionDialog.TestCaseSelectionLabelProvider(), 
+						new TestCaseSelectionDialog.TestCaseSelectionContentProvider());
 		dialog.setTitle("Select a test case");
 		dialog.setBlockOnOpen(true);
 		dialog.setInput(HandlerUtil.getActiveEditorInput(event));
-		dialog.setEmptyListMessage("There're no test cases for the given database settings.");
+		dialog.setEmptyListMessage("The specified database contains no test cases.");
 		
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();
@@ -58,10 +56,12 @@ public class SelectTestCaseForProjectHandler extends AbstractHandler {
 			
 			TestCase newTestCase = (TestCase) result[0];
 			TraceNavigatorUI.getGlobal().setTestId(newTestCase.id);
+			
 			MethodExplorerView methodExplorerView = 
 				(MethodExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
 					.getActivePage().findView(MethodExplorerView.ID);
 			methodExplorerView.refresh();
+			
 			return true;
 		}
 		return false;
