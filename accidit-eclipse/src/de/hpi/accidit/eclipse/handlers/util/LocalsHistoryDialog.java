@@ -45,7 +45,6 @@ public class LocalsHistoryDialog extends Dialog {
 	private Object treeViewerInput; // root
 	
 	private ComboViewer comboViewer;
-//	private IBaseLabelProvider comboViewerLabelProvider;
 	private IContentProvider comboViewerContentProvider;
 	private Object[] comboViewerInput;
 

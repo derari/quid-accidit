@@ -31,6 +31,11 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 		
 		super(parent, labelProvider, contentProvider);
 	}
+
+//	@Override
+//	protected Point getInitialSize() {
+//		return new Point(750, 500);
+//	}
 	
 	@Override
 	protected TreeViewer doCreateTreeViewer(Composite parent, int style) {
@@ -51,8 +56,8 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 		column0.setText("Id");
 		column0.setWidth(50);
 		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
-		column1.setText("Id");
-		column1.setWidth(350);
+		column1.setText("Name");
+		column1.setWidth(650);
 	}
 	
 	public static class TestCaseSelectionContentProvider implements ITreeContentProvider {

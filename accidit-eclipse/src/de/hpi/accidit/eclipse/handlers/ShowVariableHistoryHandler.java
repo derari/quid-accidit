@@ -22,6 +22,8 @@ import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.MethodExplorerView;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {
+	
+	// TODO put setSelection() in Display.getDefault().asyncExec() ...
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -56,6 +58,8 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		
 		MethodExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
 		TreeViewer treeViewer = traceExplorer.getTreeViewer();
+		
+		// targetElement
 		
 		TraceElement[] elements = traceExplorer.getRootElements();
 		List<Object> pathSegments = new ArrayList<Object>();

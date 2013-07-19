@@ -107,6 +107,14 @@ public class TraceNavigatorUI {
 			if (localsExplorer != null) {
 				localsExplorer.setStep(le.parent.testId, le.parent.step, le.step);
 			}
+			
+			/* 
+			 * TODO if (methodExplorer != null) {
+			 * 	methodExplorer.setStep(le.parent.testId, le.parent.step, le.step);
+			 * 
+			 * ALSO: check if step is not equal to the current step (necessary to avoid infinite loop)
+			 */
+			
 		}
 	}
 	
