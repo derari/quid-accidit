@@ -63,8 +63,8 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		
 		TraceElement[] elements = traceExplorer.getRootElements();
 		List<Object> pathSegments = new ArrayList<Object>();
+		
 		while (true) {
-			
 			TraceElement currentElement = null;
 			for (int i = 0; i < elements.length; i++) {
 				currentElement = elements[i];
@@ -89,7 +89,10 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 				treeViewer.expandToLevel(new TreePath(pathSegments.toArray()), 1);
 				elements = ((Invocation) currentElement).getChildren();
 			} else {
-				treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray())));
+				
+				
+				
+				treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray()).getParentPath()));
 				return null;
 			}			
 		}
