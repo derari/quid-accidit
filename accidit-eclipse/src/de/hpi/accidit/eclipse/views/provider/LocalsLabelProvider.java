@@ -12,7 +12,12 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 
 public class LocalsLabelProvider extends LabelProvider implements
 		ITableLabelProvider, ITableColorProvider {
-
+	
+	@Override
+	public boolean isLabelProperty(Object element, String property) {
+		return "label".equals(property);
+	}
+	
 	@Override
 	public Image getColumnImage(Object element, int columnIndex) {
 		return null;

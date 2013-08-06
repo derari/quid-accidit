@@ -150,7 +150,8 @@ public class NamedValue extends ModelBase {
 	
 	public boolean needsUpdate(long step) {
 		return (nextChangeStep > -1 && nextChangeStep < step)
-				|| (valueStep != -1 && valueStep >= step);
+				|| (valueStep != -1 && valueStep >= step)
+				|| (nextGetStep != -1 && (this.step <= nextGetStep && step > nextGetStep));
 	}
 	
 	@Override
@@ -356,10 +357,10 @@ public class NamedValue extends ModelBase {
 	private static final GraphQueryTemplate<FieldValue> FIELD_TEMPLATE = new NameValueQueryTemplate<FieldValue>() {{
 		select("m.`name`, m.`id`");
 		using("last_and_next")
-			.select("COALESCE(lastPut.`step`, lastGet.`step`, -1) AS `valueStep`")
-			.select("__ISNOTNULL{lastPut.`step`} AS `valueIsPut`")
-			.select("COALESCE(nextPut.`step`, -1) AS `nextChangeStep`")
-			.select("COALESCE(nextGet.`step`, -1) AS `nextGetStep`");
+			.select("COALESCE(lastPut.`step`, lastGet.`step`, -1) AS `valueStep`",
+					"__ISNOTNULL{lastPut.`step`} AS `valueIsPut`",
+					"COALESCE(nextPut.`step`, -1) AS `nextChangeStep`",
+					"COALESCE(nextGet.`step`, -1) AS `nextGetStep`");
 		
 		from("`Field` m");
 		
@@ -382,9 +383,9 @@ public class NamedValue extends ModelBase {
 				 "GROUP BY `fieldId`) " +
 			 "nextPut ON nextPut.`fieldId` = m.`id`");
 		join("LEFT OUTER JOIN " +
-				"(SELECT MIN(`step`) AS `step`, `fieldId` " +
+				"(SELECT MAX(`step`) AS `step`, `fieldId` " +
 				 "FROM `GetTrace` " +
-				 "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ? " +
+				 "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ?" +
 				 "GROUP BY `fieldId`) " +
 			 "nextGet ON nextGet.`fieldId` = m.`id`");
 		

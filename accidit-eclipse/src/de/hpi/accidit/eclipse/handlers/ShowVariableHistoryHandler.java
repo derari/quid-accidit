@@ -45,7 +45,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		LocalsHistoryDialog dialog = new LocalsHistoryDialog(
 				HandlerUtil.getActiveShell(event), 
 				selectedLocal, 
-				new LocalsHistoryDialog.TreeViewerContentProvider(null),
+				new LocalsHistoryDialog.TreeViewerContentProvider(),
 				treeViewerInput, 
 				TraceNavigatorUI.getGlobal().getLocalsExplorer().getRootElements());
 		

@@ -53,7 +53,7 @@ public class LocalsExplorerView extends ViewPart {
 		layout.setColumnData(column0, new ColumnWeightData(40, 50));
 		layout.setColumnData(column1, new ColumnWeightData(60, 50));
 		
-		contentProvider = new LocalsContentProvider(viewer);		
+		contentProvider = new LocalsContentProvider();		
 		viewer.setContentProvider(contentProvider);
 		viewer.setLabelProvider(new LocalsLabelProvider());
 		
@@ -90,7 +90,7 @@ public class LocalsExplorerView extends ViewPart {
 	}
 	
 	public void setStep(int testId, long call, long step) {
-		contentProvider.setStep(testId, call, step);
+		viewer.setInput(new LocalsContentProvider.Step(testId, call, step));
 	}
 	
 	/**

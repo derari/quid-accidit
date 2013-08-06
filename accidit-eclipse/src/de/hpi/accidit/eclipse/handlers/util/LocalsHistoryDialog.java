@@ -220,15 +220,8 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	public static class TreeViewerContentProvider extends LocalsContentProvider implements ITreeContentProvider {
 
-		public TreeViewerContentProvider(TreeViewer viewer) {
-			super(viewer);
-		}
-
-		@Override
-		public void setStep(int testId, long call, long step) { }
-
 		public void setRoot(NamedValue root) {
-			this.root = root;
+//			this.root = root;
 		}
 
 		@Override
