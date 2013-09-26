@@ -53,6 +53,15 @@
             name="Navigator"
             restorable="true">
       </view>
+      <view
+            allowMultiple="true"
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.BreakPointView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.BreakPointView"
+            name="Breakpoint"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -145,6 +154,10 @@
             commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView">
       </handler>
       <handler
+            class="de.hpi.accidit.eclipse.handlers.OpenBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openBreakPointView">
+      </handler>
+      <handler
             class="de.hpi.accidit.eclipse.handlers.SelectTestCaseHandler"
             commandId="de.hpi.accidit.eclipse.commands.selectTestCase">
       </handler>
@@ -217,6 +230,11 @@
             <command
                   commandId="de.hpi.accidit.eclipse.commands.openNavigatorView"
                   id="de.hpi.accidit.eclipse.menus.openNavigatorView">
+            </command>
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.openBreakPointView"
+                  id="de.hpi.accidit.eclipse.menus.openBreakPointView"
+                  style="push">
             </command>
             <separator
                   name="accidit-eclipse.separator1"
