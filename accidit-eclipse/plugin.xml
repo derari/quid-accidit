@@ -23,12 +23,6 @@
             id="de.hpi.accidit.eclipse">
       </category>
       <view
-            name="Accidit View"
-            category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.MainView"
-            id="de.hpi.accidit.eclipse.views.MainView">
-      </view>
-      <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.TraceExplorerView"
             icon="icons/a_logo.png"
@@ -133,6 +127,24 @@
             id="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
             name="Switch Layout">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+            name="Custom Arrow Navigation">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+            name="Auto Collapse">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -187,6 +199,14 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.SwitchNavigatorLayoutHandler"
             commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleCustomArrowNavigationHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
       </handler>
    </extension>
    <extension
@@ -293,6 +313,22 @@
                icon="icons/step_back_into.png"
                id="de.hpi.accidit.eclipse.toolbars.stepBackInto"
                style="push">
+         </command>
+         <separator
+               name="accidit-eclipse.separator2"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+               icon="icons/custom_arrow_navigation.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleCustomArrowNavigation"
+               style="toggle">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+               icon="icons/auto_collapse.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleAutoCollapse"
+               style="toggle">
          </command>
       </menuContribution>
       <menuContribution

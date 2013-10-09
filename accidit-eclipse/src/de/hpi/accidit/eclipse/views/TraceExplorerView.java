@@ -1,8 +1,13 @@
 package de.hpi.accidit.eclipse.views;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.commands.Command;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
@@ -26,9 +31,18 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.IMemento;
+import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.commands.ICommandService;
 import org.eclipse.ui.part.ViewPart;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.handlers.AbstractToggleHandler;
+import de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler;
+import de.hpi.accidit.eclipse.handlers.ToggleCustomArrowNavigationHandler;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
@@ -37,18 +51,30 @@ import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class TraceExplorerView extends ViewPart implements ISelectionChangedListener {
 
-	/**
-	 * The ID of the view as specified by the extension.
-	 */
+	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
 
 	private TraceNavigatorUI ui;
+	private TreeViewerSelectionAdapter treeViewerSelectionAdapter;
 	private TreeViewer treeViewer;
+
+	private static final String STORE_PROJECT_NAME = "Accidit.ProjectName";
+	private IMemento memento;
 
 	public TraceExplorerView() { }
 
 	@Override
 	public void createPartControl(Composite parent) {
+		// restore project name
+		String projectName = memento.getString(STORE_PROJECT_NAME);
+		if (projectName != null) {
+			IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+			if (project != null) {
+				DatabaseConnector.setSelectedProject(project);
+			}
+		}
+		
+		// create view elements
 		Tree tree = new Tree(parent, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
 		treeViewer = new TreeViewer(tree);
 		treeViewer.getTree().setHeaderVisible(true);
@@ -74,6 +100,22 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		ui.setTraceExplorer(this);
 		
 		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
+		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
+	}
+	
+	/* Methods to restore the view state after eclipse has been closed. */
+	
+	@Override
+	public void saveState(IMemento memento) {
+		super.saveState(memento);
+		String projectName = DatabaseConnector.getSelectedProject().getName();		
+		memento.putString(STORE_PROJECT_NAME, projectName);
+	}
+
+	@Override
+	public void init(IViewSite site, IMemento memento) throws PartInitException {
+		super.init(site, memento);
+		this.memento = memento;
 	}
 	
 	@Override
@@ -103,6 +145,11 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		Trace trace = (Trace) treeViewer.getInput();
 		return trace.getRootElements();
 	}
+	
+	/** Returns a TreeViewerSelectionAdapter instance to manipulate the treeViewer selection. */
+	public TreeViewerSelectionAdapter getSelectionAdapter() {
+		return treeViewerSelectionAdapter;
+	}
 
 	@Override
 	public void selectionChanged(SelectionChangedEvent event) {
@@ -118,113 +165,191 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		}	
 	}
 	
-	class TraceExplorerKeyAdapter extends KeyAdapter {
-
-		@Override
-		public void keyPressed(KeyEvent e) {
-			e.doit = false;
+	/** Class to manipulate selections of the TraceExplorer's treeViewer */ 
+	/* - handlers.Step*Handler (6), done:
+	 *     stepOver -> selectNextElement
+	 *     stepInto -> selectFirstChildElement
+	 *     StepOut -> selectParentElement + selectNextElement
+	 *     stepBackOver -> selectPreviousElement
+	 *     stepBackOut -> selectParentElement
+	 *     stepBackInto -> selectPreviousElement + selectLastChildElement
+	 * - handlers.ShowVariableHistoryHandler, done:
+	 * 		showVariableHistory -> selectAtStep
+	 */
+	public class TreeViewerSelectionAdapter {
+		
+		/** Selects the currently selected trace element's parent. */
+		public void selectParentElement() {
+			TreeItem[] currentSelection = treeViewer.getTree().getSelection();
+			if (currentSelection.length == 0) { // no selection
+				return;
+			}
 			
-			switch(e.keyCode) {
-			case SWT.ARROW_UP: handleArrowUp(); break;
-			case SWT.ARROW_LEFT: handleArrowLeft(); break;
-			case SWT.ARROW_RIGHT: handleArrowRight(); break;
-			case SWT.ARROW_DOWN: handleArrowDown(); break;
-			default: break;
+			TreeItem selectedItem = currentSelection[0];
+			TreeItem parent = selectedItem.getParentItem();
+			if (parent != null) { // root item isn't selected
+				treeViewer.setSelection(new StructuredSelection(parent.getData()));
+				collapseSubElements(parent);
 			}
 		}
 		
-		private void handleArrowUp() {
-			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
-			if (currentSelection.isEmpty()) return;
+		/** Selects the currently selected trace element's first child. */
+		public void selectFirstChildElement() {
+			TreeItem[] currentSelection = treeViewer.getTree().getSelection();
+			if (currentSelection.length == 0) { // no selection 
+				return;
+			}
 			
-			TreePath path = currentSelection.getPaths()[0];
-			TreePath parentPath = path.getParentPath();
+			TreeItem selectedItem = currentSelection[0];
+			treeViewer.expandToLevel(selectedItem.getData(), 1); // async load elements
+			if (selectedItem.getItemCount() > 0) {
+				treeViewer.setSelection(new StructuredSelection(selectedItem.getItem(0).getData()));
+			}
+		}
+		
+		/** Selects the currently selected trace element's last child. */
+		public void selectLastChildElement() {
+			TreeItem[] currentSelection = treeViewer.getTree().getSelection();
+			if (currentSelection.length == 0) { // no selection 
+				return;
+			}
 			
-			if (parentPath.getSegmentCount() > 0) {
-				// build path from tree
-				TreeItem item = treeViewer.getTree().getSelection()[0];
-				TreeItem parentItem = item.getParentItem();
-
-				int itemIndex = parentItem.indexOf(item);
+			TreeItem selectedItem = currentSelection[0];
+			treeViewer.expandToLevel(selectedItem.getData(), 1); // async load elements
+			if (selectedItem.getItemCount() > 0) {
+				TreeItem lastChild = selectedItem.getItem(selectedItem.getItemCount() - 1);
+				treeViewer.setSelection(new StructuredSelection(lastChild.getData()));
+			}
+		}
+		
+		/** Selects the currently selected trace element's previous sibling. */
+		public void selectPreviousElement() {
+			TreeItem[] currentSelection = treeViewer.getTree().getSelection();
+			if (currentSelection.length == 0) { // no selection
+				return;
+			}
+			
+			TreeItem selectedItem = currentSelection[0];
+			TreeItem parent = selectedItem.getParentItem();
+			if (parent != null) { // root item isn't selected
+				int itemIndex = parent.indexOf(selectedItem);
 				if (itemIndex > 0) {
-					TreeItem previousItem = parentItem.getItems()[itemIndex - 1];
-					TreePath previousItemPath = parentPath.createChildPath(previousItem.getData());
-					treeViewer.setSelection(new TreeSelection(previousItemPath));
+					TreeItem previousSibling = parent.getItems()[itemIndex - 1];
+					treeViewer.setSelection(new StructuredSelection(previousSibling.getData()));
 				} else {
-					treeViewer.setSelection(new TreeSelection(parentPath));
-					treeViewer.collapseToLevel(parentPath, 1);
+					treeViewer.setSelection(new StructuredSelection(parent.getData()));
+					collapseSubElements(parent);
 				}
 			}
 		}
-
-		private void handleArrowLeft() {
-			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
-			if (currentSelection.isEmpty()) return;
-			
-			TreePath path = currentSelection.getPaths()[0];
-			TreePath parentPath = path.getParentPath();
-			
-			if (parentPath.getSegmentCount() > 0) {
-				TreeSelection newSelection = new TreeSelection(parentPath);
-				treeViewer.setSelection(newSelection);
-				treeViewer.collapseToLevel(parentPath, 1);
-			}
-		}
 		
-		private void handleArrowRight() {
-			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
-			if (currentSelection.isEmpty()) return;
-			
-			TreePath path = currentSelection.getPaths()[0];
-			treeViewer.expandToLevel(path, 1); // load elements asynchronously
-						
-			TreeItem item = treeViewer.getTree().getSelection()[0];
-			if (item.getItemCount() > 0) {
-				TreePath childPath = path.createChildPath(item.getItem(0).getData());
-				treeViewer.setSelection(new TreeSelection(childPath));
-			}
-		}
-		
-		private void handleArrowDown() {
-			ITreeSelection currentSelection = (ITreeSelection) treeViewer.getSelection();
-			if (currentSelection.isEmpty()) {
-//				treeViewer.expandToLevel(TreePath.EMPTY, 1);
+		/** Selects the currently selected trace element's next sibling. */
+		public void selectNextElement() {
+			TreeItem[] currentSelection = treeViewer.getTree().getSelection();
+			if (currentSelection.length == 0) { // no selection
 				TreeItem[] rootItems = treeViewer.getTree().getItems();
 				if (rootItems.length > 0) {
 					treeViewer.setSelection(new StructuredSelection(rootItems[0].getData()));
 				}
 				return;
 			}
-			
-			TreePath path = currentSelection.getPaths()[0];
-			TreePath parentPath = path.getParentPath();
-			if (parentPath.getSegmentCount() > 0) {
-				// build path from tree
-				TreeItem item = treeViewer.getTree().getSelection()[0];
-				TreeItem parentItem = item.getParentItem();
 
-				int itemIndex = parentItem.indexOf(item);
-				if (parentItem.getItemCount() > itemIndex + 1) {
-					TreeItem nextItem = parentItem.getItems()[itemIndex + 1];
-					TreePath nextItemPath = parentPath.createChildPath(nextItem.getData());
-					treeViewer.setSelection(new TreeSelection(nextItemPath));
+			TreeItem selectedItem = currentSelection[0];
+			TreeItem parent = selectedItem.getParentItem();
+			if (parent != null) { // root item isn't selected
+				int index = parent.indexOf(selectedItem);
+				if (parent.getItemCount() > index + 1) { // selectedItem is not the last child of its parent
+					TreeItem nextSibling = parent.getItems()[index + 1];
+					treeViewer.setSelection(new StructuredSelection(nextSibling.getData()));
 				} else {
-					// find find item behind the parent
-					// assumption: there's always a next item exactly one level above (return)
-					TreeItem parentItemParent = parentItem.getParentItem();
-					if (parentItemParent == null) {
+					TreeItem parentsParent = parent.getParentItem();
+					if (parentsParent == null) { // root element's last child currently selected
 						treeViewer.setSelection(null);
-						treeViewer.collapseAll();
 						return;
 					}
 					
-					int parentItemIndex = parentItemParent.indexOf(parentItem);
-					TreeItem nextParentItem = parentItemParent.getItem(parentItemIndex + 1); 
-					TreePath nextParentItemPath = parentPath.getParentPath().createChildPath(nextParentItem.getData());
-					treeViewer.setSelection(new TreeSelection(nextParentItemPath));
-					treeViewer.collapseToLevel(parentPath, 1);
+					int parentIndex = parentsParent.indexOf(parent);
+					TreeItem nextParentSibling = parentsParent.getItem(parentIndex + 1); 
+					treeViewer.setSelection(new StructuredSelection(nextParentSibling.getData()));
+					collapseSubElements(parent);
 				}
 			}
+		}
+		
+		/** Selects the calling trace element of certain trace element that is identified by its step. */
+		public void selectAtStep(long step) {
+			TraceElement[] elements = TraceExplorerView.this.getRootElements();
+			List<Object> pathSegments = new ArrayList<Object>();
+			
+			while (true) {
+				TraceElement currentElement = null;
+				for (int i = 0; i < elements.length; i++) {
+					currentElement = elements[i];
+					
+					if (currentElement.step == step) {
+						pathSegments.add(currentElement);
+						treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray())));
+						return;
+					}
+
+					// Too far in the tree - go back to previous element. 
+					if (currentElement.step > step) {
+						if (i >= 1) currentElement = elements[i - 1];
+						break;
+					}
+				}
+				
+				if (currentElement == null) return;
+				pathSegments.add(currentElement);
+				
+				if (currentElement instanceof Invocation) {
+					treeViewer.expandToLevel(new TreePath(pathSegments.toArray()), 1);
+					elements = ((Invocation) currentElement).getChildren();
+				} else {
+					treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray()).getParentPath()));
+					return;
+				}			
+			}
+		}
+		
+		private void collapseSubElements(TreeItem element) {
+			if (autoCollapseEnabled())
+				treeViewer.collapseToLevel(element.getData(), 1);
+		}
+		
+		private boolean autoCollapseEnabled() {
+			ICommandService commandService = (ICommandService) PlatformUI
+					.getWorkbench().getActiveWorkbenchWindow()
+					.getService(ICommandService.class);
+			Command command = commandService.getCommand(ToggleAutoCollapseHandler.ID);
+			return AbstractToggleHandler.getCommandState(command);
+		}
+	}
+	
+	private class TraceExplorerKeyAdapter extends KeyAdapter {
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			if (!customArrowNavigationEnabled()) return;
+			
+			e.doit = false;
+			TreeViewerSelectionAdapter selectionAdapter = TraceExplorerView.this.getSelectionAdapter();
+			
+			switch(e.keyCode) {
+			case SWT.ARROW_UP: selectionAdapter.selectPreviousElement(); break;
+			case SWT.ARROW_LEFT: selectionAdapter.selectParentElement(); break;
+			case SWT.ARROW_RIGHT: selectionAdapter.selectFirstChildElement(); break;
+			case SWT.ARROW_DOWN: selectionAdapter.selectNextElement(); break;
+			default: break;
+			}
+		}
+		
+		private boolean customArrowNavigationEnabled() {
+			ICommandService commandService = (ICommandService) PlatformUI
+					.getWorkbench().getActiveWorkbenchWindow()
+					.getService(ICommandService.class);
+			Command command = commandService.getCommand(ToggleCustomArrowNavigationHandler.ID);
+			return AbstractToggleHandler.getCommandState(command);
 		}
 	}
 	
