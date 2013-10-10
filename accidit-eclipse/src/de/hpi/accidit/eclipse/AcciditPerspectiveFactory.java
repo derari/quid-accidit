@@ -4,15 +4,16 @@ import org.eclipse.ui.IFolderLayout;
 import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IPerspectiveFactory;
 
+import de.hpi.accidit.eclipse.views.BreakPointsView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.NavigatorView;
 
 public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 	
-	private static final String TRACE_EXPLORER_VIEW_ID = TraceExplorerView.ID;
-	private static final String LOCALS_EXPLORER_VIEW_ID = LocalsExplorerView.ID;
-	private static final String NAVIGATOR_VIEW_ID = NavigatorView.ID;
+//	private static final String TRACE_EXPLORER_VIEW_ID = TraceExplorerView.ID;
+//	private static final String LOCALS_EXPLORER_VIEW_ID = LocalsExplorerView.ID;
+//	private static final String NAVIGATOR_VIEW_ID = NavigatorView.ID;
 	
 	private static final String LEFT_FOLDER = "left";
 
@@ -22,11 +23,12 @@ public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 		left.addView(IPageLayout.ID_PROJECT_EXPLORER);
 		left.addView(IPageLayout.ID_OUTLINE);
 
-		layout.addView(TRACE_EXPLORER_VIEW_ID, IPageLayout.BOTTOM, 0.70f, layout.getEditorArea());
-		layout.addView(LOCALS_EXPLORER_VIEW_ID, IPageLayout.RIGHT, 0.70f, layout.getEditorArea());
+		layout.addView(TraceExplorerView.ID, IPageLayout.BOTTOM, 0.70f, layout.getEditorArea());
+		layout.addView(LocalsExplorerView.ID, IPageLayout.RIGHT, 0.70f, layout.getEditorArea());
 		
-		layout.addShowViewShortcut(TRACE_EXPLORER_VIEW_ID);
-		layout.addShowViewShortcut(LOCALS_EXPLORER_VIEW_ID);
-		layout.addShowViewShortcut(NAVIGATOR_VIEW_ID);
+		layout.addShowViewShortcut(TraceExplorerView.ID);
+		layout.addShowViewShortcut(LocalsExplorerView.ID);
+		layout.addShowViewShortcut(NavigatorView.ID);
+		layout.addShowViewShortcut(BreakPointsView.ID);
 	}
 }
