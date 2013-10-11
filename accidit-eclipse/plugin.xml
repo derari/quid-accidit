@@ -49,7 +49,7 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.BreakpointsView"
+            class="de.hpi.accidit.eclipse.views.BreakpointsViewx"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.BreakpointsView"
             name="Breakpoints"
