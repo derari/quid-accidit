@@ -49,10 +49,10 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.BreakPointsView"
+            class="de.hpi.accidit.eclipse.views.BreakpointsView"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.BreakPointsView"
-            name="Break Points"
+            id="de.hpi.accidit.eclipse.views.BreakpointsView"
+            name="Breakpoints"
             restorable="true">
       </view>
    </extension>
@@ -153,6 +153,11 @@
                id="org.eclipse.ui.commands.toggleState">
          </state>
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.addBreakpoint"
+            name="Add Breakpoint">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -215,6 +220,10 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler"
             commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
       </handler>
    </extension>
    <extension
@@ -373,6 +382,18 @@
                commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
                icon="icons/a_logo.png"
                id="de.hpi.accidit.eclipse.toolbars.switchNavigatorLayout"
+               label="Switch Layout"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.BreakpointsView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.addBreakpoint"
+               icon="icons/add_breakpoint.png"
+               id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
+               label="Add Breakpoint"
                style="push">
          </command>
       </menuContribution>

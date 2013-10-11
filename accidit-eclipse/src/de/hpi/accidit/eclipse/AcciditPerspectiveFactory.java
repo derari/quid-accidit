@@ -4,7 +4,7 @@ import org.eclipse.ui.IFolderLayout;
 import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IPerspectiveFactory;
 
-import de.hpi.accidit.eclipse.views.BreakPointsView;
+import de.hpi.accidit.eclipse.views.BreakpointsView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.NavigatorView;
@@ -29,6 +29,6 @@ public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 		layout.addShowViewShortcut(TraceExplorerView.ID);
 		layout.addShowViewShortcut(LocalsExplorerView.ID);
 		layout.addShowViewShortcut(NavigatorView.ID);
-		layout.addShowViewShortcut(BreakPointsView.ID);
+		layout.addShowViewShortcut(BreakpointsView.ID);
 	}
 }
