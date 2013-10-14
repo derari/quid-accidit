@@ -60,11 +60,6 @@ public class DatabaseConnector {
 		String dbPassword = DatabaseSettingsRetriever
 				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_PASSWORD);
 		
-//		String dbAddress	= store.getString(PreferenceConstants.CONNECTION_ADDRESS);
-//		String dbSchema		= store.getString(PreferenceConstants.CONNECTION_SCHEMA);
-//		String dbUser		= store.getString(PreferenceConstants.CONNECTION_USER);
-//		String dbPassword	= store.getString(PreferenceConstants.CONNECTION_PASSWORD);
-		
 		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
 	

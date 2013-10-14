@@ -45,9 +45,7 @@ public class SelectTestCaseHandler extends AbstractHandler {
 				e.printStackTrace();
 			}
 			
-			TraceExplorerView traceExplorer = 
-				(TraceExplorerView) HandlerUtil.getActiveWorkbenchWindow(event)
-					.getActivePage().findView(TraceExplorerView.ID);
+			TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
 			traceExplorer.refresh();
 		}
 
