@@ -11,10 +11,6 @@ import de.hpi.accidit.eclipse.views.NavigatorView;
 
 public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 	
-//	private static final String TRACE_EXPLORER_VIEW_ID = TraceExplorerView.ID;
-//	private static final String LOCALS_EXPLORER_VIEW_ID = LocalsExplorerView.ID;
-//	private static final String NAVIGATOR_VIEW_ID = NavigatorView.ID;
-	
 	private static final String LEFT_FOLDER = "left";
 
 	@Override
