@@ -14,8 +14,6 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {
-	
-	// TODO put setSelection() in Display.getDefault().asyncExec() ...
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {

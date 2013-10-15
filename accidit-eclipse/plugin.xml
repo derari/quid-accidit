@@ -158,6 +158,11 @@
             id="de.hpi.accidit.eclipse.commands.addBreakpoint"
             name="Add Breakpoint">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+            name="Reveal Setter">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -236,6 +241,22 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
+            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>
       </handler>
    </extension>
    <extension
@@ -379,10 +400,10 @@
                      variable="selection">
                   <iterate
                         ifEmpty="false"
-                        operator="or">
-                     <instanceof
-                           value="org.eclipse.core.resources.IProject">
-                     </instanceof>
+                        operator="and">
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                     </adapt>
                   </iterate>
                </with>
             </visibleWhen>
@@ -420,6 +441,12 @@
                label="Show history"
                style="push">!
          </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
+               label="Reveal setter"
+               style="push">
+         </command>
       </menuContribution>
    </extension>
    <extension
@@ -438,6 +465,7 @@
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
             name="Database Settings"
+            instanceOf="org.eclipse.core.resources.IProject"
             objectClass="org.eclipse.core.resources.IProject">
       </page>
    </extension>

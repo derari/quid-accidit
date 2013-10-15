@@ -53,6 +53,10 @@ public class NamedValue extends ModelBase {
 		return step;
 	}
 	
+	public long getValueStep() {
+		return valueStep;
+	}
+	
 //	public long getCallStep() {
 //		return callStep;
 //	}
