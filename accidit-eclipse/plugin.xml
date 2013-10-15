@@ -200,6 +200,18 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
@@ -285,6 +297,7 @@
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.toolbars.showVariableHistory"
+               label="Show history"
                style="push">
          </command>
       </menuContribution>
@@ -358,7 +371,7 @@
          <command
                commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
                icon="icons/a_logo.png"
-               id="de.hpi.accidit.eclipse.project.selectTestCase"
+               id="de.hpi.accidit.eclipse.popup.selectTestCase"
                label="Select Test Case"
                style="push">
             <visibleWhen>
@@ -395,6 +408,17 @@
                id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
                label="Add Breakpoint"
                style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:de.hpi.accidit.eclipse.views.LocalsExplorerView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
+               icon="icons/history_book.png"
+               id="de.hpi.accidit.eclipse.popups.showVariableHistory"
+               label="Show history"
+               style="push">!
          </command>
       </menuContribution>
    </extension>
