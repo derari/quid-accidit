@@ -216,7 +216,7 @@
                   </adapt>
                </iterate>
             </with>
-         </activeWhen>
+         </activeWhen>  
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
@@ -244,7 +244,7 @@
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
-            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">
+            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">       
          <activeWhen>
             <with
                   variable="selection">
@@ -256,7 +256,7 @@
                   </adapt>
                </iterate>
             </with>
-         </activeWhen>
+         </activeWhen>      
       </handler>
    </extension>
    <extension
@@ -394,7 +394,7 @@
                icon="icons/a_logo.png"
                id="de.hpi.accidit.eclipse.popup.selectTestCase"
                label="Select Test Case"
-               style="push">
+               style="push">    
             <visibleWhen>
                <with
                      variable="selection">
@@ -464,8 +464,12 @@
             class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
-            name="Database Settings"
-            objectClass="org.eclipse.core.resources.IProject">
+            name="Database Settings">
+         <enabledWhen>
+            <instanceof
+                  value="org.eclipse.core.resources.IProject">
+            </instanceof>
+         </enabledWhen>
       </page>
    </extension>
 
