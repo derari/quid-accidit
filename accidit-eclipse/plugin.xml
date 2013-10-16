@@ -212,7 +212,7 @@
                      ifEmpty="false"
                      operator="and">
                   <adapt
-                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
                   </adapt>
                </iterate>
             </with>
@@ -252,7 +252,7 @@
                      ifEmpty="false"
                      operator="and">
                   <adapt
-                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
                   </adapt>
                </iterate>
             </with>
