@@ -7,8 +7,10 @@ import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.BaseLabelProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ComboViewer;
+import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IBaseLabelProvider;
 import org.eclipse.jface.viewers.IContentProvider;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -118,8 +120,12 @@ public class LocalsHistoryDialog extends Dialog {
 		treeViewer.setLabelProvider(treeViewerLabelProvider);
 		treeViewer.setInput(treeViewerInput);
 		
-		// TODO select correct element in treeViewer - to remove focus from text box
-//		treeViewer.setSelection(null);		
+		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
+			@Override
+			public void doubleClick(DoubleClickEvent event) {
+				okPressed();
+			}
+		});	
 		
 		comboViewer.addSelectionChangedListener(new ComboViewerSelectionListener());
 		
