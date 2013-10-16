@@ -439,7 +439,7 @@
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.popups.showVariableHistory"
                label="Show history"
-               style="push">!
+               style="push">
          </command>
          <command
                commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
@@ -465,7 +465,6 @@
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
             name="Database Settings"
-            instanceOf="org.eclipse.core.resources.IProject"
             objectClass="org.eclipse.core.resources.IProject">
       </page>
    </extension>

@@ -17,6 +17,7 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -34,6 +35,7 @@ public class LocalsExplorerView extends ViewPart {
 	 * The ID of the view as specified by the extension.
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
+	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.revealVariableSetter";
 
 	private TreeViewer viewer;
 	private LocalsContentProvider contentProvider;
@@ -68,7 +70,7 @@ public class LocalsExplorerView extends ViewPart {
 			public void doubleClick(DoubleClickEvent event) {
 				IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
 				try {
-					handlerService.executeCommand("de.hpi.accidit.eclipse.commands.showVariableHistory", null);
+					handlerService.executeCommand(DEFAULT_COMMAND_ID, null);
 				} catch (ExecutionException | NotDefinedException | NotEnabledException | NotHandledException e) {
 					e.printStackTrace();
 				}
@@ -78,7 +80,8 @@ public class LocalsExplorerView extends ViewPart {
 		/* Context menu registration. */
 		MenuManager menuManager = new MenuManager();
 		menuManager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-		viewer.getTree().setMenu(menuManager.createContextMenu(viewer.getTree()));
+		final Menu contextMenu = menuManager.createContextMenu(viewer.getTree());
+		viewer.getControl().setMenu(contextMenu);		
 		getSite().registerContextMenu(menuManager, viewer);
 		getSite().setSelectionProvider(viewer);
 	}
