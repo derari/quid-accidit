@@ -18,8 +18,7 @@ public class ModelBase {
 		return fInit.beDoneNow();
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public <T> MiFuture<T> onInitialized(MiFutureAction<? extends MiFuture<? extends ModelBase>, T> action) {
+	public <T> MiFuture<T> onInitialized(MiFutureAction<?, T> action) {
 		return fInit.onComplete((MiFutureAction) action); 
 	}
 	
@@ -42,8 +41,13 @@ public class ModelBase {
 	private static final MiFutureAction<ModelBase, ModelBase> A_INIT = new MiFutureAction<ModelBase, ModelBase>() {
 		@Override
 		public ModelBase call(ModelBase arg) throws Exception {
-			arg.lazyInitialize();
-			return arg;
+			try {
+				arg.lazyInitialize();
+				return arg;
+			} catch (Exception e) {
+				e.printStackTrace(System.err);
+				throw e;
+			}
 		}
 	};
 	

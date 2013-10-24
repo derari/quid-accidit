@@ -95,6 +95,7 @@ public class JavaSrcFilesLocator {
 	}
 	
 	private IFile getFile(String filePath) {
+		if (true) return null;
 		for(IJavaProject javaProject : getProjects()) {
 			IType javaFileType;
 			try {

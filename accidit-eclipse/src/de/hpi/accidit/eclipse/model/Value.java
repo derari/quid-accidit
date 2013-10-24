@@ -2,17 +2,18 @@ package de.hpi.accidit.eclipse.model;
 
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.cthul.miro.dsl.QueryView;
 import org.cthul.miro.dsl.View;
+import org.cthul.miro.map.MappedQueryString;
 import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ResultBuilder.ValueAdapter;
-import org.cthul.miro.util.MappedQuery;
-import org.cthul.miro.util.QueryView;
-import org.cthul.miro.util.ReflectiveMapping;
+import org.cthul.miro.map.ReflectiveMapping;
+import org.cthul.miro.result.EntityInitializer;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.model.NamedValue.ObjHistoryQuery;
+import de.hpi.accidit.eclipse.model.NamedValue.VarHistoryQuery;
 
 
 public abstract class Value extends ModelBase {
@@ -25,30 +26,7 @@ public abstract class Value extends ModelBase {
 	
 	public abstract NamedValue[] getChildren();
 	
-	/**
-	 * Shows temporary children.
-	 */
-	public NamedValue[] previewChildren() {
-		return null;
-	}
-	
-	public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
-		if (!isInitialized()) return;
-		if (!hasChildren()) return;
-		for (NamedValue nv: getChildren()) {
-			nv.updateValue(step, updateCallback);
-		}
-	}
-	
-	public boolean needsUpdate(long step) {
-		if (!isInitialized()) return false;
-		if (!hasChildren()) return false;
-		for (NamedValue nv: getChildren()) {
-			if (nv.needsUpdate(step)) {
-				reInitialize();
-				return true;
-			}
-		}
+	public boolean updateNeeded(long newStep) {
 		return false;
 	}
 	
@@ -135,33 +113,10 @@ public abstract class Value extends ModelBase {
 			return children;
 		}
 		
-		@Override
-		public NamedValue[] previewChildren() {
-			return children;
-		}
-		
-		@Override
-		public boolean needsUpdate(long step) {
-			if (isInitializing) {
-				// we would have to block to wait for a result,
-				// assume update is needed instead
-				reInitialize(); // stop current execution
-				return true;
-			}
-			boolean valueUpdate = false;
-			if (!isInitialized()) return false;
-			if (!hasChildren()) return false;
-			if (updateNeeded == null) return true;
-			for (int i = 0; i < children.length; i++) {
-				boolean u = children[i].needsUpdate(step);
-				updateNeeded[i] = u;
-				valueUpdate |= u;
-			}
-			if (valueUpdate) {
-				reInitialize();
-			}
-			return valueUpdate;
-		}
+//		@Override
+//		public NamedValue[] previewChildren() {
+//			return children;
+//		}
 		
 		@Override
 		protected void lazyInitialize() throws Exception {
@@ -231,6 +186,9 @@ public abstract class Value extends ModelBase {
 		@Override
 		public String getLongString() {
 			beInitialized();
+			if (longName == null) {
+				longName = ValueToString.getLongName(this, children);
+			}
 			return longName;
 		}
 		
@@ -241,35 +199,42 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
+			NamedValue[] c;
 			if (arrayLength == null) {
-				return DatabaseConnector.cnn()
+				c = DatabaseConnector.cnn()
 						.select().from(NamedValue.FIELD_VIEW)
 						.where().atStep(testId, thisId, step)
 						.asArray().execute();
 			} else {
-				return DatabaseConnector.cnn()
+				c = DatabaseConnector.cnn()
 						.select().from(NamedValue.ARRAY_ITEM_VIEW)
 						.where().atStep(testId, thisId, step)
 						.asArray().execute();
 			}
+			for (NamedValue n: c) {
+				n.setOwner(this);
+			}
+			return c;
 		}
 		
 		@Override
 		protected void lazyInitialize() throws Exception {
 			super.lazyInitialize();
-			longName = ValueToString.getLongName(this, children);
-		}
-		@Override
-		public boolean needsUpdate(long step) {
-			this.step = step;
-			return super.needsUpdate(step);
-		}
-		@Override
-		public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
-			this.step = step;
-			super.updateChildren(step, updateCallback);
 		}
 		
+		@Override
+		public boolean updateNeeded(long newStep) {
+			step = newStep;
+			if (!isInitialized()) {
+				return false;
+			}
+			for (NamedValue nv: getChildren()) {
+				if (nv.updateNeeded(newStep)) {
+					return true;
+				}
+			}
+			return false;
+		}
 	}
 	
 	public static class MethodSnapshot extends ValueWithChildren {
@@ -313,15 +278,19 @@ public abstract class Value extends ModelBase {
 			System.arraycopy(c, 0, c2, 1, c.length);
 			return c2;
 		}
+		
 		@Override
-		public boolean needsUpdate(long step) {
-			this.step = step;
-			return super.needsUpdate(step);
-		}		
-		@Override
-		public void updateChildren(long step, Callback<? super NamedValue> updateCallback) {
-			this.step = step;
-			super.updateChildren(step, updateCallback);
+		public boolean updateNeeded(long newStep) {
+			step = newStep;
+			if (!isInitialized()) {
+				return false;
+			}
+			for (NamedValue nv: getChildren()) {
+				if (nv.updateNeeded(newStep)) {
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 	
@@ -354,15 +323,51 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			return DatabaseConnector.cnn()
+			VarHistoryQuery qry = DatabaseConnector.cnn()
 					.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-					.where().inCall(testId, callStep).byId(varId)
-					.asArray().execute();
+					.where().inCall(testId, callStep);
+			if (varId > -1) {
+				qry.byId(varId);
+			}
+			return qry.asArray().execute();
 		}
-		
 	}
 	
-	
+	public static class ObjectHistory extends ValueWithChildren {
+		
+		private int testId;
+		private long thisId;
+		private int fieldId;
+		
+		public ObjectHistory(int testId, long thisId, int fieldId) {
+			super();
+			this.testId = testId;
+			this.thisId = thisId;
+			this.fieldId = fieldId;
+		}
+
+		@Override
+		public String getLongString() {
+			return "-";
+		}
+		
+		@Override
+		public String getShortString() {
+			return "-";
+		}
+		
+		@Override
+		protected NamedValue[] fetchChildren() throws Exception {
+			ObjHistoryQuery qry = DatabaseConnector.cnn()
+					.select().from(NamedValue.OBJECT_HISTORY_VIEW)
+					.where().ofObject(testId, thisId);
+			if (fieldId > -1) {
+				qry.byId(fieldId);
+			}
+			return qry.asArray().execute();
+		}
+	}
+
 	private static Value newValue(int testId, char primType, long valueId) {
 		if (primType == 'L' && valueId != 0) {
 			return new ObjectSnapshot(testId, valueId);
@@ -371,7 +376,7 @@ public abstract class Value extends ModelBase {
 		}
 	}
 	
-	public static View<MappedQuery<Value>> this_inInvocation(int testId, long callStep, long step) {
+	public static View<MappedQueryString<Value>> this_inInvocation(int testId, long callStep, long step) {
 		return new QueryView<>(MAPPING, 
 					"SELECT t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
 					"FROM `CallTrace` t " +
@@ -381,27 +386,27 @@ public abstract class Value extends ModelBase {
 					  "ON y.`id` = o.`typeId` " +
 					"WHERE t.`testId` = ? AND t.`step` = ?", 
 					testId, callStep)
-			.adapters(new SetStepAdapter(step));
+			.configure(new SetStepAdapter(step));
 	}
 	
-	public static View<MappedQuery<Value>> ofVariable(int varId, int testId, long valueStep, long step) {
+	public static View<MappedQueryString<Value>> ofVariable(int varId, int testId, long valueStep, long step) {
 		return new ValueQuery("VariableTrace", "variableId", varId, testId, valueStep)
-					.adapters(new SetStepAdapter(step));
+					.configure(new SetStepAdapter(step));
 	}
 
-	public static View<MappedQuery<Value>> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
+	public static View<MappedQueryString<Value>> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
 		return new ValueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep)
-					.adapters(new SetStepAdapter(step));
+					.configure(new SetStepAdapter(step));
 	}
 	
-	public static View<MappedQuery<Value>> ofArray(boolean put, int index, int testId, long valueStep, long step) {
+	public static View<MappedQueryString<Value>> ofArray(boolean put, int index, int testId, long valueStep, long step) {
 		return new ValueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep)
-					.adapters(new SetStepAdapter(step));
+					.configure(new SetStepAdapter(step));
 	}
 
 	private static final String[] C_PARAMS = {"testId", "primType", "valueId"};
 	
-	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>((Class) ObjectSnapshot.class) {
+	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>(Value.class, ObjectSnapshot.class, null) {
 		
 		protected String[] getConstructorParameters() {
 			return C_PARAMS;
@@ -437,16 +442,12 @@ public abstract class Value extends ModelBase {
 		}
 	}
 		
-	private static class SetStepAdapter implements ValueAdapter<Value> {
+	private static class SetStepAdapter implements EntityInitializer<Value> {
 		
 		private final long step;
 		
 		public SetStepAdapter(long step) {
 			this.step = step;
-		}
-
-		@Override
-		public void initialize(ResultSet rs) throws SQLException {
 		}
 
 		@Override
@@ -457,13 +458,9 @@ public abstract class Value extends ModelBase {
 		}
 
 		@Override
-		public void complete() throws SQLException {
-		}
+		public void complete() throws SQLException { }
 
 		@Override
-		public void close() throws SQLException {
-		}
-		
+		public void close() throws SQLException { }		
 	}
-
 }

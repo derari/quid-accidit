@@ -3,12 +3,18 @@ package de.hpi.accidit.eclipse.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.cthul.miro.at.Always;
+import org.cthul.miro.at.AnnotatedView;
+import org.cthul.miro.at.Config;
+import org.cthul.miro.at.From;
+import org.cthul.miro.at.MiQuery;
+import org.cthul.miro.at.More;
+import org.cthul.miro.dsl.QueryView;
 import org.cthul.miro.dsl.View;
 import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ResultBuilder.ValueAdapter;
-import org.cthul.miro.util.MappedQuery;
-import org.cthul.miro.util.QueryView;
-import org.cthul.miro.util.ReflectiveMapping;
+import org.cthul.miro.map.ReflectiveMapping;
+import org.cthul.miro.result.EntityInitializer;
+import org.cthul.objects.instance.Arg;
 
 public class ExceptionEvent extends TraceElement {
 
@@ -29,31 +35,26 @@ public class ExceptionEvent extends TraceElement {
 	
 	private static final Mapping<ExceptionEvent> MAPPING = new ReflectiveMapping<>(ExceptionEvent.class);
 	
-	public static View<MappedQuery<ExceptionEvent>> throw_inInvocation(Invocation inv) {
-		return new QueryView<>(MAPPING, 
-					"SELECT `line`, `step` " +
-					"FROM `ThrowTrace` " +
-					"WHERE `testId` = ? AND `callStep` = ? " +
-					"ORDER BY `step`", 
-					inv.testId, inv.step)
-				.adapters(
-					new SetIsThrow(true),
-					new SetParentAdapter(inv));
+	public static View<ThrowQuery> THROW = new AnnotatedView<>(ThrowQuery.class, MAPPING);
+	public static View<CatchQuery> CATCH = new AnnotatedView<>(CatchQuery.class, MAPPING);
+	
+	@From("`ThrowTrace` e")
+	@Always(@More(
+		config=@Config(impl=SetIsThrow.class, args=@Arg(x=true))
+	))
+	public static interface ThrowQuery extends Query<ExceptionEvent, ThrowQuery> {
+		
 	}
 	
-	public static View<MappedQuery<ExceptionEvent>> catch_inInvocation(Invocation inv) {
-		return new QueryView<>(MAPPING, 
-					"SELECT `line`, `step` " +
-					"FROM `CatchTrace` " +
-					"WHERE `testId` = ? AND `callStep` = ? " +
-					"ORDER BY `step`", 
-					inv.testId, inv.step)
-				.adapters(
-					new SetIsThrow(false),
-					new SetParentAdapter(inv));
+	@From("`CatchTrace` e")
+	@Always(@More(
+		config=@Config(impl=SetIsThrow.class, args=@Arg(x=false))
+	))
+	public static interface CatchQuery extends Query<ExceptionEvent, CatchQuery> {
+		
 	}
 	
-	private static class SetIsThrow implements ValueAdapter<ExceptionEvent> {
+	public static class SetIsThrow implements EntityInitializer<ExceptionEvent> {
 
 		private boolean isThrow;
 		
@@ -62,12 +63,8 @@ public class ExceptionEvent extends TraceElement {
 		}
 
 		@Override
-		public void initialize(ResultSet rs) throws SQLException {
-		}
-
-		@Override
 		public void apply(ExceptionEvent entity) throws SQLException {
-			entity.isThrow = this.isThrow;
+			entity.isThrow = isThrow;
 		}
 
 		@Override
@@ -77,7 +74,5 @@ public class ExceptionEvent extends TraceElement {
 		@Override
 		public void close() throws SQLException {
 		}
-		
 	}
-	
 }

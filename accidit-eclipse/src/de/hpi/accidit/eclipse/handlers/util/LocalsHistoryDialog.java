@@ -8,13 +8,10 @@ import org.eclipse.jface.viewers.BaseLabelProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.IBaseLabelProvider;
-import org.eclipse.jface.viewers.IContentProvider;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -28,15 +25,22 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 
-import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.views.provider.LocalsContentProvider;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
+import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class LocalsHistoryDialog extends Dialog {
 
@@ -44,38 +48,39 @@ public class LocalsHistoryDialog extends Dialog {
 
 	
 	private TreeViewer treeViewer;
-	private IBaseLabelProvider treeViewerLabelProvider;
-	private IContentProvider treeViewerContentProvider; // LocalsHistoryContentProvider 
-	private Object treeViewerInput; // root
+	private HistoryNode contentNode;
+	private HistorySource source;
 	
 	private ComboViewer comboViewer;
-	private IContentProvider comboViewerContentProvider;
-	private Object[] comboViewerInput;
+	private NamedEntity[] comboViewerInput;
 
 	private Label titleLabel;
 	
 	 /* The selection in the comboViewer and the element whose history is displayed in the treeViewer. */
-	private Object selectedObject;
+	private NamedEntity selectedObject;
+	
 	
 	public LocalsHistoryDialog(
 			Shell parent,
-			NamedValue selectedObject, 
-			IContentProvider treeViewerContentProvider,
-			Object treeViewerInput, 
-			Object[] localsRootElements) {
+			HistorySource source,
+			int selectedObject, 
+			NamedEntity[] options) {
 		super(parent);
 		
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
-		this.treeViewerContentProvider = treeViewerContentProvider;
-		this.treeViewerLabelProvider = new LocalsLabelProvider();
-		this.treeViewerInput = treeViewerInput; // VariableHistory || null for NamedValue
+		this.source = source;
+		for (int i = 0; i < options.length; i++) {
+			if (options[i].getId() == selectedObject) {
+				this.selectedObject = options[i];
+			}
+		}
 		
-		this.comboViewerContentProvider = ArrayContentProvider.getInstance();
-		this.comboViewerInput = localsRootElements; // NamedValue this && VariableValue ex
-		
-		this.selectedObject = selectedObject; // VariableValue
+		// NamedValue this && VariableValue ex
+		this.comboViewerInput = new NamedEntity[options.length+1];
+		comboViewerInput[0] = ALL;
+		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
 	}
 	
 	@Override
@@ -91,7 +96,7 @@ public class LocalsHistoryDialog extends Dialog {
 		comboViewer = new ComboViewer(container, SWT.READ_ONLY | SWT.V_SCROLL);
 		Combo combo = comboViewer.getCombo();
 		combo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		comboViewer.setContentProvider(comboViewerContentProvider);
+		comboViewer.setContentProvider(ArrayContentProvider.getInstance());
 		comboViewer.setInput(comboViewerInput);
 		comboViewer.setLabelProvider(new ComboViewerLabelProvider());
 		StructuredSelection comboViewerSelection =
@@ -106,19 +111,24 @@ public class LocalsHistoryDialog extends Dialog {
 		tree.setHeaderVisible(true);
 		
 		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
-		column0.setText("Key");
+		column0.setText("Name");
 		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
 		column1.setText("Value");
+		TreeColumn column2 = new TreeColumn(tree, SWT.RIGHT);
+		column2.setText("Step");
 		
 		TreeColumnLayout layout = new TreeColumnLayout();
 		treeContainer.setLayout(layout);
 		layout.setColumnData(column0, new ColumnWeightData(30, 50));
 		layout.setColumnData(column1, new ColumnWeightData(70, 50));
+		layout.setColumnData(column2, new ColumnWeightData(20, 50));
 		
 		treeViewer.setUseHashlookup(true);
-		treeViewer.setContentProvider(treeViewerContentProvider);
-		treeViewer.setLabelProvider(treeViewerLabelProvider);
-		treeViewer.setInput(treeViewerInput);
+		treeViewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
+		treeViewer.setLabelProvider(new HistoryLabelProvider());
+		contentNode = new HistoryNode(treeViewer);
+		treeViewer.setInput(contentNode);
+		source.show(contentNode, selectedObject.getId());
 		
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
@@ -128,6 +138,17 @@ public class LocalsHistoryDialog extends Dialog {
 		});	
 		
 		comboViewer.addSelectionChangedListener(new ComboViewerSelectionListener());
+		treeViewer.getTree().addListener(SWT.PaintItem, new Listener() {
+			public void handleEvent(Event event) {
+				if (event.index != 0) return;
+				TreeItem item = (TreeItem) event.item;
+				NamedValueNode node = (NamedValueNode) item.getData();
+				if (node == null || node.getDepth() != 1) return;
+				Image image = getImage(node);
+				if (image == null) return; 
+				event.gc.drawImage(image, event.x, event.y);
+			}
+		});
 		
 		return parent;
 	}
@@ -172,10 +193,6 @@ public class LocalsHistoryDialog extends Dialog {
 		return super.open();
 	}
 	
-	public void setTreeViewerContentProvider(IContentProvider provider) {
-		treeViewerContentProvider = provider;
-	}
-	
 	public Object[] getResult() {
 		if (dialogResultCache == null)
 			return new Object[0];
@@ -184,8 +201,8 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	private void refreshTitleLabel() {
 		String title = (selectedObject != null) ?
-				"History of \"" + ((NamedValue) selectedObject).getName() + "\"" :
-				"Select a variable:";
+				"History of \"" + selectedObject.getName() + "\"" :
+				"Select a value:";
 		titleLabel.setText(title);
 	}
 	
@@ -195,15 +212,8 @@ public class LocalsHistoryDialog extends Dialog {
 			IStructuredSelection selection = (IStructuredSelection) event.getSelection();
 			if (selection.isEmpty()) return;
 			
-			NamedValue selectedObject = (NamedValue) selection.getFirstElement();
-			NamedValue treeViewerInput = null;
-			if (selectedObject instanceof NamedValue.VariableValue) {
-				treeViewerInput = new NamedValue.VariableHistory(
-						TraceNavigatorUI.getGlobal().getTestId(), 
-						TraceNavigatorUI.getGlobal().getCallStep(), 
-						selectedObject.getId());
-			}
-			treeViewer.setInput(treeViewerInput);
+			NamedEntity selectedObject = (NamedEntity) selection.getFirstElement();
+			source.show(contentNode, selectedObject.getId());
 			LocalsHistoryDialog.this.selectedObject = selectedObject;
 			refreshTitleLabel();
 		}
@@ -218,39 +228,119 @@ public class LocalsHistoryDialog extends Dialog {
 
 		@Override
 		public String getText(Object element) {
-			if (!(element instanceof NamedValue.VariableValue)) return null;
-			NamedValue.VariableValue value = (NamedValue.VariableValue) element;
+			if (!(element instanceof NamedEntity)) return null;
+			NamedEntity value = (NamedEntity) element;
 			return value.getName();
 		}
 	}
 	
-	public static class TreeViewerContentProvider extends LocalsContentProvider implements ITreeContentProvider {
+	private static final NamedValue ALL = new NamedValue("(all)");
+	
+	public static abstract class HistorySource {
+		public abstract void show(HistoryNode content, long id);
+	}
+	
+	public static class MethodCallSource extends HistorySource {
+		private final long testId;
+		private final long callStep;
+		
+		public MethodCallSource(long testId, long callStep) {
+			this.testId = testId;
+			this.callStep = callStep;
+		}
 
-		public TreeViewerContentProvider(TreeViewer viewer) {
+		@Override
+		public void show(HistoryNode content, long id) {
+			content.showVariables(testId, callStep, id);
+		}
+	}
+	
+	public static class ObjectSource extends HistorySource {
+		private final long testId;
+		private final long thisId;
+		
+		public ObjectSource(long testId, long thisId) {
+			this.testId = testId;
+			this.thisId = thisId;
+		}
+
+		@Override
+		public void show(HistoryNode content, long id) {
+			content.showFields(testId, thisId, id);
+		}
+	}
+	
+	private static class HistoryNode extends NamedValueNode {
+
+		public HistoryNode(TreeViewer viewer) {
 			super(viewer);
 		}
-
-		@Override
-		public void setStep(int testId, long call, long step) { }
-
-		public void setRoot(NamedValue root) {
-			this.root = root;
+		
+		public void showVariables(long testId, long callStep, long variableId) {
+			setValue(new NamedValue.VariableHistory((int) testId, callStep, (int) variableId));
 		}
-
-		@Override
-		public Object[] getElements(Object inputElement) {
-			return new Object[1];
+		
+		public void showFields(long testId, long callStep, long thisId) {
+			setValue(new NamedValue.ObjectHistory((int) testId, callStep, (int) thisId));
 		}
-
+	}
+	
+	private class HistoryLabelProvider extends LocalsLabelProvider {
+		
+//		@Override
+//		public Image getImage(Object element) {
+//			NamedValueNode node = (NamedValueNode) element;
+//			if (node.getDepth() != 1) return null;
+//			
+//			NamedValue nv = (NamedValue) node.getValue();
+//			if (nv instanceof VariableValue) {
+//				return imgPut;
+//			} else if (nv instanceof FieldValue) {
+//				FieldValue fv = (FieldValue) nv;
+//				return fv.isPut() ? imgPut : imgGet;
+//			}
+//			return null;
+//		}
+		
 		@Override
-		public Object[] getChildren(Object parentElement) {
-			throw new UnsupportedOperationException();
+		public String getColumnText(Object element, int columnIndex) {
+			if (columnIndex == 0) {
+				NamedValueNode node = (NamedValueNode) element;
+				if (node.getDepth() == 1 && node.getValue() instanceof FieldValue) {
+					return "    " + super.getColumnText(element, columnIndex);
+				}
+			}
+			if (columnIndex == 2) {
+				NamedValueNode node = (NamedValueNode) element;
+				if (node.getDepth() == 1) {
+					NamedValue nv = (NamedValue) node.getValue();
+					return String.valueOf(nv.getStep());
+				}
+				return null;
+			}
+			return super.getColumnText(element, columnIndex);
 		}
-
-		@Override
-		public boolean hasChildren(Object element) {
-			throw new UnsupportedOperationException();
+	}
+	
+	public Image getImage(NamedValueNode node) {
+		if (node.getDepth() != 1) return null;
+		
+		NamedValue nv = (NamedValue) node.getValue();
+		if (nv instanceof VariableValue) {
+			//return imgPut;
+		} else if (nv instanceof FieldValue) {
+			FieldValue fv = (FieldValue) nv;
+			return fv.isPut() ? imgPut : imgGet;
 		}
-
+		return null;
+	}
+	
+	private static Image imgPut = null;
+	private static Image imgGet = null;
+	
+	static {
+		Display d = Display.getDefault();
+		imgPut = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/put.png"));
+		imgGet = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/get.png"));
 	}
 }

@@ -64,6 +64,8 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 	}
 	
 	public static class TestCaseSelectionContentProvider implements ITreeContentProvider {
+		
+		List<TestCase> testCases = null;
 
 		@Override
 		public void dispose() { }
@@ -73,18 +75,21 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 
 		@Override
 		public Object[] getElements(Object inputElement) {
-			String query = getTestCaseQuery();
-			ResultSet resultSet;
-			List<TestCase> testCases;
-
-			try {
-				resultSet = executeQuery(query);
-				testCases = buildFromResultSet(resultSet);
-			} catch (SQLException e) {
-				e.printStackTrace();
+			if (!"input".equals(inputElement)) {
 				return null;
 			}
-			
+			if (testCases == null) {
+				String query = getTestCaseQuery();
+				ResultSet resultSet;
+	
+				try {
+					resultSet = executeQuery(query);
+					testCases = buildFromResultSet(resultSet);
+				} catch (SQLException e) {
+					e.printStackTrace();
+					return null;
+				}
+			}
 			return testCases.toArray();
 		}
 		

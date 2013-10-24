@@ -212,7 +212,7 @@
                      ifEmpty="false"
                      operator="and">
                   <adapt
-                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                        type="de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider$ContentNode">
                   </adapt>
                </iterate>
             </with>

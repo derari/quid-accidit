@@ -26,8 +26,9 @@ import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.views.provider.LocalsContentProvider;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class LocalsExplorerView extends ViewPart {
 
@@ -38,7 +39,8 @@ public class LocalsExplorerView extends ViewPart {
 	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.revealVariableSetter";
 
 	private TreeViewer viewer;
-	private LocalsContentProvider contentProvider;
+	private MethodNode rootNode;
+	//private LocalsContentProvider contentProvider;
 
 	public LocalsExplorerView() {}
 
@@ -58,9 +60,12 @@ public class LocalsExplorerView extends ViewPart {
 		layout.setColumnData(column0, new ColumnWeightData(40, 50));
 		layout.setColumnData(column1, new ColumnWeightData(60, 50));
 		
-		contentProvider = new LocalsContentProvider(viewer);		
-		viewer.setContentProvider(contentProvider);
+		//contentProvider = new LocalsContentProvider(viewer);		
+		//viewer.setContentProvider(contentProvider);
+		viewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
 		viewer.setLabelProvider(new LocalsLabelProvider());
+		rootNode = new MethodNode(viewer);
+		viewer.setInput(rootNode);
 		
 		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
 		ui.setLocalsExprorer(this);
@@ -102,7 +107,7 @@ public class LocalsExplorerView extends ViewPart {
 	}
 	
 	public void setStep(int testId, long call, long step) {
-		contentProvider.setStep(testId, call, step);
+		rootNode.setStep(testId, call, step);
 	}
 	
 	/**
@@ -119,6 +124,38 @@ public class LocalsExplorerView extends ViewPart {
 			}
 		}
 		return rootElements.toArray();
+	}
+	
+	public static class MethodNode extends NamedValueNode {
+		
+		private int testId = -1;
+		private long callStep = -1;
+		private long step;
+		protected NamedValue root;
+
+		public MethodNode(TreeViewer viewer) {
+			super(viewer);
+		}
+
+		public void setStep(int testId, long call, long step) {
+//			if (testId != this.testId || call != this.callStep) {
+				root = new NamedValue.MethodFrameValue(testId, call, step);
+				setValue(root);
+				root.onInitialized(asyncUpdate());
+//			} else if (step != this.step) {
+//				updateStep(step);
+////				root = new NamedValue.MethodFrameValue(testId, call, step);
+////				root.onInitialized(asyncUpdate());
+////				//root.beInitialized();
+////				setValue(root);
+//////				root.updateValue(step, cbUpdateNamedValue);
+//////				if (!root.isInitialized()) {
+//////				}
+//			}
+			this.testId = testId;
+			this.callStep = call;
+			this.step = step;
+		}
 	}
 	
 }
