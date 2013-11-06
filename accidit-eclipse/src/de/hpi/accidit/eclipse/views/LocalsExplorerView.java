@@ -7,6 +7,8 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
 import org.eclipse.core.commands.common.NotDefinedException;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.DoubleClickEvent;
@@ -15,8 +17,10 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.ViewPart;
 
@@ -31,6 +35,7 @@ public class LocalsExplorerView extends ViewPart {
 	 * The ID of the view as specified by the extension.
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
+	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.revealVariableSetter";
 
 	private TreeViewer viewer;
 	private LocalsContentProvider contentProvider;
@@ -61,17 +66,24 @@ public class LocalsExplorerView extends ViewPart {
 		ui.setLocalsExprorer(this);
 		
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
-			
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
 				IHandlerService handlerService = (IHandlerService) getSite().getService(IHandlerService.class);
 				try {
-					handlerService.executeCommand("de.hpi.accidit.eclipse.commands.showVariableHistory", null);
+					handlerService.executeCommand(DEFAULT_COMMAND_ID, null);
 				} catch (ExecutionException | NotDefinedException | NotEnabledException | NotHandledException e) {
 					e.printStackTrace();
 				}
 			}
 		});
+		
+		/* Context menu registration. */
+		MenuManager menuManager = new MenuManager();
+		menuManager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+		final Menu contextMenu = menuManager.createContextMenu(viewer.getTree());
+		viewer.getControl().setMenu(contextMenu);		
+		getSite().registerContextMenu(menuManager, viewer);
+		getSite().setSelectionProvider(viewer);
 	}
 	
 	@Override

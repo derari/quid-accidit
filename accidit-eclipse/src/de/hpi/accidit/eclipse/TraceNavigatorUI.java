@@ -8,6 +8,8 @@ import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
+// TODO rename
+
 public class TraceNavigatorUI {
 
 	private static TraceNavigatorUI GLOBAL = null;
@@ -109,15 +111,7 @@ public class TraceNavigatorUI {
 
 			if (localsExplorer != null) {
 				localsExplorer.setStep(le.parent.testId, le.parent.step, le.step);
-			}
-			
-			/* 
-			 * TODO if (traceExplorer != null) {
-			 * 	traceExplorer.setStep(le.parent.testId, le.parent.step, le.step);
-			 * 
-			 * ALSO: check if step is not equal to the current step (necessary to avoid infinite loop)
-			 */
-			
+			}			
 		}
 	}
 	

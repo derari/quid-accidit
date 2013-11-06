@@ -23,12 +23,6 @@
             id="de.hpi.accidit.eclipse">
       </category>
       <view
-            name="Accidit View"
-            category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.MainView"
-            id="de.hpi.accidit.eclipse.views.MainView">
-      </view>
-      <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.TraceExplorerView"
             icon="icons/a_logo.png"
@@ -51,6 +45,14 @@
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.NavigatorView"
             name="Navigator"
+            restorable="true">
+      </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.BreakpointsView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.BreakpointsView"
+            name="Breakpoints"
             restorable="true">
       </view>
    </extension>
@@ -133,6 +135,34 @@
             id="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
             name="Switch Layout">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+            name="Custom Arrow Navigation">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+            name="Auto Collapse">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.addBreakpoint"
+            name="Add Breakpoint">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+            name="Reveal Setter">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -175,6 +205,18 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
@@ -187,6 +229,34 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.SwitchNavigatorLayoutHandler"
             commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleCustomArrowNavigationHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
+            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>
       </handler>
    </extension>
    <extension
@@ -248,6 +318,7 @@
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.toolbars.showVariableHistory"
+               label="Show history"
                style="push">
          </command>
       </menuContribution>
@@ -294,6 +365,22 @@
                id="de.hpi.accidit.eclipse.toolbars.stepBackInto"
                style="push">
          </command>
+         <separator
+               name="accidit-eclipse.separator2"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+               icon="icons/custom_arrow_navigation.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleCustomArrowNavigation"
+               style="toggle">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+               icon="icons/auto_collapse.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleAutoCollapse"
+               style="toggle">
+         </command>
       </menuContribution>
       <menuContribution
             allPopups="false"
@@ -305,7 +392,7 @@
          <command
                commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
                icon="icons/a_logo.png"
-               id="de.hpi.accidit.eclipse.project.selectTestCase"
+               id="de.hpi.accidit.eclipse.popup.selectTestCase"
                label="Select Test Case"
                style="push">
             <visibleWhen>
@@ -313,10 +400,10 @@
                      variable="selection">
                   <iterate
                         ifEmpty="false"
-                        operator="or">
-                     <instanceof
-                           value="org.eclipse.core.resources.IProject">
-                     </instanceof>
+                        operator="and">
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                     </adapt>
                   </iterate>
                </with>
             </visibleWhen>
@@ -329,6 +416,35 @@
                commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
                icon="icons/a_logo.png"
                id="de.hpi.accidit.eclipse.toolbars.switchNavigatorLayout"
+               label="Switch Layout"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.BreakpointsView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.addBreakpoint"
+               icon="icons/add_breakpoint.png"
+               id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
+               label="Add Breakpoint"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:de.hpi.accidit.eclipse.views.LocalsExplorerView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
+               icon="icons/history_book.png"
+               id="de.hpi.accidit.eclipse.popups.showVariableHistory"
+               label="Show history"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
+               label="Reveal setter"
                style="push">
          </command>
       </menuContribution>
