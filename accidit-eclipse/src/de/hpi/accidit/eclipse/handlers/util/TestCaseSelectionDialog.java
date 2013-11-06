@@ -75,9 +75,9 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 
 		@Override
 		public Object[] getElements(Object inputElement) {
-			if (!"input".equals(inputElement)) {
-				return null;
-			}
+//			if (!"input".equals(inputElement)) {
+//				return null;
+//			}
 			if (testCases == null) {
 				String query = getTestCaseQuery();
 				ResultSet resultSet;

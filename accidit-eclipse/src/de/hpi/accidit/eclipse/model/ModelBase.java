@@ -1,5 +1,6 @@
 package de.hpi.accidit.eclipse.model;
 
+import org.cthul.miro.MiConnection;
 import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
 import org.cthul.miro.util.LazyAction;
@@ -9,6 +10,18 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 public class ModelBase {
 	
 	private final LazyAction<ModelBase> fInit = new LazyAction<ModelBase>(DatabaseConnector.cnn(), this, A_INIT);
+	private MiConnection cnn = null;
+	
+	public ModelBase() {
+	}
+	
+	public ModelBase(MiConnection cnn) {
+		this.cnn = cnn;
+	}
+
+	protected MiConnection cnn() {
+		return cnn;
+	}
 	
 	public boolean isInitialized() {
 		return fInit.isDone();

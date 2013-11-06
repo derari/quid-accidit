@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.model;
 
-import java.sql.SQLException;
-
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 
 public class Trace {

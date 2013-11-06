@@ -3,8 +3,6 @@ package de.hpi.accidit.eclipse.model;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
-import de.hpi.accidit.eclipse.views.TraceExplorerView.TraceLabelProvider;
-
 public class Pending extends TraceElement {
 	
 	public static final Image imgWait;

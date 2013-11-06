@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.views;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.cthul.miro.MiConnection;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
@@ -24,6 +25,7 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.ViewPart;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
@@ -139,7 +141,8 @@ public class LocalsExplorerView extends ViewPart {
 
 		public void setStep(int testId, long call, long step) {
 //			if (testId != this.testId || call != this.callStep) {
-				root = new NamedValue.MethodFrameValue(testId, call, step);
+				MiConnection cnn = DatabaseConnector.cnn();
+				root = new NamedValue.MethodFrameValue(cnn, testId, call, step);
 				setValue(root);
 				root.onInitialized(asyncUpdate());
 //			} else if (step != this.step) {

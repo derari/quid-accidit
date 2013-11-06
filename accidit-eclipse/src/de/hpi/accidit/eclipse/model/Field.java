@@ -1,12 +1,14 @@
 package de.hpi.accidit.eclipse.model;
 
-import org.cthul.miro.at.*;
 import org.cthul.miro.dsl.View;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
+
+import de.hpi.accidit.eclipse.model.db.FieldDao;
+import de.hpi.accidit.eclipse.model.db.FieldDao.Query;
 
 public class Field implements NamedEntity {
 
+	public static final View<Query> VIEW = FieldDao.VIEW;
+	
 	private int id;
 	private String name;
 	
@@ -26,31 +28,4 @@ public class Field implements NamedEntity {
 	public String getName() {
 		return name;
 	}
-	
-	private static final Mapping<Field> MAPPING = new ReflectiveMapping<>(Field.class);
-	
-	private static final AnnotatedQueryTemplate<Field> TEMPLATE = new AnnotatedQueryTemplate<Field>() {{
-		select("f.`id`, f.`name`");
-		from("`Field` f");
-		join("`Type` t ON f.`declaringTypeId` = t.`id`");
-		using("t")
-			.join("`ObjectTrace` o ON t.`id` = o.`typeId`");
-	}};
-	
-	public static final View<Query> VIEW = new AnnotatedView<>(Query.class, MAPPING, TEMPLATE);
-	
-	public static interface Query extends AnnotatedMappedStatement<Field> {
-		
-		@Require("t")
-		@Where("t.`id` = ?")
-		Query ofType(long mId);
-		
-		@Require("o")
-		@Where("o.`testId` = ? AND o.`id` = ?")
-		Query ofObject(long testId, long thisId);
-		
-		@OrderBy("f.`id`")
-		Query orderById();
-	}
-	
 }

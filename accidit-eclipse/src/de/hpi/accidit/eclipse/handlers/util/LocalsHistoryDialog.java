@@ -1,5 +1,6 @@
 package de.hpi.accidit.eclipse.handlers.util;
 
+import org.cthul.miro.MiConnection;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.TreeColumnLayout;
@@ -34,6 +35,7 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
@@ -277,11 +279,13 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 		
 		public void showVariables(long testId, long callStep, long variableId) {
-			setValue(new NamedValue.VariableHistory((int) testId, callStep, (int) variableId));
+			MiConnection cnn = DatabaseConnector.cnn();
+			setValue(new NamedValue.VariableHistory(cnn, (int) testId, callStep, (int) variableId));
 		}
 		
 		public void showFields(long testId, long callStep, long thisId) {
-			setValue(new NamedValue.ObjectHistory((int) testId, callStep, (int) thisId));
+			MiConnection cnn = DatabaseConnector.cnn();
+			setValue(new NamedValue.ObjectHistory(cnn, (int) testId, callStep, (int) thisId));
 		}
 	}
 	
