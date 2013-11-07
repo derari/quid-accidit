@@ -5,6 +5,7 @@ import org.cthul.miro.dsl.View;
 import org.cthul.miro.map.MappedQueryString;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.ValueDao;
@@ -387,6 +388,41 @@ public abstract class Value extends ModelBase {
 					.where().ofObject(testId, thisId);
 			if (fieldId > -1) {
 				qry.byId(fieldId);
+			}
+			return qry.asArray().execute();
+		}
+	}
+	
+	public static class ArrayHistory extends ValueWithChildren {
+		
+		private int testId;
+		private long thisId;
+		private int index;
+		
+		public ArrayHistory(MiConnection cnn, int testId, long thisId, int index) {
+			super(cnn);
+			this.testId = testId;
+			this.thisId = thisId;
+			this.index = index;
+		}
+
+		@Override
+		public String getLongString() {
+			return "-";
+		}
+		
+		@Override
+		public String getShortString() {
+			return "-";
+		}
+		
+		@Override
+		protected NamedValue[] fetchChildren() throws Exception {
+			ArrayHistoryQuery qry = cnn()
+					.select().from(NamedValue.ARRAY_HISTORY_VIEW)
+					.where().ofObject(testId, thisId);
+			if (index > -1) {
+				qry.byId(index);
 			}
 			return qry.asArray().execute();
 		}

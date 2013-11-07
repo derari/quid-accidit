@@ -5,6 +5,7 @@ import org.cthul.miro.dsl.View;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.FieldQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ItemQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
@@ -18,6 +19,7 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	public static final View<ItemQuery> ARRAY_ITEM_VIEW = NamedValueDao.ARRAY_ITEM_VIEW;
 	public static final View<VarHistoryQuery> VARIABLE_HISTORY_VIEW = NamedValueDao.VARIABLE_HISTORY_VIEW;
 	public static final View<ObjHistoryQuery> OBJECT_HISTORY_VIEW = NamedValueDao.OBJECT_HISTORY_VIEW;
+	public static final View<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = NamedValueDao.ARRAY_HISTORY_VIEW;
 
 	protected int testId;
 	protected long step;
@@ -300,6 +302,10 @@ public class NamedValue extends ModelBase implements NamedEntity {
 		
 		private boolean valueIsPut;
 		
+		public boolean isPut() {
+			return valueIsPut;
+		}
+		
 		@Override
 		public String getName() {
 			return String.valueOf(id);
@@ -336,8 +342,14 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	}
 	
 	public static class ObjectHistory extends NamedValue {
-		public ObjectHistory(MiConnection cnn, int testId, long callStep, int varId) {
-			super("-", new Value.ObjectHistory(cnn, testId, callStep, varId));
+		public ObjectHistory(MiConnection cnn, int testId, long callStep, int thisId) {
+			super("-", new Value.ObjectHistory(cnn, testId, callStep, thisId));
+		}
+	}
+	
+	public static class ArrayHistory extends NamedValue {
+		public ArrayHistory(MiConnection cnn, int testId, long callStep, int thisId) {
+			super("-", new Value.ArrayHistory(cnn, testId, callStep, thisId));
 		}
 	}
 }

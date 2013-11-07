@@ -22,7 +22,10 @@ public class TraceElementDaoBase extends ModelDaoBase {
 	where = {@Where(key="testId_EQ", value="e.`testId` = ?"),
 			 @Where(key="callStep_EQ", value="e.`callStep` = ?")},
 	orderBy = @OrderBy(key="asc_step", value="e.`step`"))
-	public static interface Query<E extends TraceElement, This extends Query<E, This>> extends AnnotatedMappedStatement<E>, ModelDaoBase.Query {
+	public static interface QueryAttributes extends ModelDaoBase.Query {
+	}
+	
+	public static interface Query<E extends TraceElement, This extends Query<E, This>> extends AnnotatedMappedStatement<E>, ModelDaoBase.Query, QueryAttributes {
 		
 		This where();
 		

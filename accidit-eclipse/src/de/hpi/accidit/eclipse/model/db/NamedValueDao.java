@@ -24,6 +24,7 @@ public class NamedValueDao extends ModelDaoBase {
 	public static final View<ItemQuery> ARRAY_ITEM_VIEW = new QueryFactoryView<>(ItemQuery.class);
 	public static final View<VarHistoryQuery> VARIABLE_HISTORY_VIEW = new QueryFactoryView<>(VarHistoryQuery.class);
 	public static final View<ObjHistoryQuery> OBJECT_HISTORY_VIEW = new QueryFactoryView<>(ObjHistoryQuery.class);
+	public static final View<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = new QueryFactoryView<>(ArrayHistoryQuery.class);
 	
 	private static class NameValueQueryTemplate<E> extends GraphQueryTemplate<E> {{}}
 	
@@ -328,6 +329,76 @@ public class NamedValueDao extends ModelDaoBase {
 		}
 		
 		public ObjHistoryQuery byId(int id) {
+			where("id_EQ", id);
+			return this;
+		}
+		
+		@Override
+		protected String queryString() {
+			System.out.println(super.queryString());
+			return super.queryString();
+		}
+	};
+	
+	private static final GraphQueryTemplate<ItemValue> ARRAY_HISTORY_TEMPLATE = new NameValueQueryTemplate<ItemValue>() {{
+		select("val.`index` AS `id`");
+		select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`");
+		using("nextPut")
+			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
+		using("nextGet")
+			.select("COALESCE(MIN(nextGet.`step`), -1) AS `nextGetStep`");
+		
+		/*JOIN 
+		(SELECT `step`, `fieldId`, 1 AS `valueIsPut` FROM `PutTrace` WHERE `testId` = 0 AND `thisId` = 34 
+		 UNION
+		 SELECT `step`, `fieldId`, 0 AS `valueIsPut` FROM `GetTrace` WHERE `testId` = 0 AND `thisId` = 34 ) val
+			ON val.`fieldId` = m.`id`
+		LEFT OUTER JOIN `PutTrace` nextPut 
+			ON nextPut.`fieldId` = m.`id` AND nextPut.`step` > val.`step` AND nextPut.`testId` = 0 AND nextPut.`thisId` = 34 
+
+		LEFT OUTER JOIN `GetTrace` nextGet ON nextGet.`fieldId` = m.`id` AND nextGet.`step` >= val.`step` AND nextGet.`testId` = 0 AND nextGet.`thisId` = 34 
+		 
+		ORDER BY val.`step`*/
+		
+		from("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
+			  "UNION " +
+			  "SELECT `testId`, `step`, `index`, 0 AS `valueIsPut` FROM `ArrayGetTrace` WHERE `testId` = ? AND `thisId` = ?) " + 
+			 "val");
+		join("LEFT OUTER JOIN `ArrayPutTrace` nextPut " +
+			 "ON nextPut.`index` = val.`index` AND nextPut.`step` > val.`step` " +
+			 "AND nextPut.`testId` = ? AND nextPut.`thisId` = ?");
+		join("LEFT OUTER JOIN `ArrayGetTrace` nextGet " +
+			 "ON nextGet.`index` = val.`index` AND nextGet.`step` >= val.`step` " +
+			 "AND nextGet.`testId` = ? AND nextGet.`thisId` = ?");
+		
+		where("id_EQ", "val.`index` = ?");
+		
+		always()
+			.groupBy("val.`index`")
+			.groupBy("val.`step`")
+			.orderBy("val.`step`");
+		always().configure("cfgCnn", SET_CONNECTION);
+	}};
+	
+	public static class ArrayHistoryQuery extends GraphQuery<ItemValue> {
+
+		public ArrayHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
+			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_HISTORY_TEMPLATE, view);
+			select(fields);
+		}
+		
+		public ArrayHistoryQuery where() {
+			return this;
+		}
+		
+		public ArrayHistoryQuery ofObject(int testId, long thisId) {
+			put("val", testId, thisId, testId, thisId);
+			put("nextPut", testId, thisId);
+			put("nextGet", testId, thisId);
+			return this;
+		}
+		
+		public ArrayHistoryQuery byId(int id) {
 			where("id_EQ", id);
 			return this;
 		}

@@ -10,7 +10,7 @@ import de.hpi.accidit.eclipse.model.FieldEvent;
 
 public class FieldEventDao extends TraceElementDaoBase {
 
-private static final Mapping<FieldEvent> MAPPING = new ReflectiveMapping<>(FieldEvent.class);
+	public static final Mapping<FieldEvent> MAPPING = new ReflectiveMapping<>(FieldEvent.class);
 	
 	public static final View<PutQuery> PUT = new AnnotatedView<>(PutQuery.class, MAPPING);
 	

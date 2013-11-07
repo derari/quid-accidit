@@ -14,6 +14,7 @@ import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.HistorySource;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.MethodCallSource;
 import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.ObjectSource;
+import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
@@ -34,6 +35,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		int selected = -1;
 		boolean variable = false;
 		long thisId = -1;
+		int arrayLength = -1;
 		if (!selectedLocals.isEmpty()) {
 			NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
 			NamedValue nv = (NamedValue) nvn.getValue();
@@ -45,6 +47,13 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 				Value v = nv.getOwner();
 				if (v instanceof ObjectSnapshot) {
 					thisId = ((ObjectSnapshot) v).getThisId();
+				}
+			} else if (nv instanceof NamedValue.ItemValue) {
+				selected = nv.getId();
+				Value v = nv.getOwner();
+				if (v instanceof ObjectSnapshot) {
+					thisId = ((ObjectSnapshot) v).getThisId();
+					arrayLength = ((ObjectSnapshot) v).getArrayLength();
 				}
 			}
 		}
@@ -59,10 +68,15 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 					.asArray()._execute();
 		} else if (thisId != -1) {
 			long testId = TraceNavigatorUI.getGlobal().getTestId();
-			src = new ObjectSource(testId, thisId);
-			options = DatabaseConnector.cnn().select()
-					.from(Field.VIEW).ofObject(testId, thisId).orderById()
-					.asArray()._execute();
+			if (arrayLength > -1) {
+				src = new ObjectSource(testId, thisId, true);
+				options = ArrayIndex.newIndexArray(arrayLength);
+			} else {
+				src = new ObjectSource(testId, thisId, false);
+				options = DatabaseConnector.cnn().select()
+						.from(Field.VIEW).ofObject(testId, thisId).orderById()
+						.asArray()._execute();
+			}
 		} else {
 			throw new UnsupportedOperationException(String.valueOf(selected));
 		}

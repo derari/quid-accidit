@@ -39,6 +39,7 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
+import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
@@ -148,7 +149,7 @@ public class LocalsHistoryDialog extends Dialog {
 				if (node == null || node.getDepth() != 1) return;
 				Image image = getImage(node);
 				if (image == null) return; 
-				event.gc.drawImage(image, event.x, event.y);
+				event.gc.drawImage(image, event.x+1, event.y);
 			}
 		});
 		
@@ -260,15 +261,17 @@ public class LocalsHistoryDialog extends Dialog {
 	public static class ObjectSource extends HistorySource {
 		private final long testId;
 		private final long thisId;
+		private final boolean isArray;
 		
-		public ObjectSource(long testId, long thisId) {
+		public ObjectSource(long testId, long thisId, boolean isArray) {
 			this.testId = testId;
 			this.thisId = thisId;
+			this.isArray = isArray;
 		}
 
 		@Override
 		public void show(HistoryNode content, long id) {
-			content.showFields(testId, thisId, id);
+			content.showFields(testId, thisId, id, isArray);
 		}
 	}
 	
@@ -283,9 +286,13 @@ public class LocalsHistoryDialog extends Dialog {
 			setValue(new NamedValue.VariableHistory(cnn, (int) testId, callStep, (int) variableId));
 		}
 		
-		public void showFields(long testId, long callStep, long thisId) {
+		public void showFields(long testId, long callStep, long thisId, boolean isArray) {
 			MiConnection cnn = DatabaseConnector.cnn();
-			setValue(new NamedValue.ObjectHistory(cnn, (int) testId, callStep, (int) thisId));
+			if (isArray) {
+				setValue(new NamedValue.ArrayHistory(cnn, (int) testId, callStep, (int) thisId));
+			} else {
+				setValue(new NamedValue.ObjectHistory(cnn, (int) testId, callStep, (int) thisId));
+			}
 		}
 	}
 	
@@ -310,7 +317,7 @@ public class LocalsHistoryDialog extends Dialog {
 		public String getColumnText(Object element, int columnIndex) {
 			if (columnIndex == 0) {
 				NamedValueNode node = (NamedValueNode) element;
-				if (node.getDepth() == 1 && node.getValue() instanceof FieldValue) {
+				if (node.getDepth() == 1 && ! (node.getValue() instanceof VariableValue)) {
 					return "    " + super.getColumnText(element, columnIndex);
 				}
 			}
@@ -334,6 +341,9 @@ public class LocalsHistoryDialog extends Dialog {
 			//return imgPut;
 		} else if (nv instanceof FieldValue) {
 			FieldValue fv = (FieldValue) nv;
+			return fv.isPut() ? imgPut : imgGet;
+		} else if (nv instanceof ItemValue) {
+			ItemValue fv = (ItemValue) nv;
 			return fv.isPut() ? imgPut : imgGet;
 		}
 		return null;

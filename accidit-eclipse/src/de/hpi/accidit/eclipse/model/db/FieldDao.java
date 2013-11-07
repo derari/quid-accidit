@@ -14,7 +14,7 @@ import de.hpi.accidit.eclipse.model.Field;
 
 public class FieldDao {
 	
-	private static final Mapping<Field> MAPPING = new ReflectiveMapping<>(Field.class);
+	public static final Mapping<Field> MAPPING = new ReflectiveMapping<>(Field.class);
 	
 	private static final AnnotatedQueryTemplate<Field> TEMPLATE = new AnnotatedQueryTemplate<Field>() {{
 		select("f.`id`, f.`name`");
