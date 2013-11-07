@@ -14,6 +14,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
 
 public class BreakpointsView extends ViewPart {
 
@@ -26,12 +27,20 @@ public class BreakpointsView extends ViewPart {
 
 	@Override
 	public void createPartControl(Composite parent) {
-		GridLayout layout = new GridLayout(5, false);
+		GridLayout layout = new GridLayout(4, false);
 		parent.setLayout(layout);
 		this.parent = parent;
 
 		addHeadline();
-		addBreakpointLine();
+		addBreakpointLine("");
+
+		TraceNavigatorUI.getGlobal().setBreakpointsView(this);
+	}
+	
+	@Override
+	public void dispose() {
+		TraceNavigatorUI.getGlobal().unsetBreakpointsView(this);
+		super.dispose();
 	}
 
 	@Override
@@ -48,10 +57,6 @@ public class BreakpointsView extends ViewPart {
 		final Label locationLabel = new Label(parent, SWT.NONE);
 		locationLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		locationLabel.setText("Location");
-		
-		final Label detailsLabel = new Label(parent, SWT.NONE);
-		detailsLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		detailsLabel.setText("Location details");
 
 		@SuppressWarnings("unused")
 		final Label placeHolder2 = new Label(parent, SWT.NONE);
@@ -75,7 +80,7 @@ public class BreakpointsView extends ViewPart {
 //		});
 	}
 	
-	public void addBreakpointLine() {
+	public void addBreakpointLine(String locationInfo) {
 		final Button detailsButton = new Button(parent, SWT.BORDER);
 		detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		detailsButton.setText("v");
@@ -87,9 +92,7 @@ public class BreakpointsView extends ViewPart {
 		
 		final Text locationText = new Text(parent, SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL);
 		locationText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		
-		final Text detailsText = new Text(parent, SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL);
-		detailsText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		locationText.setText(locationInfo);
 		
 		final Label removeButton = new Label(parent, SWT.NONE);
 		removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
@@ -102,7 +105,6 @@ public class BreakpointsView extends ViewPart {
 				detailsButton.dispose();
 				typeCombo.dispose();
 				locationText.dispose();
-				detailsText.dispose();
 				removeButton.dispose();
 				parent.layout();
 			}

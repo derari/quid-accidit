@@ -89,7 +89,7 @@
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showVariableHistory"
-            name="Show Variable History">
+            name="Show history">
       </command>
       <category
             id="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
@@ -163,6 +163,11 @@
             id="de.hpi.accidit.eclipse.commands.revealVariableSetter"
             name="Reveal Setter">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint"
+            name="Toggle Accidit Line Breakpoint">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -216,7 +221,7 @@
                   </adapt>
                </iterate>
             </with>
-         </activeWhen>
+         </activeWhen>  
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
@@ -244,7 +249,7 @@
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
-            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">
+            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">       
          <activeWhen>
             <with
                   variable="selection">
@@ -252,11 +257,15 @@
                      ifEmpty="false"
                      operator="and">
                   <adapt
-                        type="de.hpi.accidit.eclipse.model.NamedValue">
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
                   </adapt>
                </iterate>
             </with>
-         </activeWhen>
+         </activeWhen>      
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleAcciditLineBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
    </extension>
    <extension
@@ -394,7 +403,7 @@
                icon="icons/a_logo.png"
                id="de.hpi.accidit.eclipse.popup.selectTestCase"
                label="Select Test Case"
-               style="push">
+               style="push">    
             <visibleWhen>
                <with
                      variable="selection">
@@ -448,6 +457,17 @@
                style="push">
          </command>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:#AbstractTextEditorRulerContext?after=additions">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.popups.toggleAcciditLineBreakpoint"
+               label="Toggle Accidit Line Breakpoint"
+               style="toggle">
+         </command>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.perspectives">
@@ -464,9 +484,33 @@
             class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
-            name="Database Settings"
-            objectClass="org.eclipse.core.resources.IProject">
+            name="Database Settings">
+         <enabledWhen>
+            <instanceof
+                  value="org.eclipse.core.resources.IProject">
+            </instanceof>
+         </enabledWhen>
       </page>
+   </extension>
+   <extension
+         id="acciditBreakpointMarker"
+         name="Accidit Breakpoint Marker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.debug.core.lineBreakpointMarker">
+      </super>
+      <persistent
+            value="false">
+      </persistent>
+   </extension>
+   <extension
+         point="org.eclipse.debug.core.breakpoints">
+      <breakpoint
+            class="de.hpi.accidit.eclipse.breakpoints.AcciditLineBreakpoint"
+            id="acciditLineBreakpoint"
+            markerType="de.hpi.accidit.eclipse.acciditBreakpointMarker"
+            name="Accidit Line Breakpoints">
+      </breakpoint>
    </extension>
 
 </plugin>

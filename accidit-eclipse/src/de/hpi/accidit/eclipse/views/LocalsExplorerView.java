@@ -69,8 +69,7 @@ public class LocalsExplorerView extends ViewPart {
 		rootNode = new MethodNode(viewer);
 		viewer.setInput(rootNode);
 		
-		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
-		ui.setLocalsExprorer(this);
+		TraceNavigatorUI.getGlobal().setLocalsExprorer(this);
 		
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
