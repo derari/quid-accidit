@@ -62,8 +62,7 @@ public class LocalsExplorerView extends ViewPart {
 		viewer.setContentProvider(contentProvider);
 		viewer.setLabelProvider(new LocalsLabelProvider());
 		
-		TraceNavigatorUI ui = TraceNavigatorUI.getGlobal();
-		ui.setLocalsExprorer(this);
+		TraceNavigatorUI.getGlobal().setLocalsExprorer(this);
 		
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
