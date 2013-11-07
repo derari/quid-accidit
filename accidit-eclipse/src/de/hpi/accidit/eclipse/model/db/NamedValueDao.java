@@ -80,7 +80,7 @@ public class NamedValueDao extends ModelDaoBase {
 		}
 	};
 	
-	private static final Mapping<FieldValue> FIELD_MAPPING = new ReflectiveMapping<FieldValue>(FieldValue.class) {
+	public static final Mapping<FieldValue> FIELD_MAPPING = new ReflectiveMapping<FieldValue>(FieldValue.class) {
 		protected void setField(FieldValue record, String field, java.sql.ResultSet rs, int i) throws SQLException {
 			switch (field) {
 			case "valueIsPut":
