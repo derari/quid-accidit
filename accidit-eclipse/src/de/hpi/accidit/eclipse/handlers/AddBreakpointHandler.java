@@ -13,7 +13,7 @@ public class AddBreakpointHandler extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		BreakpointsView breakpointsView = 
 				(BreakpointsView) HandlerUtil.getActiveWorkbenchWindow(event).getActivePage().findView(BreakpointsView.ID);
-		breakpointsView.addBreakpointLine();
+		breakpointsView.addBreakpointLine("");
 		return null;
 	}
 

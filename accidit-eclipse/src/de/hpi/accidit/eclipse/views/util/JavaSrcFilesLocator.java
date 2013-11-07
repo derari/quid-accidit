@@ -62,7 +62,7 @@ public class JavaSrcFilesLocator {
 		return projects;
 	}
 	
-	public void open(final String filePath,final int line, final IWorkbenchPage dPage, final ViewPart activeView) {
+	public void open(final String filePath, final int line, final IWorkbenchPage dPage, final ViewPart activeView) {
 		if (dPage == null) return;
 		
 		Job job = new Job("My Job") {
@@ -75,9 +75,8 @@ public class JavaSrcFilesLocator {
 				Display.getDefault().asyncExec(new Runnable() {
 					@Override
 					public void run() {
-						IEditorPart textEditor;
 						try {
-							textEditor = IDE.openEditor(dPage, file, true);
+							IEditorPart textEditor = IDE.openEditor(dPage, file, true);							
 							highlightLine(textEditor, line);
 							activeView.setFocus();
 						} catch (PartInitException e) {
@@ -95,7 +94,6 @@ public class JavaSrcFilesLocator {
 	}
 	
 	private IFile getFile(String filePath) {
-		if (true) return null;
 		for(IJavaProject javaProject : getProjects()) {
 			IType javaFileType;
 			try {
@@ -125,11 +123,11 @@ public class JavaSrcFilesLocator {
 			}
 
 			if(javaFileType == null) continue;
-			
 			IResource iResource = javaFileType.getResource();
+			
 			if (iResource == null) continue;
-
 			IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+			
 			if (dPage != null) {
 				try {										
 					IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
