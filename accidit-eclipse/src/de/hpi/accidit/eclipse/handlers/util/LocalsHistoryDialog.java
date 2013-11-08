@@ -1,6 +1,9 @@
 package de.hpi.accidit.eclipse.handlers.util;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.MiFuture;
+import org.cthul.miro.MiFutureAction;
+import org.cthul.miro.util.FinalFuture;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.TreeColumnLayout;
@@ -41,15 +44,18 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
+import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
+import de.hpi.accidit.eclipse.model.db.TypeDao;
+import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
+import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class LocalsHistoryDialog extends Dialog {
 
 	private Object[] dialogResultCache = null;
 
-	
 	private TreeViewer treeViewer;
 	private HistoryNode contentNode;
 	private HistorySource source;
@@ -61,7 +67,7 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	 /* The selection in the comboViewer and the element whose history is displayed in the treeViewer. */
 	private NamedEntity selectedObject;
-	
+	private long currentStep = 0;
 	
 	public LocalsHistoryDialog(
 			Shell parent,
@@ -69,7 +75,7 @@ public class LocalsHistoryDialog extends Dialog {
 			int selectedObject, 
 			NamedEntity[] options) {
 		super(parent);
-		
+
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
@@ -138,6 +144,18 @@ public class LocalsHistoryDialog extends Dialog {
 		treeViewer.setInput(contentNode);
 		source.show(contentNode, selectedObject.getId());
 		
+		treeViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			@Override
+			public void selectionChanged(SelectionChangedEvent arg0) {
+				NamedValueNode nvn = getSelectedElement();
+				if (nvn == null) return;
+				NamedValue nv = nvn.getValue();
+				long step = nv.getStep();
+				if (step == currentStep) return;
+				currentStep = step;
+				refreshTitleLabel();
+			}
+		});
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
@@ -154,7 +172,7 @@ public class LocalsHistoryDialog extends Dialog {
 				if (node == null || node.getDepth() != 1) return;
 				Image image = getImage(node);
 				if (image == null) return; 
-				event.gc.drawImage(image, event.x+1, event.y);
+				event.gc.drawImage(image, event.x+3, event.y);
 			}
 		});
 		
@@ -178,15 +196,19 @@ public class LocalsHistoryDialog extends Dialog {
 		return new Point(450, 300);
 	}
 	
-	@Override
-	public void okPressed() {
+	private NamedValueNode getSelectedElement() {
 		ITreeSelection selection = (ITreeSelection) treeViewer.getSelection();
 		if (selection != null && !selection.isEmpty()) {
-			TreePath treePath = selection.getPaths()[0];
-			if (treePath.getSegmentCount() != 1) return;
-
-			dialogResultCache = new Object[] {selection.getFirstElement()};
+			return (NamedValueNode) selection.getFirstElement();
 		}
+		return null;
+	}
+	
+	@Override
+	public void okPressed() {
+		NamedValueNode sel = getSelectedElement();
+		if (sel == null || sel.getDepth() > 0) return;
+		dialogResultCache = new Object[]{sel};
 		super.okPressed();
 	}
 	
@@ -208,10 +230,19 @@ public class LocalsHistoryDialog extends Dialog {
 	}
 	
 	private void refreshTitleLabel() {
-		String title = (selectedObject != null) ?
-				"History of \"" + selectedObject.getName() + "\"" :
-				"Select a value:";
-		titleLabel.setText(title);
+//		String title = (selectedObject != null) ?
+//				"History of \"" + selectedObject.getName() + "\"" :
+//				"Select a value:";
+		final long step = currentStep;
+		source.getTitle(DatabaseConnector.cnn(), step).onComplete(new DoInUiThread<String>() {
+			@Override
+			protected void run(String value, Throwable error) {
+				if (step != currentStep) return;
+				String title = "History of " + (value != null ? value : error);
+				titleLabel.setText(title);
+				
+			}
+		});
 	}
 	
 	private final class ComboViewerSelectionListener implements ISelectionChangedListener {
@@ -223,7 +254,6 @@ public class LocalsHistoryDialog extends Dialog {
 			NamedEntity selectedObject = (NamedEntity) selection.getFirstElement();
 			source.show(contentNode, selectedObject.getId());
 			LocalsHistoryDialog.this.selectedObject = selectedObject;
-			refreshTitleLabel();
 		}
 	}
 	
@@ -246,6 +276,8 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	public static abstract class HistorySource {
 		public abstract void show(HistoryNode content, long id);
+		
+		public abstract MiFuture<String> getTitle(MiConnection cnn, long step);
 	}
 	
 	public static class MethodCallSource extends HistorySource {
@@ -260,6 +292,12 @@ public class LocalsHistoryDialog extends Dialog {
 		@Override
 		public void show(HistoryNode content, long id) {
 			content.showVariables(testId, callStep, id);
+		}
+		
+		@Override
+		public MiFuture<String> getTitle(MiConnection cnn, long step) {
+			String s = String.valueOf("#" + callStep);
+			return new FinalFuture<String>(s);
 		}
 	}
 	
@@ -277,6 +315,17 @@ public class LocalsHistoryDialog extends Dialog {
 		@Override
 		public void show(HistoryNode content, long id) {
 			content.showFields(testId, thisId, id, isArray);
+		}
+
+		@Override
+		public MiFuture<String> getTitle(MiConnection cnn, long step) {
+			return new Value.ObjectSnapshot(cnn, (int) testId, thisId, step)
+				.onInitialized(new MiFutureAction<Value.ObjectSnapshot, String>() {
+					@Override
+					public java.lang.String call(ObjectSnapshot arg) throws Exception {
+						return arg.getLongString();
+					}
+			});
 		}
 	}
 	

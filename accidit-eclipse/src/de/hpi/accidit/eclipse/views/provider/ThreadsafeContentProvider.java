@@ -251,6 +251,11 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		@Override
+		public NamedValue getValue() {
+			return (NamedValue) super.getValue();
+		}
+		
+		@Override
 		protected synchronized void initialize() {
 			if (!nv.isInitialized()) {
 				setSize(0);

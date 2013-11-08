@@ -36,6 +36,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		boolean variable = false;
 		long thisId = -1;
 		int arrayLength = -1;
+		Value owner = null;
 		if (!selectedLocals.isEmpty()) {
 			NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
 			NamedValue nv = (NamedValue) nvn.getValue();
@@ -44,16 +45,16 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 				selected = nv.getId();
 			} else if (nv instanceof NamedValue.FieldValue) {
 				selected = nv.getId();
-				Value v = nv.getOwner();
-				if (v instanceof ObjectSnapshot) {
-					thisId = ((ObjectSnapshot) v).getThisId();
+				owner = nv.getOwner();
+				if (owner instanceof ObjectSnapshot) {
+					thisId = ((ObjectSnapshot) owner).getThisId();
 				}
 			} else if (nv instanceof NamedValue.ItemValue) {
 				selected = nv.getId();
-				Value v = nv.getOwner();
-				if (v instanceof ObjectSnapshot) {
-					thisId = ((ObjectSnapshot) v).getThisId();
-					arrayLength = ((ObjectSnapshot) v).getArrayLength();
+				owner = nv.getOwner();
+				if (owner instanceof ObjectSnapshot) {
+					thisId = ((ObjectSnapshot) owner).getThisId();
+					arrayLength = ((ObjectSnapshot) owner).getArrayLength();
 				}
 			}
 		}
@@ -90,11 +91,11 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		if (dialog.open() == Window.OK) {
 			Object[] result = dialog.getResult();
 			if (result.length > 0) {
-				NamedValue.VariableValue variableValue = (NamedValue.VariableValue) result[0];
+				NamedValue variableValue = ((NamedValueNode) result[0]).getValue();
 				long step = variableValue.getStep();
-				
-				TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
-				traceExplorer.getSelectionAdapter().selectAtStep(step);
+				TraceNavigatorUI.getGlobal().setStep(step);
+//				TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
+//				traceExplorer.getSelectionAdapter().selectAtStep(step);
 			}
 		}
 		return null;

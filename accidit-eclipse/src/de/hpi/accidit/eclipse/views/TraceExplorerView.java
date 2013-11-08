@@ -59,6 +59,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	private TreeViewer treeViewer;
 
 	private static final String STORE_PROJECT_NAME = "Accidit.ProjectName";
+	private static final String STORE_TEST_ID = "Accidit.TestId";
 	private IMemento memento;
 	
 	private TraceElement current;
@@ -66,16 +67,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	public TraceExplorerView() { }
 
 	@Override
-	public void createPartControl(Composite parent) {
-		// restore project name
-		String projectName = memento == null ? null : memento.getString(STORE_PROJECT_NAME);
-		if (projectName != null) {
-			IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-			if (project != null) {
-				DatabaseConnector.setSelectedProject(project);
-			}
-		}
-		
+	public void createPartControl(Composite parent) {		
 		// create view elements
 		Tree tree = new Tree(parent, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
 		treeViewer = new TreeViewer(tree);
@@ -103,6 +95,20 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
 		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
+		
+		// restore project name
+		if (memento != null) {
+			String projectName = memento.getString(STORE_PROJECT_NAME);
+			if (projectName != null && DatabaseConnector.getSelectedProject() == null) {
+				IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+				if (project != null) {
+					DatabaseConnector.setSelectedProject(project);
+				}
+			}
+			Integer testId = memento.getInteger(STORE_TEST_ID);
+			if (testId == null) testId = 0;
+			TraceNavigatorUI.getGlobal().setTestId(testId);
+		}
 	}
 	
 	/* Methods to restore the view state after eclipse has been closed. */
@@ -110,8 +116,10 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	@Override
 	public void saveState(IMemento memento) {
 		super.saveState(memento);
-		String projectName = DatabaseConnector.getSelectedProject().getName();		
+		IProject prj = DatabaseConnector.getSelectedProject();
+		String projectName = prj != null ? prj.getName() : null;		
 		memento.putString(STORE_PROJECT_NAME, projectName);
+		memento.putInteger(STORE_TEST_ID, current.getTestId());
 	}
 
 	@Override
@@ -137,10 +145,14 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	
 	@Override
 	public void setStep(TraceElement te) {
+		if (current == te) {
+			return;
+		}
 		if (current == null || current.getTestId() != te.getTestId()) {
 			treeViewer.setInput(new Trace(te.getTestId(), ui));
+		} else {
+			getSelectionAdapter().selectAtStep(te.getStep());
 		}
-		// TODO !!!!
 	}
 	
 	public void refresh() {
@@ -165,6 +177,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 			if (obj instanceof TraceElement) {
 				TraceElement te = (TraceElement) obj;
+				current = te;
 				ui.setStep(te);
 			}
 			setFocus();

@@ -134,7 +134,7 @@ public class NamedValueDao extends ModelDaoBase {
 				   "OR lastGet.`step` IS NOT NULL " +
 				   "OR nextPut.`step` IS NOT NULL " +
 				   "OR nextGet.`step` IS NOT NULL)");
-		always().orderBy("m.`id`");
+		always().orderBy("m.`name`");
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	

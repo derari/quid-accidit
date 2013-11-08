@@ -107,9 +107,13 @@ public class TraceNavigatorUI {
 		if (getTraceExplorer() == null) {
 			// TODO: open trace explorer
 		}
+		setStep(0);
+	}
+	
+	public void setStep(final long newStep) {
 		setStep(new TraceElement(){{
 			this.testId = TraceNavigatorUI.this.testId;
-			this.step = 0;
+			this.step = newStep;
 		}});
 	}
 	

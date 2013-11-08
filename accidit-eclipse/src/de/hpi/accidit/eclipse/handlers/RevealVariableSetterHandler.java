@@ -24,7 +24,8 @@ public class RevealVariableSetterHandler extends AbstractHandler {
 			if (step < 0) { // the correct step is already selected
 				traceExplorer.setFocus();
 			} else {
-				traceExplorer.getSelectionAdapter().selectAtStep(step);
+				TraceNavigatorUI.getGlobal().setStep(step);
+//				traceExplorer.getSelectionAdapter().selectAtStep(step);
 			}
 		}
 		
