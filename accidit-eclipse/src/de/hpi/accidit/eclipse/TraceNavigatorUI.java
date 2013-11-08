@@ -4,6 +4,7 @@ import org.cthul.miro.MiConnection;
 import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.views.BreakpointsView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
@@ -23,6 +24,7 @@ public class TraceNavigatorUI {
 	private IWorkbenchPage mainPage = null;
 	private TraceExplorerView traceExplorer = null;
 	private LocalsExplorerView localsExplorer = null;
+	private BreakpointsView breakpointsView = null;
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
 	
@@ -56,6 +58,20 @@ public class TraceNavigatorUI {
 	public void unsetLocalsExprorer(LocalsExplorerView localsExprorer) {
 		if (this.localsExplorer == localsExprorer) {
 			this.localsExplorer = null;
+		}
+	}
+	
+	public BreakpointsView getBreakpointsView() {
+		return breakpointsView;
+	}
+	
+	public void setBreakpointsView(BreakpointsView breakpointsView) {
+		this.breakpointsView = breakpointsView;
+	}
+	
+	public void unsetBreakpointsView(BreakpointsView breakpointsView) {
+		if (this.breakpointsView == breakpointsView) {
+			this.breakpointsView = null;
 		}
 	}
 	

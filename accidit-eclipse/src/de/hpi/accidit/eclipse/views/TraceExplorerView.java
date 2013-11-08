@@ -66,7 +66,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	@Override
 	public void createPartControl(Composite parent) {
 		// restore project name
-		String projectName = memento.getString(STORE_PROJECT_NAME);
+		String projectName = memento == null ? null : memento.getString(STORE_PROJECT_NAME);
 		if (projectName != null) {
 			IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
 			if (project != null) {
@@ -367,10 +367,11 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			protected void run(Invocation inv, Throwable error) {
 				if (error != null) {
 					error.printStackTrace(System.err);
+				} else {
+					viewer.setChildCount(inv, 0);
+					viewer.setChildCount(inv, inv.getChildren().length);
+					viewer.update(inv, null);
 				}
-				viewer.setChildCount(inv, 0);
-				viewer.setChildCount(inv, inv.getChildren().length);
-				viewer.update(inv, null);
 			}
 		};
 
@@ -399,7 +400,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				} else {
 					viewer.setChildCount(inv, 1);
 					viewer.replace(inv, 0, new Pending());
-					inv.onInitialized(updateInvocation);
+					inv.onInitialized( updateInvocation);
 				}
 			}
 		}

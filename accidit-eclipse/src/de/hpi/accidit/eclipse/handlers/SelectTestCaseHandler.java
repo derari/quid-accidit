@@ -28,7 +28,8 @@ public class SelectTestCaseHandler extends AbstractHandler {
 						new TestCaseSelectionDialog.TestCaseSelectionContentProvider());
 		dialog.setTitle("Select a test case");
 		dialog.setBlockOnOpen(true);
-		dialog.setInput(HandlerUtil.getActiveEditorInput(event));
+		//dialog.setInput(HandlerUtil.getActiveEditorInput(event));
+		dialog.setInput("input");
 		dialog.setEmptyListMessage("The specified database contains no test cases.");
 		
 		if (dialog.open() == Window.OK) {
@@ -46,7 +47,7 @@ public class SelectTestCaseHandler extends AbstractHandler {
 			}
 			
 			TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
-			traceExplorer.refresh();
+			if (traceExplorer != null) traceExplorer.refresh();
 		}
 
 		return null;

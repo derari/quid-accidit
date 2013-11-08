@@ -179,7 +179,7 @@ public class DatabaseConnector {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replace("`", "\"")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "(LEAST(0, IFNULL($1, -1))+1)");
-			System.out.println(sql);
+			//System.out.println(sql);
 			return sql;
 		}
 	};
@@ -197,7 +197,7 @@ public class DatabaseConnector {
 		public String apply(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
-			System.out.println(sql);
+			//System.out.println(sql);
 			return sql;
 		}
 	};
