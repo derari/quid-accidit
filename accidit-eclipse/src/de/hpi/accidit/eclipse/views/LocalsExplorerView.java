@@ -28,11 +28,12 @@ import org.eclipse.ui.part.ViewPart;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
-public class LocalsExplorerView extends ViewPart {
+public class LocalsExplorerView extends ViewPart implements AcciditView {
 
 	/**
 	 * The ID of the view as specified by the extension.
@@ -69,7 +70,7 @@ public class LocalsExplorerView extends ViewPart {
 		rootNode = new MethodNode(viewer);
 		viewer.setInput(rootNode);
 		
-		TraceNavigatorUI.getGlobal().setLocalsExprorer(this);
+		TraceNavigatorUI.getGlobal().addView(this);
 		
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
@@ -94,7 +95,7 @@ public class LocalsExplorerView extends ViewPart {
 	
 	@Override
 	public void dispose() {
-		TraceNavigatorUI.getGlobal().unsetLocalsExprorer(this);
+		TraceNavigatorUI.getGlobal().removeView(this);
 		super.dispose();
 	}
 	
@@ -107,8 +108,9 @@ public class LocalsExplorerView extends ViewPart {
 		viewer.getControl().setFocus();
 	}
 	
-	public void setStep(int testId, long call, long step) {
-		rootNode.setStep(testId, call, step);
+	@Override
+	public void setStep(TraceElement te) {
+		rootNode.setStep(te.getTestId(), te.getCallStep(), te.getStep());
 	}
 	
 	/**

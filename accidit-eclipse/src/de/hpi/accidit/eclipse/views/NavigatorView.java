@@ -1,5 +1,6 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
@@ -13,6 +14,9 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
+import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class NavigatorView extends ViewPart {
 
@@ -25,6 +29,8 @@ public class NavigatorView extends ViewPart {
 	private Composite intoComposite;
 	private Composite downLeftComposite;
 	private Composite overComposite;
+	
+	private SideEffectsNode sideEffects;
 	
 	private boolean currentlyLeftFilled = false;
 	
@@ -80,8 +86,10 @@ public class NavigatorView extends ViewPart {
 		overComposite = new Group(parent, SWT.NONE);
 		overComposite.setLayout(defaultLayout);
 		overComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		Label overLabel = new Label(overComposite, SWT.NONE);
-		overLabel.setText("Over");
+		TreeViewer treeSideEffects = new TreeViewer(overComposite);
+		treeSideEffects.setLabelProvider(new LocalsLabelProvider());
+		treeSideEffects.setContentProvider(ThreadsafeContentProvider.INSTANCE);
+		sideEffects = new SideEffectsNode(treeSideEffects);
 		
 		parent.pack();
 				
@@ -123,5 +131,15 @@ public class NavigatorView extends ViewPart {
 	@Override
 	public void setFocus() {
 //		upComposite.setFocus();
+	}
+	
+	private static class SideEffectsNode extends NamedValueNode {
+
+		public SideEffectsNode(TreeViewer viewer) {
+			super(viewer);
+		}
+		
+		//public void setStep(long testId, )
+		
 	}
 }

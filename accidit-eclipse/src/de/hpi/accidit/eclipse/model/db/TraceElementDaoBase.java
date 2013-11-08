@@ -18,7 +18,7 @@ import de.hpi.accidit.eclipse.model.TraceElement;
 public class TraceElementDaoBase extends ModelDaoBase {
 	
 	@MiQuery(
-	select = @Select("e.`line`, e.`step`"),
+	select = @Select("e.`testId`, e.`line`, e.`step`"),
 	where = {@Where(key="testId_EQ", value="e.`testId` = ?"),
 			 @Where(key="callStep_EQ", value="e.`callStep` = ?")},
 	orderBy = @OrderBy(key="asc_step", value="e.`step`"))
@@ -42,8 +42,8 @@ public class TraceElementDaoBase extends ModelDaoBase {
 		
 		public static void inInvocation(AnnotatedQueryHandler<? extends TraceElement> query, Invocation inv) {
 			query.configure(new InitParent(inv));
-			query.put("testId_EQ", inv.testId);
-			query.put("callStep_EQ", inv.step);
+			query.put("testId_EQ", inv.getTestId());
+			query.put("callStep_EQ", inv.getStep());
 		}
 	}
 	

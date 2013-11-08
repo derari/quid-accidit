@@ -49,7 +49,7 @@ import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
-public class TraceExplorerView extends ViewPart implements ISelectionChangedListener {
+public class TraceExplorerView extends ViewPart implements ISelectionChangedListener, AcciditView {
 
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
@@ -60,6 +60,8 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 	private static final String STORE_PROJECT_NAME = "Accidit.ProjectName";
 	private IMemento memento;
+	
+	private TraceElement current;
 
 	public TraceExplorerView() { }
 
@@ -120,7 +122,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	
 	@Override
 	public void dispose() {
-		TraceNavigatorUI.getGlobal().unsetTraceExplorer(this);
+		TraceNavigatorUI.getGlobal().removeView(this);
 		super.dispose();
 	}
 
@@ -133,8 +135,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		return treeViewer;
 	}
 	
-	public void setTestCaseId(int id) {
-		treeViewer.setInput(new Trace(id, ui));
+	@Override
+	public void setStep(TraceElement te) {
+		if (current == null || current.getTestId() != te.getTestId()) {
+			treeViewer.setInput(new Trace(te.getTestId(), ui));
+		}
+		// TODO !!!!
 	}
 	
 	public void refresh() {
@@ -286,14 +292,14 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				for (int i = 0; i < elements.length; i++) {
 					currentElement = elements[i];
 					
-					if (currentElement.step == step) {
+					if (currentElement.getStep() == step) {
 						pathSegments.add(currentElement);
 						treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray())));
 						return;
 					}
 
 					// Too far in the tree - go back to previous element. 
-					if (currentElement.step > step) {
+					if (currentElement.getStep() > step) {
 						if (i >= 1) currentElement = elements[i - 1];
 						break;
 					}
@@ -465,14 +471,14 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			}
 
 			if (columnIndex == 1 && element instanceof TraceElement) {
-				return String.valueOf(((TraceElement) element).step);
+				return String.valueOf(((TraceElement) element).getStep());
 			}
 
 			if (element instanceof TraceElement) {
 				TraceElement le = (TraceElement) element;
 				switch(columnIndex) {
 				case 0: return le.getShortText();
-				case 1: return String.valueOf(le.step);
+				case 1: return String.valueOf(le.getStep());
 				default: return "";
 				}
 			}

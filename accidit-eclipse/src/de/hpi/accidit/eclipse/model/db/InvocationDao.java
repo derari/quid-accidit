@@ -51,9 +51,9 @@ public class InvocationDao extends TraceElementDaoBase {
 		
 		public static void inInvocation(AnnotatedQueryHandler<Invocation> query, Invocation inv) {
 			query.configure(new InitParent(inv));
-			query.put("testId_EQ", inv.testId);
+			query.put("testId_EQ", inv.getTestId());
 			query.put("depth_EQ", inv.depth+1);
-			query.put("step_BETWEEN", inv.step, inv.exitStep);
+			query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 			query.put("asc_step");
 		}
 		

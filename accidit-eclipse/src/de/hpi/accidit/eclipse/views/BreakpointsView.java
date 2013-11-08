@@ -15,8 +15,9 @@ import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.TraceElement;
 
-public class BreakpointsView extends ViewPart {
+public class BreakpointsView extends ViewPart implements AcciditView {
 
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.BreakpointsView";
@@ -34,17 +35,20 @@ public class BreakpointsView extends ViewPart {
 		addHeadline();
 		addBreakpointLine("");
 
-		TraceNavigatorUI.getGlobal().setBreakpointsView(this);
+		TraceNavigatorUI.getGlobal().addView(this);
 	}
 	
 	@Override
 	public void dispose() {
-		TraceNavigatorUI.getGlobal().unsetBreakpointsView(this);
+		TraceNavigatorUI.getGlobal().removeView(this);
 		super.dispose();
 	}
 
 	@Override
 	public void setFocus() { }
+	
+	@Override
+	public void setStep(TraceElement te) { }
 	
 	private void addHeadline() {
 		@SuppressWarnings("unused")

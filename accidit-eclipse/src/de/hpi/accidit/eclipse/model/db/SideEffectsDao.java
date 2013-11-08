@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.dsl.QueryFactoryView;
 import org.cthul.miro.dsl.View;
 import org.cthul.miro.graph.GraphQuery;
 import org.cthul.miro.graph.GraphQueryTemplate;
@@ -9,6 +10,8 @@ import org.cthul.miro.graph.SelectByKey;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 
 public class SideEffectsDao extends ModelDaoBase {
+	
+	public static final View<FieldSE> FIELDS = new QueryFactoryView<>(FieldSE.class);
 
 	public static final GraphQueryTemplate<FieldValue> FIELD_SE_TEMPLATE = new GraphQueryTemplate<FieldValue>(NamedValueDao.FIELD_MAPPING) {{
 		select("m.`name`, m.`id`");
@@ -25,7 +28,7 @@ public class SideEffectsDao extends ModelDaoBase {
 		join("JOIN " +
 				"(SELECT MAX(`step`) AS `step`, `fieldId`, `thisId` " +
 				 "FROM `PutTrace` " +
-				 "WHERE `testId` = ? AND `step` < ? " +
+				 "WHERE `testId` = ? AND `step` >= ? AND `step` <= ? " +
 				 "GROUP BY `fieldId`) " +
 			 "lastPut ON lastPut.`fieldId` = m.`id`");
 //		join("LEFT OUTER JOIN " +
@@ -51,10 +54,10 @@ public class SideEffectsDao extends ModelDaoBase {
 			.where("last_and_next", 
 				     "(lastPut.`step` IS NOT NULL " +
 //				   "OR lastGet.`step` IS NOT NULL " +
-				   "AND nextGet.`step` IS NOT NULL)");
+				   "AND nextGet.`step` IS NOT NULL " +
+				   "AND (nextPut.`step` IS NULL OR nextPut.`step` > nextGet.`step`))");
 		always().orderBy("m.`id`");
 		always().configure("cfgCnn", SET_CONNECTION);
-		
 	}};
 	
 	
@@ -73,10 +76,14 @@ public class SideEffectsDao extends ModelDaoBase {
 		}
 		
 		public FieldSE captureBetween(long start, long end) {
-			put("lastPut");
+			put("lastPut", testId, start, end);
 			return this;
 		}
 		
+		public FieldSE targetBetween(long start, long end) {
+			put("nextPut", testId, start, end);
+			put("nextGet", testId, start, end);
+			return this;
+		}
 	}
-	
 }
