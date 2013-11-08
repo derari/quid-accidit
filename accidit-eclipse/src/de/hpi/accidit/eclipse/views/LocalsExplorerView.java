@@ -63,8 +63,6 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		layout.setColumnData(column0, new ColumnWeightData(40, 50));
 		layout.setColumnData(column1, new ColumnWeightData(60, 50));
 		
-		//contentProvider = new LocalsContentProvider(viewer);		
-		//viewer.setContentProvider(contentProvider);
 		viewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
 		viewer.setLabelProvider(new LocalsLabelProvider());
 		rootNode = new MethodNode(viewer);

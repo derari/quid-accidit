@@ -73,11 +73,16 @@ public class LocalsHistoryDialog extends Dialog {
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
+		if (source == null) throw new NullPointerException("source");
 		this.source = source;
 		for (int i = 0; i < options.length; i++) {
 			if (options[i].getId() == selectedObject) {
 				this.selectedObject = options[i];
+				break;
 			}
+		}
+		if (this.selectedObject == null) {
+			this.selectedObject = ALL;
 		}
 		
 		// NamedValue this && VariableValue ex

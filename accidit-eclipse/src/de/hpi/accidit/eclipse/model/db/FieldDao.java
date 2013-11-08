@@ -20,8 +20,7 @@ public class FieldDao {
 		select("f.`id`, f.`name`");
 		from("`Field` f");
 		join("`Type` t ON f.`declaringTypeId` = t.`id`");
-		using("t")
-			.join("`ObjectTrace` o ON t.`id` = o.`typeId`");
+		join("`ObjectTrace` o ON f.`declaringTypeId` = o.`typeId`");
 	}};
 	
 	public static final View<Query> VIEW = new AnnotatedView<>(Query.class, MAPPING, TEMPLATE);

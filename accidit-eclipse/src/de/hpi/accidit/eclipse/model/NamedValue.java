@@ -195,7 +195,7 @@ public class NamedValue extends ModelBase implements NamedEntity {
 //		}
 		return true;
 	}
-	
+
 	private boolean setValueStep(long newStep) {
 		if (value.updateNeeded(newStep)) {
 			value = null;
@@ -340,7 +340,7 @@ public class NamedValue extends ModelBase implements NamedEntity {
 			super("-", new Value.VariableHistory(cnn, testId, callStep, varId));
 		}
 	}
-	
+
 	public static class ObjectHistory extends NamedValue {
 		public ObjectHistory(MiConnection cnn, int testId, long callStep, int thisId) {
 			super("-", new Value.ObjectHistory(cnn, testId, callStep, thisId));
