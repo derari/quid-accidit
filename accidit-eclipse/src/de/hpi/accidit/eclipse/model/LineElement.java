@@ -4,6 +4,7 @@ public class LineElement extends TraceElement {
 
 	public LineElement(Invocation inv, long step, int line) {
 		this.parent = inv;
+		this.testId = inv.getTestId();
 		this.step = step;
 		this.line = line;
 	}

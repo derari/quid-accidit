@@ -12,11 +12,19 @@ public class Trace {
 	public Trace(int id, final TraceNavigatorUI ui) {
 		this.id = id;
 		this.ui = ui;
-		root = ui.cnn()
-			.select()
-			.from(Invocation.VIEW)
-			.where().rootOfTest(id)
-			.asArray()._execute();
+		try {
+			root = ui.cnn()
+				.select()
+				.from(Invocation.VIEW)
+				.where().rootOfTest(id)
+				.asArray().execute();
+		} catch (Exception ex) {
+			ex.printStackTrace(System.err);
+			root = new TraceElement[0];
+		}
 	}
 	
+	public TraceElement[] getRootElements() {
+		return root;
+	}
 }

@@ -5,15 +5,15 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
-            name="Accidit Preferences"
-            class="de.hpi.accidit.eclipse.preferences.MainPreferencePage"
-            id="de.hpi.accidit.eclipse.preferences.MainPreferencePage">
+            class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
+            id="de.hpi.accidit.eclipse.preferencePages.DatabaseSettings"
+            name="Database Settings">
       </page>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
       <initializer
-            class="de.hpi.accidit.eclipse.preferences.PreferenceInitializer">
+            class="de.hpi.accidit.eclipse.properties.Configuration">
       </initializer>
    </extension>
    <extension
@@ -23,17 +23,11 @@
             id="de.hpi.accidit.eclipse">
       </category>
       <view
-            name="Accidit View"
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.MainView"
-            id="de.hpi.accidit.eclipse.views.MainView">
-      </view>
-      <view
-            category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.MethodExplorerView"
+            class="de.hpi.accidit.eclipse.views.TraceExplorerView"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.MethodExplorerView"
-            name="Method Explorer"
+            id="de.hpi.accidit.eclipse.views.TraceExplorerView"
+            name="Trace Explorer"
             restorable="true">
       </view>
       <view
@@ -53,12 +47,14 @@
             name="Navigator"
             restorable="true">
       </view>
-   </extension>
-   <extension
-         point="org.eclipse.help.contexts">
-      <contexts
-            file="contexts.xml">
-      </contexts>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.BreakpointsView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.BreakpointsView"
+            name="Breakpoints"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -68,8 +64,8 @@
       </category>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            id="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
-            name="Open Method Explorer">
+            id="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
+            name="Open Trace Explorer">
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
@@ -93,7 +89,7 @@
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showVariableHistory"
-            name="Show Variable History">
+            name="Show history">
       </command>
       <category
             id="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
@@ -129,12 +125,55 @@
             id="de.hpi.accidit.eclipse.commands.stepBackOver"
             name="Step Back Over">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
+            name="Select Test Case">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
+            name="Switch Layout">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+            name="Custom Arrow Navigation">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+            name="Auto Collapse">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:true"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.addBreakpoint"
+            name="Add Breakpoint">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+            name="Reveal Setter">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint"
+            name="Toggle Accidit Line Breakpoint">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="de.hpi.accidit.eclipse.handlers.OpenMethodExplorerViewHandler"
-            commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView">
+            class="de.hpi.accidit.eclipse.handlers.OpenTraceExplorerViewHandler"
+            commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView">
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenLocalsExplorerViewHandler"
@@ -171,10 +210,62 @@
       <handler
             class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider$ContentNode">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>  
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
             commandId="de.hpi.accidit.eclipse.commands.openNavigatorView">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.SelectTestCaseForProjectHandler"
+            commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.SwitchNavigatorLayoutHandler"
+            commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleCustomArrowNavigationHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
+            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">       
+         <activeWhen>
+            <with
+                  variable="selection">
+               <iterate
+                     ifEmpty="false"
+                     operator="and">
+                  <adapt
+                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
+                  </adapt>
+               </iterate>
+            </with>
+         </activeWhen>      
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.handlers.ToggleAcciditLineBreakpointHandler"
+            commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
    </extension>
    <extension
@@ -195,8 +286,8 @@
                label="Accidit"
                mnemonic="M">
             <command
-                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
-                  id="de.hpi.accidit.eclipse.menus.openMethodExplorerView">
+                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
+                  id="de.hpi.accidit.eclipse.menus.openTraceExplorerView">
             </command>
             <command
                   commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
@@ -222,10 +313,10 @@
          <toolbar
                id="de.hpi.accidit.eclipse.toolbars.toolbar">
             <command
-                  commandId="de.hpi.accidit.eclipse.commands.openMethodExplorerView"
+                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
                   icon="icons/sample.gif"
-                  id="de.hpi.accidit.eclipse.toolbars.openMethodExplorerView"
-                  tooltip="Open the Method Explorer View">
+                  id="de.hpi.accidit.eclipse.toolbars.openTraceExplorerView"
+                  tooltip="Open the Trace Explorer View">
             </command>
          </toolbar>
       </menuContribution>
@@ -236,12 +327,13 @@
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.toolbars.showVariableHistory"
+               label="Show history"
                style="push">
          </command>
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="toolbar:de.hpi.accidit.eclipse.views.MethodExplorerView">
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.TraceExplorerView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.stepInto"
                icon="icons/step_into.png"
@@ -282,6 +374,99 @@
                id="de.hpi.accidit.eclipse.toolbars.stepBackInto"
                style="push">
          </command>
+         <separator
+               name="accidit-eclipse.separator2"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleCustomArrowNavigation"
+               icon="icons/custom_arrow_navigation.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleCustomArrowNavigation"
+               style="toggle">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse"
+               icon="icons/auto_collapse.png"
+               id="de.hpi.accidit.eclipse.toolbars.toggleAutoCollapse"
+               style="toggle">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.eclipse.ui.navigator.ProjectExplorer#PopupMenu?after=additions">
+         <separator
+               name="accidit-eclipse.separator1"
+               visible="true">
+         </separator>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.selectTestCaseForProject"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.popup.selectTestCase"
+               label="Select Test Case"
+               style="push">    
+            <visibleWhen>
+               <with
+                     variable="selection">
+                  <iterate
+                        ifEmpty="false"
+                        operator="and">
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                     </adapt>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.NavigatorView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.switchNavigatorLayout"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.toolbars.switchNavigatorLayout"
+               label="Switch Layout"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.BreakpointsView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.addBreakpoint"
+               icon="icons/add_breakpoint.png"
+               id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
+               label="Add Breakpoint"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:de.hpi.accidit.eclipse.views.LocalsExplorerView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
+               icon="icons/history_book.png"
+               id="de.hpi.accidit.eclipse.popups.showVariableHistory"
+               label="Show history"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
+               label="Reveal setter"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:#AbstractTextEditorRulerContext?after=additions">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint"
+               icon="icons/a_logo.png"
+               id="de.hpi.accidit.eclipse.popups.toggleAcciditLineBreakpoint"
+               label="Toggle Accidit Line Breakpoint"
+               style="toggle">
+         </command>
       </menuContribution>
    </extension>
    <extension
@@ -296,12 +481,36 @@
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
-            class="de.hpi.accidit.eclipse.properties.DatabaseInformation"
+            class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.properties.databaseInformation"
-            name="Accidit Database Info"
-            objectClass="org.eclipse.core.resources.IProject">
+            id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
+            name="Database Settings">
+         <enabledWhen>
+            <instanceof
+                  value="org.eclipse.core.resources.IProject">
+            </instanceof>
+         </enabledWhen>
       </page>
+   </extension>
+   <extension
+         id="acciditBreakpointMarker"
+         name="Accidit Breakpoint Marker"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.debug.core.lineBreakpointMarker">
+      </super>
+      <persistent
+            value="false">
+      </persistent>
+   </extension>
+   <extension
+         point="org.eclipse.debug.core.breakpoints">
+      <breakpoint
+            class="de.hpi.accidit.eclipse.breakpoints.AcciditLineBreakpoint"
+            id="acciditLineBreakpoint"
+            markerType="de.hpi.accidit.eclipse.acciditBreakpointMarker"
+            name="Accidit Line Breakpoints">
+      </breakpoint>
    </extension>
 
 </plugin>

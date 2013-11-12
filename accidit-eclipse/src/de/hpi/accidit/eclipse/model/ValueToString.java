@@ -29,6 +29,17 @@ public class ValueToString {
 			return integerValue(v, children);
 		case "java.lang.String":
 			return stringValue(v, children);
+		case "java.util.Collections$EmptyCollection":
+			return "EmptyCollection #" + v.getThisId() + " (size = 0)";
+		case "java.util.Collections$EmptyList":
+			return "EmptyList #" + v.getThisId() + " (size = 0)";
+		case "java.util.Collections$EmptySet":
+			return "EmptyMap #" + v.getThisId() + " (size = 0)";
+		case "java.util.Collections$EmptyMap":
+			return "EmptySet #" + v.getThisId() + " (size = 0)";
+		}
+		if (typeName.startsWith("java.util")) {
+			return javaUtilName(v, children);
 		}
 		return simpleLongName(v);
 	}
@@ -80,19 +91,53 @@ public class ValueToString {
 	}
 	
 	private static String integerValue(ObjectSnapshot v, NamedValue[] children) {
-		Primitive vValue = null;
-		for (NamedValue nv: children) {
-			switch (nv.getName()) {
-			case "value":
-				vValue = (Primitive) nv.getValue();
-				break;
-			}
-		}
-		if (vValue == null) {
+		String val = getValueShortString(children, "value");
+		if (val == null) {
 			return simpleLongName(v);
 		}
-		String s = vValue.getShortString();
-		return s + " (" + simpleShortName(v) + ")";
+		return val + " (" + simpleShortName(v) + ")";
 	}
 	
+	private static String javaUtilName(ObjectSnapshot v, NamedValue[] children) {
+		Value collection = v;
+		String size = null;
+		while (collection != null && size == null) {
+			NamedValue[] c = collection.getChildren();
+			size = getValueShortString(c, "size");
+			if (size == null) {
+				// collection is just a delegator, find actual
+				collection = getValue(c, "map", "c", "list");
+			}
+		}
+		if (size == null) {
+			return simpleLongName(v);
+		}
+		return simpleShortName(v) + " (size = " + size + ")";
+	}
+	
+	private static String getValueShortString(NamedValue[] children, String name) {
+		Value v = getValue(children, name);
+		if (v == null) return null;
+		return v.getShortString();
+	}
+
+	private static Value getValue(NamedValue[] children, String name) {
+		for (NamedValue nv: children) {
+			if (name.equals(nv.getName())) {
+				return nv.getValue();
+			}
+		}
+		return null;
+	}
+	
+	private static Value getValue(NamedValue[] children, String... names) {
+		for (NamedValue nv: children) {
+			for (String n: names) {
+				if (n.equals(nv.getName())) {
+					return nv.getValue();
+				}
+			}
+		}
+		return null;
+	}
 }

@@ -9,18 +9,34 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.views.dataClasses.LocalBase;
+import de.hpi.accidit.eclipse.model.Pending;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.ContentNode;
 
 public class LocalsLabelProvider extends LabelProvider implements
 		ITableLabelProvider, ITableColorProvider {
-
+	
+	@Override
+	public boolean isLabelProperty(Object element, String property) {
+		return "label".equals(property);
+	}
+	
 	@Override
 	public Image getColumnImage(Object element, int columnIndex) {
+//		if (element instanceof ContentNode && columnIndex == 0) {
+//			ContentNode cn = (ContentNode) element;
+//			if (cn.isInvalid()) {
+//				return Pending.imgWait;
+//			}
+//		}
 		return null;
 	}
 	
 	@Override
 	public String getColumnText(Object element, int columnIndex) {
+		if (element instanceof ContentNode) {
+			ContentNode cn = (ContentNode) element;
+			element = cn.getValue();
+		}
 		if (!(element instanceof NamedValue)) {
 			return String.valueOf(element);
 		}
@@ -39,6 +55,9 @@ public class LocalsLabelProvider extends LabelProvider implements
 
 	@Override
 	public Color getForeground(Object element, int columnIndex) {
+		if (element instanceof ContentNode) {
+			element = ((ContentNode) element).getValue();
+		}
 		if (!(element instanceof NamedValue)) {
 			return null;
 		}

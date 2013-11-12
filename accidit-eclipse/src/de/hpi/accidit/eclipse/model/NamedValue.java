@@ -1,33 +1,43 @@
 package de.hpi.accidit.eclipse.model;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 import org.cthul.miro.MiConnection;
 import org.cthul.miro.dsl.View;
-import org.cthul.miro.graph.GraphQuery;
-import org.cthul.miro.graph.GraphQueryTemplate;
-import org.cthul.miro.graph.SelectByKey;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ValueAdapterBase;
-import org.cthul.miro.util.QueryFactoryView;
-import org.cthul.miro.util.ReflectiveMapping;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.FieldQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ItemQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarHistoryQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarQuery;
 
-public class NamedValue extends ModelBase {
+public class NamedValue extends ModelBase implements NamedEntity {
 	
+	public static final View<VarQuery> VARIABLE_VIEW = NamedValueDao.VARIABLE_VIEW;
+	public static final View<FieldQuery> FIELD_VIEW = NamedValueDao.FIELD_VIEW;
+	public static final View<ItemQuery> ARRAY_ITEM_VIEW = NamedValueDao.ARRAY_ITEM_VIEW;
+	public static final View<VarHistoryQuery> VARIABLE_HISTORY_VIEW = NamedValueDao.VARIABLE_HISTORY_VIEW;
+	public static final View<ObjHistoryQuery> OBJECT_HISTORY_VIEW = NamedValueDao.OBJECT_HISTORY_VIEW;
+	public static final View<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = NamedValueDao.ARRAY_HISTORY_VIEW;
+
 	protected int testId;
 	protected long step;
+//	protected long callStep;
 	protected long valueStep;
 	protected long nextChangeStep;
 	protected long nextGetStep = -1;
+	protected long lastGetStep = -1;
 	protected int id = -1;
 	protected String name;
 	protected Value value;
 	protected String method;
+	private Value owner;
 	
-	public NamedValue() {
+	public NamedValue() { }
+	
+	public NamedValue(MiConnection cnn) {
+		super(cnn);
 	}
 
 	public NamedValue(String name) {
@@ -53,6 +63,22 @@ public class NamedValue extends ModelBase {
 		return step;
 	}
 	
+	public long getValueStep() {
+		return valueStep;
+	}
+	
+	public Value getOwner() {
+		return owner;
+	}
+	
+	public void setOwner(Value owner) {
+		this.owner = owner;
+	}
+	
+//	public long getCallStep() {
+//		return callStep;
+//	}
+	
 	public int getId() {
 		return id;
 	}
@@ -63,6 +89,7 @@ public class NamedValue extends ModelBase {
 	
 	@Override
 	protected void lazyInitialize() throws Exception {
+		//Thread.sleep(500);
 		if (value == null) {
 			value = fetchValue();
 		}
@@ -119,34 +146,63 @@ public class NamedValue extends ModelBase {
 		return true;
 	}
 	
-	public NamedValue[] previewChildren() {
-		if (value == null) return null;
-		return value.previewChildren();
-	}
+//	public NamedValue[] previewChildren() {
+//		if (value == null) return null;
+//		return value.previewChildren();
+//	}
 
-	public void updateValue(long step, Callback<? super NamedValue> updateCallback) {
-		this.step = step;
-		if (!isInitialized()) return;
-//		if (needsUpdate(step)) {
-//			value = null;
-//			reInitialize();
-//			updateCallback.call(this);
-//		} else {
-//			value.updateChildren(step, updateCallback);
-//		}
-		if (value.needsUpdate(step)) {
-			synchronized (this) {
-				reInitialize();
-			}
-			updateCallback.call(this);
-		} else {
-			value.updateChildren(step, updateCallback);
+	private boolean stepOver(long value, long oldStep, long newStep) {
+		if (value == oldStep) {
+			return value != newStep;
+		} else if (value < oldStep) {
+			return value >= newStep;
+		} else { // value > oldStep
+			return value <= newStep;
 		}
 	}
+//	
+//	public boolean valueUpdateNeeded(long newStep) {
+//		return valueUpdateNeeded(step, newStep);
+//	}
 	
-	public boolean needsUpdate(long step) {
-		return (nextChangeStep > -1 && nextChangeStep < step)
-				|| (valueStep != -1 && valueStep >= step);
+	public boolean updateNeeded(long newStep) {
+		return valueUpdateNeeded(step, newStep) || minorUpdateNeeded(step, newStep);
+	}
+	
+	private boolean valueUpdateNeeded(long oldStep, long newStep) {
+		return (nextChangeStep != -1 && stepOver(nextChangeStep, oldStep, newStep))
+				|| (valueStep != -1 && stepOver(valueStep, oldStep, newStep));
+	}
+	
+	private boolean minorUpdateNeeded(long oldStep, long newStep) {
+		return (nextGetStep != -1 && stepOver(nextGetStep, oldStep, newStep))
+				|| (lastGetStep != -1 && stepOver(lastGetStep, oldStep, newStep));
+	}
+	
+	public boolean setStep(long newStep) {
+		assert !updateNeeded(newStep);
+		step = newStep;
+		if (!isInitialized()) {
+			return true;
+		}
+		if (!setValueStep(newStep)) {
+			return false;
+		}
+//		if (valueUpdateNeeded(oldStep, newStep) || minorUpdateNeeded(oldStep, newStep)) {
+//			value = null;
+//			reInitialize();
+//			return false;
+//		}
+		return true;
+	}
+
+	private boolean setValueStep(long newStep) {
+		if (value.updateNeeded(newStep)) {
+			value = null;
+			reInitialize();
+			return false;
+		}
+		return true;
 	}
 	
 	@Override
@@ -164,7 +220,8 @@ public class NamedValue extends ModelBase {
 
 		private long call;
 		
-		public MethodFrameValue(int testId, long call, long step) {
+		public MethodFrameValue(MiConnection cnn, int testId, long call, long step) {
+			super(cnn);
 			this.testId = testId;
 			this.call = call;
 			this.step = step;
@@ -174,19 +231,11 @@ public class NamedValue extends ModelBase {
 
 		@Override
 		protected Value fetchValue() throws Exception {
-			return new Value.MethodSnapshot(testId, call, step);
-		}
-		
+			return new Value.MethodSnapshot(cnn(), testId, call, step);
+		}	
 	}
 	
 	public static class VariableValue extends NamedValue { 
-		
-		@Override
-		public String getName() {
-			String s = super.getName();
-			if (s != null) return s;
-			return String.valueOf(step);
-		}
 		
 		@Override
 		protected Value fetchValue() throws Exception {
@@ -194,9 +243,8 @@ public class NamedValue extends ModelBase {
 				return new Value.Primitive("--> " + nextChangeStep);
 			}
 			return DatabaseConnector.cnn()
-					.select().from(Value.VARIABLE_VIEW)
-					.where().id(id).atStep(testId, valueStep)
-					.withCurrentStep(step)
+					.select()
+					.from(Value.ofVariable(id, testId, valueStep, step))
 					.getSingle().execute();
 		}
 		
@@ -209,6 +257,10 @@ public class NamedValue extends ModelBase {
 	public static class FieldValue extends NamedValue {
 		
 		private boolean valueIsPut;
+		
+		public boolean isPut() {
+			return valueIsPut;
+		}
 		
 		@Override
 		protected Value fetchValue() throws Exception {
@@ -223,21 +275,21 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
+			
 			Value v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select()
+				.from(Value.ofField(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 			if (v != null) return v;
+			
 			System.err.println("TODO: fix this");
-			view = !valueIsPut ? Value.PUT_VIEW : Value.GET_VIEW;
 			v = DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
-				.getSingle().execute();
-			return v;
+					.select()
+					.from(Value.ofField(!valueIsPut, id, testId, valueStep, step))
+					.getSingle().execute();
+			if (v != null) return v;
+			
+			return null;
 		}
 		
 		@Override
@@ -249,6 +301,10 @@ public class NamedValue extends ModelBase {
 	public static class ItemValue extends NamedValue {
 		
 		private boolean valueIsPut;
+		
+		public boolean isPut() {
+			return valueIsPut;
+		}
 		
 		@Override
 		public String getName() {
@@ -268,11 +324,8 @@ public class NamedValue extends ModelBase {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			View<Value.ValueQuery> view = valueIsPut ? Value.ARRAY_PUT_VIEW : Value.ARRAY_GET_VIEW;
 			return DatabaseConnector.cnn()
-				.select().from(view)
-				.where().id(id).atStep(testId, valueStep)
-				.withCurrentStep(step)
+				.select().from(Value.ofArray(valueIsPut, id, testId, valueStep, step))
 				.getSingle().execute();
 		}
 		
@@ -283,270 +336,20 @@ public class NamedValue extends ModelBase {
 	}
 	
 	public static class VariableHistory extends NamedValue {
-		public VariableHistory(int testId, long callStep, int varId) {
-			super("-", new Value.VariableHistory(testId, callStep, varId));
+		public VariableHistory(MiConnection cnn, int testId, long callStep, int varId) {
+			super("-", new Value.VariableHistory(cnn, testId, callStep, varId));
+		}
+	}
+
+	public static class ObjectHistory extends NamedValue {
+		public ObjectHistory(MiConnection cnn, int testId, long callStep, int thisId) {
+			super("-", new Value.ObjectHistory(cnn, testId, callStep, thisId));
 		}
 	}
 	
-	public static final View<VarQuery> VARIABLE_VIEW = new QueryFactoryView<>(VarQuery.class);
-	public static final View<FieldQuery> FIELD_VIEW = new QueryFactoryView<>(FieldQuery.class);
-	public static final View<ItemQuery> ARRAY_ITEM_VIEW = new QueryFactoryView<>(ItemQuery.class);
-	public static final View<VarHistoryQuery> VARIABLE_HISTORY_VIEW = new QueryFactoryView<>(VarHistoryQuery.class);
-	
-	private static class NameValueQueryTemplate<E> extends GraphQueryTemplate<E> {{}}
-	
-	private static final Mapping<VariableValue> VAR_MAPPING = new ReflectiveMapping<VariableValue>(VariableValue.class);
-	
-	private static final GraphQueryTemplate<VariableValue> VAR_TEMPLATE = new NameValueQueryTemplate<VariableValue>() {{
-		select("m.`name`, m.`id`");
-		using("last_and_next")
-			.select("COALESCE(lastSet.`step`, -1) AS `valueStep`")
-			.select("COALESCE(nextSet.`step`, -1) AS `nextChangeStep`");
-		
-		from("`Variable` m");
-		join("LEFT OUTER JOIN " +
-				 "(SELECT `methodId`, `variableId`, MAX(`step`) AS `step` " +
-			    "FROM `VariableTrace` " +
-			    "WHERE `testId` = ? AND `callStep` = ? AND `step` < ? " +
-			    "GROUP BY `methodId`, `variableId`) " +
-			 "lastSet ON m.`id` = lastSet.`variableId` AND m.`methodId` = lastSet.`methodId`");
-		join("LEFT OUTER JOIN " +
-			 "(SELECT `methodId`, `variableId`, MIN(`step`) AS `step` " +
-			    "FROM `VariableTrace` " +
-			    "WHERE `testId` = ? AND `callStep` = ? AND `step` >= ? " +
-			    "GROUP BY `methodId`, `variableId`) " +
-			 "nextSet ON m.`id` = nextSet.`variableId` AND m.`methodId` = nextSet.`methodId`");
-		
-		using("lastSet", "nextSet")
-			.where("last_and_next", 
-				     "(lastSet.`step` IS NOT NULL " +
-				   "OR nextSet.`step` IS NOT NULL)");
-		
-		always().orderBy("m.`id`");
-	}};
-
-	public static class VarQuery extends GraphQuery<VariableValue> {
-
-		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, VAR_MAPPING, VAR_TEMPLATE, view);
-			select_keys(fields);
+	public static class ArrayHistory extends NamedValue {
+		public ArrayHistory(MiConnection cnn, int testId, long callStep, int thisId) {
+			super("-", new Value.ArrayHistory(cnn, testId, callStep, thisId));
 		}
-		
-		public VarQuery where() {
-			return this;
-		}
-		
-		public VarQuery atStep(int testId, long callStep, long step) {
-			put("lastSet", testId, callStep, step);
-			put("nextSet", testId, callStep, step);
-			adapter(new SetStepAdapter(testId, step));
-			return this;
-		}
-	};
-	
-	private static final Mapping<FieldValue> FIELD_MAPPING = new ReflectiveMapping<FieldValue>(FieldValue.class) {
-		protected void setField(FieldValue record, String field, java.sql.ResultSet rs, int i) throws SQLException {
-			switch (field) {
-			case "valueIsPut":
-				record.valueIsPut = rs.getInt(i) == 1;
-				break;
-			default:
-				super.setField(record, field, rs, i);
-			}
-		};
-	};
-		
-	private static final GraphQueryTemplate<FieldValue> FIELD_TEMPLATE = new NameValueQueryTemplate<FieldValue>() {{
-		select("m.`name`, m.`id`");
-		using("last_and_next")
-			.select("COALESCE(lastPut.`step`, lastGet.`step`, -1) AS `valueStep`")
-			.select("__ISNOTNULL{lastPut.`step`} AS `valueIsPut`")
-			.select("COALESCE(nextPut.`step`, -1) AS `nextChangeStep`")
-			.select("COALESCE(nextGet.`step`, -1) AS `nextGetStep`");
-		
-		from("`Field` m");
-		
-		join("LEFT OUTER JOIN " +
-				"(SELECT MAX(`step`) AS `step`, `fieldId` " +
-				 "FROM `PutTrace` " +
-				 "WHERE `testId` = ? AND `thisId` = ? AND `step` < ? " +
-				 "GROUP BY `fieldId`) " +
-			 "lastPut ON lastPut.`fieldId` = m.`id`");
-		join("LEFT OUTER JOIN " +
-				"(SELECT MAX(`step`) AS `step`, `fieldId` " +
-				 "FROM `GetTrace` " +
-				 "WHERE `testId` = ? AND `thisId` = ? AND `step` < ? " +
-				 "GROUP BY `fieldId`) " +
-			 "lastGet ON lastGet.`fieldId` = m.`id`");
-		join("LEFT OUTER JOIN " +
-				"(SELECT MIN(`step`) AS `step`, `fieldId` " +
-				 "FROM `PutTrace` " +
-				 "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ? " +
-				 "GROUP BY `fieldId`) " +
-			 "nextPut ON nextPut.`fieldId` = m.`id`");
-		join("LEFT OUTER JOIN " +
-				"(SELECT MIN(`step`) AS `step`, `fieldId` " +
-				 "FROM `GetTrace` " +
-				 "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ? " +
-				 "GROUP BY `fieldId`) " +
-			 "nextGet ON nextGet.`fieldId` = m.`id`");
-		
-		using("lastPut", "lastGet", "nextPut", "nextGet")
-			.where("last_and_next", 
-				     "(lastPut.`step` IS NOT NULL " +
-				   "OR lastGet.`step` IS NOT NULL " +
-				   "OR nextPut.`step` IS NOT NULL " +
-				   "OR nextGet.`step` IS NOT NULL)");
-		always().orderBy("m.`id`");
-	}};
-	
-	public static class FieldQuery extends GraphQuery<FieldValue> {
-
-		public FieldQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, FIELD_MAPPING, FIELD_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-		public FieldQuery where() {
-			return this;
-		}
-		
-		public FieldQuery atStep(int testId, long thisId, long step) {
-			put("lastPut", testId, thisId, step);
-			put("lastGet", testId, thisId, step);
-			put("nextPut", testId, thisId, step);
-			put("nextGet", testId, thisId, step);
-			adapter(new SetStepAdapter(testId, step));
-			return this;
-		}
-	};
-	
-	private static final Mapping<ItemValue> ARRAY_ITEM_MAPPING = new ReflectiveMapping<ItemValue>(ItemValue.class) {
-		protected void setField(ItemValue record, String field, java.sql.ResultSet rs, int i) throws SQLException {
-			switch (field) {
-			case "valueIsPut":
-				record.valueIsPut = rs.getInt(i) == 1;
-				break;
-			default:
-				super.setField(record, field, rs, i);
-			}
-		};
-	};
-	
-	private static final GraphQueryTemplate<ItemValue> ARRAY_ITEM_TEMPLATE = new NameValueQueryTemplate<ItemValue>() {{
-		select("`index` AS `id`",
-			   "COALESCE(MAX(lastPut_step), MAX(lastGet_step), -1) AS `valueStep`",
-			   "__ISNOTNULL{MIN(lastPut_step)} AS `valueIsPut`",
-			   "COALESCE(MIN(nextPut_step), -1) AS `nextChangeStep`",
-			   "COALESCE(MIN(nextGet_step), -1) AS `nextGetStep`");
-		
-		from("(SELECT * FROM " +
-				"(SELECT `index`, " +
-				        "MAX(`step`) AS lastPut_step, NULL AS lastGet_step, NULL AS nextPut_step, NULL AS nextGet_step " +
-		         "FROM `ArrayPutTrace` " +
-		         "WHERE `testId` = ? AND `thisId` = ? AND `step` < ? " +
-		         "GROUP BY `index`) tmp " +
-	         "UNION " +
-				"(SELECT `index`, " +
-				        "NULL AS lastPut_step, MAX(`step`) AS lastGet_step, NULL AS nextPut_step, NULL AS nextGet_step " +
-		         "FROM `ArrayGetTrace` " +
-		         "WHERE `testId` = ? AND `thisId` = ? AND `step` < ? " +
-		         "GROUP BY `index`) " +
-	         "UNION " +
-				"(SELECT `index`, " +
-				        "NULL AS lastPut_step, NULL AS lastGet_step, MIN(`step`) AS nextPut_step, NULL AS nextGet_step " +
-		         "FROM `ArrayPutTrace` " +
-		         "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ? " +
-		         "GROUP BY `index`) " +
-	         "UNION " +
-				"(SELECT `index`, " +
-				        "NULL AS lastPut_step, NULL AS lastGet_step, NULL AS nextPut_step, MIN(`step`) AS nextGet_step " +
-		         "FROM `ArrayGetTrace` " +
-		         "WHERE `testId` = ? AND `thisId` = ? AND `step` >= ? " +
-		         "GROUP BY `index`) " +				
-			 ") t");
-		
-		always()
-			.groupBy("`index`")
-			.orderBy("`index`");
-	}};
-	
-	public static class ItemQuery extends GraphQuery<ItemValue> {
-
-		public ItemQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_ITEM_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-		public ItemQuery where() {
-			return this;
-		}
-		
-		public ItemQuery atStep(int testId, long thisId, long step) {
-			put("t",
-					testId, thisId, step,
-					testId, thisId, step,
-					testId, thisId, step,
-					testId, thisId, step);
-			adapter(new SetStepAdapter(testId, step));
-			return this;
-		}
-		
-	};
-	
-	private static final GraphQueryTemplate<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>() {{
-		select("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`, t.`step` AS `valueStep`");
-		
-		from("`VariableTrace` t");
-		where("call_EQ", "t.`testId` = ? AND t.`callStep` = ?");
-		where("id_EQ", "t.`variableId` = ?");
-		always().orderBy("t.`step`");
-	}};
-	
-	public static class VarHistoryQuery extends GraphQuery<VariableValue> {
-
-		public VarHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, VAR_MAPPING, VAR_HISTORY_TEMPLATE, view);
-			select_keys(fields);
-		}
-		
-		public VarHistoryQuery where() {
-			return this;
-		}
-		
-		public VarHistoryQuery inCall(int testId, long callStep) {
-			where_key("call_EQ", testId, callStep);
-			return this;
-		}
-		
-		public VarHistoryQuery byId(int id) {
-			where_key("id_EQ", id);
-			return this;
-		}
-	};
-
-	private static class SetStepAdapter extends ValueAdapterBase<NamedValue> {
-		private final int testId;
-		private final long step;
-		public SetStepAdapter(int testId, long step) {
-			super();
-			this.testId = testId;
-			this.step = step;
-		}
-		@Override
-		public void initialize(ResultSet rs) throws SQLException {
-		}
-		@Override
-		public void apply(NamedValue entity) throws SQLException {
-			entity.testId = testId;
-			entity.step = step;
-		}
-		@Override
-		public void complete() throws SQLException {
-		}
-		@Override
-		public void close() throws SQLException {
-		}		
 	}
-
 }
