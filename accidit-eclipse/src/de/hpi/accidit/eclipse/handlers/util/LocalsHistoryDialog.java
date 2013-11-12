@@ -207,7 +207,7 @@ public class LocalsHistoryDialog extends Dialog {
 	@Override
 	public void okPressed() {
 		NamedValueNode sel = getSelectedElement();
-		if (sel == null || sel.getDepth() > 0) return;
+		if (sel == null || sel.getDepth() > 1) return;
 		dialogResultCache = new Object[]{sel};
 		super.okPressed();
 	}
@@ -238,9 +238,10 @@ public class LocalsHistoryDialog extends Dialog {
 			@Override
 			protected void run(String value, Throwable error) {
 				if (step != currentStep) return;
+				if (error != null) error.printStackTrace(System.err);
 				String title = "History of " + (value != null ? value : error);
 				titleLabel.setText(title);
-				
+				titleLabel.getParent().layout();
 			}
 		});
 	}
@@ -319,11 +320,16 @@ public class LocalsHistoryDialog extends Dialog {
 
 		@Override
 		public MiFuture<String> getTitle(MiConnection cnn, long step) {
-			return new Value.ObjectSnapshot(cnn, (int) testId, thisId, step)
-				.onInitialized(new MiFutureAction<Value.ObjectSnapshot, String>() {
+			return cnn.select().from(Value.object((int) testId, thisId, step))
+					.getSingle()._submit()
+					.onComplete(new MiFutureAction<MiFuture<Value>, String>() {
 					@Override
-					public java.lang.String call(ObjectSnapshot arg) throws Exception {
-						return arg.getLongString();
+					public String call(MiFuture<Value> arg) throws Exception {
+						if (arg.hasFailed()) {
+							arg.getException().printStackTrace(System.err);
+							return arg.getException().getMessage();
+						}
+						return arg.getResult().getLongString();
 					}
 			});
 		}

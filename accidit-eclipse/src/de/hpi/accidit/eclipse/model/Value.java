@@ -29,6 +29,10 @@ public abstract class Value extends ModelBase {
 		return ValueDao.ofArray(put, index, testId, valueStep, step);
 	}
 	
+	public static View<MappedQueryString<Value>> object(int testId, long thisId, long step) {
+		return ValueDao.object(testId, thisId, step);
+	}
+	
 	public Value(MiConnection cnn) {
 		super(cnn);
 	}

@@ -44,6 +44,18 @@ public class ValueDao extends ModelDaoBase {
 					.configure(new SetStepAdapter(step));
 	}
 
+	public static View<MappedQueryString<Value>> object(int testId, long thisId, long step) {
+		return new QueryView<>(MAPPING, 
+					"SELECT o.`testId`, 'L' AS `primType`, o.`id` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
+					"FROM `ObjectTrace` o " +
+					"LEFT OUTER JOIN `Type` y " +
+					  "ON y.`id` = o.`typeId` " +
+					"WHERE o.`testId` = ? AND o.`id` = ?", 
+					testId, thisId)
+			.configure(SET_CONNECTION)
+			.configure(new SetStepAdapter(step));
+	}
+	
 	private static final String[] C_PARAMS = {"testId", "primType", "valueId"};
 	
 	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>(Value.class, ObjectSnapshot.class, null) {
