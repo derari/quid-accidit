@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.handlers;
+package de.hpi.accidit.eclipse.breakpoints;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;

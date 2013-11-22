@@ -244,7 +244,7 @@
             commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
+            class="de.hpi.accidit.eclipse.breakpoints.AddBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
       </handler>
       <handler
@@ -264,7 +264,7 @@
          </activeWhen>      
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.ToggleAcciditLineBreakpointHandler"
+            class="de.hpi.accidit.eclipse.breakpoints.ToggleAcciditLineBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
    </extension>
