@@ -264,7 +264,7 @@
          </activeWhen>      
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.breakpoints.ToggleAcciditLineBreakpointHandler"
+            class="de.hpi.accidit.eclipse.breakpoints.ToggleLineBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
    </extension>

@@ -8,7 +8,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.swt.widgets.Widget;
 
-public class AcciditLineBreakpoint {
+public class LineBreakpoint {
 	
 	private static final String MARKER_ID = "de.hpi.accidit.eclipse.acciditAnnotationMarker";
 	
@@ -19,7 +19,7 @@ public class AcciditLineBreakpoint {
 	
 	private List<Widget> widgets;
 
-	public AcciditLineBreakpoint(IResource resource, int lineNumber) throws CoreException {
+	public LineBreakpoint(IResource resource, int lineNumber) throws CoreException {
 		this.resource = resource;
 		this.lineNumber = lineNumber;
 

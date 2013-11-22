@@ -72,7 +72,7 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 		final Label placeHolder2 = new Label(parent, SWT.NONE);
 	}
 	
-	public void addBreakpointLine(final AcciditLineBreakpoint breakpoint) {
+	public void addBreakpointLine(final LineBreakpoint breakpoint) {
 		final Button detailsButton = new Button(parent, SWT.BORDER);
 		detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		detailsButton.setText("v");
@@ -115,7 +115,7 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 		parent.layout();
 	}
 	
-	public void removeBreakpointLine(AcciditLineBreakpoint breakpoint) {
+	public void removeBreakpointLine(LineBreakpoint breakpoint) {
 		for (Widget widget : breakpoint.getUIElements()) {
 			widget.dispose();
 		}

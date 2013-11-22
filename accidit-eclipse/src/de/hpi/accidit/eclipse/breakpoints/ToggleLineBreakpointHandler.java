@@ -11,7 +11,7 @@ import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 
-public class ToggleAcciditLineBreakpointHandler extends AbstractHandler {
+public class ToggleLineBreakpointHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {

@@ -10,11 +10,11 @@ import de.hpi.accidit.eclipse.TraceNavigatorUI;
 
 public class BreakpointsManager {
 	
-	private List<AcciditLineBreakpoint> currentBreakpoints = new ArrayList<AcciditLineBreakpoint>();
+	private List<LineBreakpoint> currentBreakpoints = new ArrayList<LineBreakpoint>();
 	
 	public void toggleBreakpoint(IResource resource, int lineNumber) {
 		try {
-			AcciditLineBreakpoint breakpoint = getBreakpoint(resource, lineNumber);
+			LineBreakpoint breakpoint = getBreakpoint(resource, lineNumber);
 			if (breakpoint == null) {
 				addBreakpoint(resource, lineNumber);
 			} else {
@@ -25,8 +25,8 @@ public class BreakpointsManager {
 		}	
 	}
 	
-	private AcciditLineBreakpoint getBreakpoint(IResource resource, int lineNumber) {
-		for (AcciditLineBreakpoint breakpoint : currentBreakpoints) {
+	private LineBreakpoint getBreakpoint(IResource resource, int lineNumber) {
+		for (LineBreakpoint breakpoint : currentBreakpoints) {
 			if (breakpoint.getResource() == resource && breakpoint.getLineNumber() == lineNumber)
 				return breakpoint;
 		}
@@ -34,7 +34,7 @@ public class BreakpointsManager {
 	}
 	
 	public void addBreakpoint(IResource resource, int lineNumber) throws CoreException {
-		AcciditLineBreakpoint breakpoint = new AcciditLineBreakpoint(resource, lineNumber);
+		LineBreakpoint breakpoint = new LineBreakpoint(resource, lineNumber);
 
 		BreakpointsView breakpointsView = TraceNavigatorUI.getGlobal().getBreakpointsView();
 		breakpointsView.addBreakpointLine(breakpoint);
@@ -42,7 +42,7 @@ public class BreakpointsManager {
 		currentBreakpoints.add(breakpoint);
 	}
 	
-	public void removeBreakpoint(AcciditLineBreakpoint breakpoint) throws CoreException {
+	public void removeBreakpoint(LineBreakpoint breakpoint) throws CoreException {
 		breakpoint.delete();
 
 		BreakpointsView breakpointsView = TraceNavigatorUI.getGlobal().getBreakpointsView();
