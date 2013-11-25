@@ -7,9 +7,10 @@ import java.util.Set;
 import org.cthul.miro.MiConnection;
 import org.eclipse.ui.IWorkbenchPage;
 
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.BreakpointsView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
@@ -34,12 +35,13 @@ public class TraceNavigatorUI {
 	private final Set<AcciditView> views = Collections.synchronizedSet(new HashSet<AcciditView>());
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
+	private final BreakpointsManager breakpointsManager = new BreakpointsManager();
 	
 	// Trace
 	private int testId;
 	private TraceElement current;
 	
-	public TraceNavigatorUI() { }
+	public TraceNavigatorUI() {	}
 
 	public void setTraceExplorer(TraceExplorerView traceExplorer) {
 		this.mainPage = traceExplorer.getViewSite().getPage();
@@ -126,5 +128,9 @@ public class TraceNavigatorUI {
 			String filePath = le.parent.type;
 			srcFilesLocator.open(filePath, le.line, mainPage, getTraceExplorer());
 		}
+	}
+	
+	public BreakpointsManager getBreakpointsManager() {
+		return breakpointsManager;
 	}
 }

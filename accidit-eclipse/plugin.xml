@@ -49,7 +49,7 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.BreakpointsView"
+            class="de.hpi.accidit.eclipse.breakpoints.BreakpointsView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.BreakpointsView"
             name="Breakpoints"
@@ -244,7 +244,7 @@
             commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.AddBreakpointHandler"
+            class="de.hpi.accidit.eclipse.breakpoints.AddBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
       </handler>
       <handler
@@ -264,7 +264,7 @@
          </activeWhen>      
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.ToggleAcciditLineBreakpointHandler"
+            class="de.hpi.accidit.eclipse.breakpoints.ToggleLineBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
    </extension>
@@ -493,24 +493,29 @@
       </page>
    </extension>
    <extension
-         id="acciditBreakpointMarker"
-         name="Accidit Breakpoint Marker"
+         id="acciditAnnotationMarker"
          point="org.eclipse.core.resources.markers">
       <super
-            type="org.eclipse.debug.core.lineBreakpointMarker">
+            type="org.eclipse.core.resources.textmarker">
       </super>
-      <persistent
-            value="false">
-      </persistent>
    </extension>
    <extension
-         point="org.eclipse.debug.core.breakpoints">
-      <breakpoint
-            class="de.hpi.accidit.eclipse.breakpoints.AcciditLineBreakpoint"
-            id="acciditLineBreakpoint"
-            markerType="de.hpi.accidit.eclipse.acciditBreakpointMarker"
-            name="Accidit Line Breakpoints">
-      </breakpoint>
+         point="org.eclipse.ui.editors.annotationTypes">
+      <type
+            markerSeverity="1"
+            markerType="de.hpi.accidit.eclipse.acciditAnnotationMarker"
+            name="de.hpi.accidit.eclipse.breakpointAnnotation"
+            super="org.eclipse.ui.workbench.texteditor.warning">
+      </type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="de.hpi.accidit.eclipse.breakpointAnnotation"
+            icon="icons/a_logo.png"
+            includeOnPreferencePage="true"
+            verticalRulerPreferenceKey="myMarkerIndicationInVerticalRuler">
+      </specification>
    </extension>
 
 </plugin>
