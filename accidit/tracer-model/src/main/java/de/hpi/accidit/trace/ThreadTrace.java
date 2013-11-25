@@ -47,10 +47,15 @@ public class ThreadTrace {
     
     @SuppressWarnings("CallToThreadDumpStack")
     private void report(String msg, Throwable t) {
+        boolean end = false;
         errorCount++;
         msg += " (" + errorCount + "/" + MAX_ERROR + ")";
+        if (invocation != null) {
+            msg += " " + invocation;
+        }
         if (errorCount >= MAX_ERROR) {
             endTrace();
+            end = true;
             msg += " trace canceled";
             System.out.println(msg);
         } else if (invocation == null && root != null) {
@@ -65,6 +70,7 @@ public class ThreadTrace {
         } else {
             System.out.println(t.getMessage());
         }
+        if (end) throw new AssertionError("end trace: " + msg);
         //new RuntimeException(msg, t).printStackTrace();
     }
 
