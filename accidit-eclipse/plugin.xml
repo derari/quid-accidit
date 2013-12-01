@@ -55,6 +55,14 @@
             name="Breakpoints"
             restorable="true">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
+            name="Locals History"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">

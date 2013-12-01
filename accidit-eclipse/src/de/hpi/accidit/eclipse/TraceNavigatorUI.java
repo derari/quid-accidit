@@ -113,7 +113,7 @@ public class TraceNavigatorUI {
 	}
 	
 	public void setStep(final long newStep) {
-		setStep(new TraceElement(){{
+		setStep(new TraceElement() {{
 			this.testId = TraceNavigatorUI.this.testId;
 			this.step = newStep;
 		}});

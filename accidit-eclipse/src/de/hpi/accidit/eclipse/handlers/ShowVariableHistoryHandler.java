@@ -10,10 +10,10 @@ import org.eclipse.ui.handlers.HandlerUtil;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
-import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog;
-import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.HistorySource;
-import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.MethodCallSource;
-import de.hpi.accidit.eclipse.handlers.util.LocalsHistoryDialog.ObjectSource;
+import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog;
+import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.HistorySource;
+import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.MethodCallSource;
+import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.ObjectSource;
 import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
@@ -21,7 +21,6 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Variable;
-import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class ShowVariableHistoryHandler extends AbstractHandler {

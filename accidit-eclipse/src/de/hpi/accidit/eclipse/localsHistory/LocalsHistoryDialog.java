@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.handlers.util;
+package de.hpi.accidit.eclipse.localsHistory;
 
 import org.cthul.miro.MiConnection;
 import org.cthul.miro.MiFuture;
@@ -8,18 +8,16 @@ import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ArrayContentProvider;
-import org.eclipse.jface.viewers.BaseLabelProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITreeSelection;
+import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.jface.viewers.TreePath;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -44,8 +42,6 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
-import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
-import de.hpi.accidit.eclipse.model.db.TypeDao;
 import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
@@ -53,6 +49,16 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValu
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class LocalsHistoryDialog extends Dialog {
+	
+	private static final NamedValue ALL = new NamedValue("(all)");
+	
+	private static Image IMG_PUT = null;
+	private static Image IMG_GET = null;
+	static {
+		Display d = Display.getDefault();
+		IMG_PUT = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/put.png"));
+		IMG_GET = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/get.png"));
+	}
 
 	private Object[] dialogResultCache = null;
 
@@ -67,6 +73,7 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	 /* The selection in the comboViewer and the element whose history is displayed in the treeViewer. */
 	private NamedEntity selectedObject;
+	
 	private long currentStep = 0;
 	
 	public LocalsHistoryDialog(
@@ -156,6 +163,7 @@ public class LocalsHistoryDialog extends Dialog {
 				refreshTitleLabel();
 			}
 		});
+		
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
@@ -164,6 +172,7 @@ public class LocalsHistoryDialog extends Dialog {
 		});	
 		
 		comboViewer.addSelectionChangedListener(new ComboViewerSelectionListener());
+		
 		treeViewer.getTree().addListener(SWT.PaintItem, new Listener() {
 			public void handleEvent(Event event) {
 				if (event.index != 0) return;
@@ -229,10 +238,23 @@ public class LocalsHistoryDialog extends Dialog {
 		return dialogResultCache;
 	}
 	
+	public Image getImage(NamedValueNode node) {
+		if (node.getDepth() != 1) return null;
+		
+		NamedValue nv = (NamedValue) node.getValue();
+		if (nv instanceof VariableValue) {
+			//return imgPut;
+		} else if (nv instanceof FieldValue) {
+			FieldValue fv = (FieldValue) nv;
+			return fv.isPut() ? IMG_PUT : IMG_GET;
+		} else if (nv instanceof ItemValue) {
+			ItemValue iv = (ItemValue) nv;
+			return iv.isPut() ? IMG_PUT : IMG_GET;
+		}
+		return null;
+	}
+	
 	private void refreshTitleLabel() {
-//		String title = (selectedObject != null) ?
-//				"History of \"" + selectedObject.getName() + "\"" :
-//				"Select a value:";
 		final long step = currentStep;
 		source.getTitle(DatabaseConnector.cnn(), step).onComplete(new DoInUiThread<String>() {
 			@Override
@@ -258,7 +280,7 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 	}
 	
-	private static class ComboViewerLabelProvider extends BaseLabelProvider implements ILabelProvider {
+	private static class ComboViewerLabelProvider extends LabelProvider {
 
 		@Override
 		public Image getImage(Object element) {
@@ -272,8 +294,6 @@ public class LocalsHistoryDialog extends Dialog {
 			return value.getName();
 		}
 	}
-	
-	private static final NamedValue ALL = new NamedValue("(all)");
 	
 	public static abstract class HistorySource {
 		public abstract void show(HistoryNode content, long id);
@@ -358,21 +378,6 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	private class HistoryLabelProvider extends LocalsLabelProvider {
 		
-//		@Override
-//		public Image getImage(Object element) {
-//			NamedValueNode node = (NamedValueNode) element;
-//			if (node.getDepth() != 1) return null;
-//			
-//			NamedValue nv = (NamedValue) node.getValue();
-//			if (nv instanceof VariableValue) {
-//				return imgPut;
-//			} else if (nv instanceof FieldValue) {
-//				FieldValue fv = (FieldValue) nv;
-//				return fv.isPut() ? imgPut : imgGet;
-//			}
-//			return null;
-//		}
-		
 		@Override
 		public String getColumnText(Object element, int columnIndex) {
 			if (columnIndex == 0) {
@@ -393,28 +398,4 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 	}
 	
-	public Image getImage(NamedValueNode node) {
-		if (node.getDepth() != 1) return null;
-		
-		NamedValue nv = (NamedValue) node.getValue();
-		if (nv instanceof VariableValue) {
-			//return imgPut;
-		} else if (nv instanceof FieldValue) {
-			FieldValue fv = (FieldValue) nv;
-			return fv.isPut() ? imgPut : imgGet;
-		} else if (nv instanceof ItemValue) {
-			ItemValue fv = (ItemValue) nv;
-			return fv.isPut() ? imgPut : imgGet;
-		}
-		return null;
-	}
-	
-	private static Image imgPut = null;
-	private static Image imgGet = null;
-	
-	static {
-		Display d = Display.getDefault();
-		imgPut = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/put.png"));
-		imgGet = new Image(d, LocalsHistoryDialog.class.getResourceAsStream("/get.png"));
-	}
 }
