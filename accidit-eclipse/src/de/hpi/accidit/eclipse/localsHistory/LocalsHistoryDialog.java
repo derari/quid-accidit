@@ -63,17 +63,15 @@ public class LocalsHistoryDialog extends Dialog {
 	private Object[] dialogResultCache = null;
 
 	private TreeViewer treeViewer;
-	private HistoryNode contentNode;
 	private HistorySource source;
+	private HistoryNode contentNode;
 	
 	private ComboViewer comboViewer;
 	private NamedEntity[] comboViewerInput;
+	private NamedEntity selectedObject; //the selected comboViewer element
 
 	private Label titleLabel;
-	
-	 /* The selection in the comboViewer and the element whose history is displayed in the treeViewer. */
-	private NamedEntity selectedObject;
-	
+
 	private long currentStep = 0;
 	
 	public LocalsHistoryDialog(
@@ -88,6 +86,7 @@ public class LocalsHistoryDialog extends Dialog {
 		
 		if (source == null) throw new NullPointerException("source");
 		this.source = source;
+		
 		for (int i = 0; i < options.length; i++) {
 			if (options[i].getId() == selectedObject) {
 				this.selectedObject = options[i];
@@ -98,8 +97,7 @@ public class LocalsHistoryDialog extends Dialog {
 			this.selectedObject = ALL;
 		}
 		
-		// NamedValue this && VariableValue ex
-		this.comboViewerInput = new NamedEntity[options.length+1];
+		this.comboViewerInput = new NamedEntity[options.length + 1];
 		comboViewerInput[0] = ALL;
 		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
 	}
@@ -207,10 +205,10 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	private NamedValueNode getSelectedElement() {
 		ITreeSelection selection = (ITreeSelection) treeViewer.getSelection();
-		if (selection != null && !selection.isEmpty()) {
-			return (NamedValueNode) selection.getFirstElement();
+		if (selection == null || selection.isEmpty()) {
+			return null;
 		}
-		return null;
+		return (NamedValueNode) selection.getFirstElement();
 	}
 	
 	@Override
@@ -268,7 +266,7 @@ public class LocalsHistoryDialog extends Dialog {
 		});
 	}
 	
-	private final class ComboViewerSelectionListener implements ISelectionChangedListener {
+	public final class ComboViewerSelectionListener implements ISelectionChangedListener {
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
 			IStructuredSelection selection = (IStructuredSelection) event.getSelection();
@@ -280,7 +278,7 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 	}
 	
-	private static class ComboViewerLabelProvider extends LabelProvider {
+	public static class ComboViewerLabelProvider extends LabelProvider {
 
 		@Override
 		public Image getImage(Object element) {
@@ -355,7 +353,7 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 	}
 	
-	private static class HistoryNode extends NamedValueNode {
+	public static class HistoryNode extends NamedValueNode {
 
 		public HistoryNode(TreeViewer viewer) {
 			super(viewer);
@@ -376,7 +374,7 @@ public class LocalsHistoryDialog extends Dialog {
 		}
 	}
 	
-	private class HistoryLabelProvider extends LocalsLabelProvider {
+	public class HistoryLabelProvider extends LocalsLabelProvider {
 		
 		@Override
 		public String getColumnText(Object element, int columnIndex) {

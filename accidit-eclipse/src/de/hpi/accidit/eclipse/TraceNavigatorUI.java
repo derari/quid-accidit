@@ -26,11 +26,7 @@ public class TraceNavigatorUI {
 		return GLOBAL;
 	}
 	
-	// UI
 	private IWorkbenchPage mainPage = null;
-//	private TraceExplorerView traceExplorer = null;
-//	private LocalsExplorerView localsExplorer = null;
-//	private BreakpointsView breakpointsView = null;
 	
 	private final Set<AcciditView> views = Collections.synchronizedSet(new HashSet<AcciditView>());
 	
