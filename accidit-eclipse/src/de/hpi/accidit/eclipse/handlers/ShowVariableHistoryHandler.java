@@ -10,10 +10,10 @@ import org.eclipse.ui.handlers.HandlerUtil;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.localsHistory.HistorySource;
+import de.hpi.accidit.eclipse.localsHistory.HistorySource.MethodCallSource;
+import de.hpi.accidit.eclipse.localsHistory.HistorySource.ObjectSource;
 import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.HistorySource;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.MethodCallSource;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog.ObjectSource;
 import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
@@ -30,7 +30,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
 		ITreeSelection selectedLocals = (ITreeSelection) sel;
 
-		NamedEntity[] options = null;
+		
 		int selected = -1;
 		boolean variable = false;
 		long thisId = -1;
@@ -58,6 +58,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 			}
 		}
 		
+		NamedEntity[] options = null;
 		HistorySource src;
 		if (variable) {
 			long testId = TraceNavigatorUI.getGlobal().getTestId();
