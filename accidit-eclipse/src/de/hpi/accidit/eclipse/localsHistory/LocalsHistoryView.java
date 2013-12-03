@@ -76,17 +76,22 @@ public class LocalsHistoryView extends ViewPart implements AcciditView {
 	public LocalsHistoryView() { }
 
 	@Override
-	public void createPartControl(Composite parent) {		
+	public void createPartControl(final Composite parent) {		
 		GridLayout layout = new GridLayout(2, false);
 		parent.setLayout(layout);
 		
 		titleLabel = new Label(parent, SWT.NONE);
-		titleLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
-//		refreshTitleLabel(); TODO
+		GridData labelLayoutData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		labelLayoutData.widthHint = 250;
+		titleLabel.setLayoutData(labelLayoutData);
+		refreshTitleLabel();
 		
 		comboViewer = new ComboViewer(parent, SWT.READ_ONLY | SWT.V_SCROLL);
 		Combo combo = comboViewer.getCombo();
-		combo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		GridData comboLayoutData = new GridData(SWT.FILL, SWT.CENTER, true, false);
+		comboLayoutData.widthHint = 150;
+		comboLayoutData.minimumWidth = 80;
+		combo.setLayoutData(comboLayoutData);
 		comboViewer.setContentProvider(ArrayContentProvider.getInstance());
 		comboViewer.setInput(comboViewerInput);
 		comboViewer.setLabelProvider(new ComboViewerLabelProvider());
@@ -119,7 +124,6 @@ public class LocalsHistoryView extends ViewPart implements AcciditView {
 		treeViewer.setLabelProvider(new HistoryLabelProvider());
 		contentNode = new HistoryNode(treeViewer);
 		treeViewer.setInput(contentNode);
-//		source.show(contentNode, selectedObject.getId()); TODO
 		
 		treeViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			private long currentStep;
@@ -156,15 +160,24 @@ public class LocalsHistoryView extends ViewPart implements AcciditView {
 				NamedValueNode node = (NamedValueNode) item.getData();
 				if (node == null || node.getDepth() != 1) return;
 				Image image = getImage(node);
-				if (image == null) return; 
-				event.gc.drawImage(image, event.x+3, event.y);
+				if (image == null) return;
+				event.gc.drawImage(image, event.x + 3, event.y);
 			}
 		});
+		
+//		parent.addListener(SWT.Resize, new Listener() {
+//			@Override
+//			public void handleEvent(Event event) {
+////				parent.layout();
+//			}
+//	    });
 		
 		TraceNavigatorUI.getGlobal().addView(this);
 	}
 	
 	private void refreshTitleLabel() {
+		if (source == null) return;
+		
 		final long step = currentStep;
 		source.getTitle(DatabaseConnector.cnn(), step).onComplete(new DoInUiThread<String>() {
 			@Override
@@ -211,19 +224,18 @@ public class LocalsHistoryView extends ViewPart implements AcciditView {
 	public void setStep(TraceElement te) {
 		long testId = te.getTestId();
 		long callStep = te.getCallStep(); 
+		
 		source = new MethodCallSource(testId, callStep);
 		NamedEntity[] options = DatabaseConnector.cnn().select()
 				.from(Variable.VIEW).inCall(testId, callStep).orderById()
 				.asArray()._execute();
-
 		comboViewerInput = new NamedEntity[options.length + 1];
 		comboViewerInput[0] = ALL;
 		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
 
-		selectedObject = ALL;
 		comboViewer.setInput(comboViewerInput);
-		StructuredSelection comboViewerSelection = new StructuredSelection(selectedObject);
-		comboViewer.setSelection(comboViewerSelection);
+		comboViewer.setSelection(new StructuredSelection(ALL));
+		refreshTitleLabel();
 	}
 	
 	@Override
@@ -257,8 +269,6 @@ public class LocalsHistoryView extends ViewPart implements AcciditView {
 	public final class ComboViewerSelectionListener implements ISelectionChangedListener {
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
-			// TODO check if selection did not change: return
-			
 			IStructuredSelection selection = (IStructuredSelection) event.getSelection();
 			if (selection.isEmpty()) return;
 			
