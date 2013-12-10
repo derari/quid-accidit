@@ -18,7 +18,6 @@ import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Variable;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
@@ -30,62 +29,44 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
 		ITreeSelection selectedLocals = (ITreeSelection) sel;
 
-		
-		int selected = -1;
-		boolean variable = false;
-		long thisId = -1;
-		int arrayLength = -1;
-		Value owner = null;
-		if (!selectedLocals.isEmpty()) {
-			NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
-			NamedValue nv = (NamedValue) nvn.getValue();
-			if (nv instanceof NamedValue.VariableValue) {
-				variable = true;
-				selected = nv.getId();
-			} else if (nv instanceof NamedValue.FieldValue) {
-				selected = nv.getId();
-				owner = nv.getOwner();
-				if (owner instanceof ObjectSnapshot) {
-					thisId = ((ObjectSnapshot) owner).getThisId();
-				}
-			} else if (nv instanceof NamedValue.ItemValue) {
-				selected = nv.getId();
-				owner = nv.getOwner();
-				if (owner instanceof ObjectSnapshot) {
-					thisId = ((ObjectSnapshot) owner).getThisId();
-					arrayLength = ((ObjectSnapshot) owner).getArrayLength();
-				}
-			}
-		}
-		
+		NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
+		NamedValue nv = (NamedValue) nvn.getValue();
+		int selectedNamedValueId = nv.getId();
+		long testId = TraceNavigatorUI.getGlobal().getTestId();
+
 		NamedEntity[] options = null;
 		HistorySource src;
-		if (variable) {
-			long testId = TraceNavigatorUI.getGlobal().getTestId();
-			long callStep = TraceNavigatorUI.getGlobal().getCallStep(); 
+
+		if (nv instanceof NamedValue.VariableValue) {
+			long callStep = TraceNavigatorUI.getGlobal().getCallStep();
+			
 			src = new MethodCallSource(testId, callStep);
 			options = DatabaseConnector.cnn().select()
 					.from(Variable.VIEW).inCall(testId, callStep).orderById()
 					.asArray()._execute();
-		} else if (thisId != -1) {
-			long testId = TraceNavigatorUI.getGlobal().getTestId();
-			if (arrayLength > -1) {
-				src = new ObjectSource(testId, thisId, true);
-				options = ArrayIndex.newIndexArray(arrayLength);
-			} else {
-				src = new ObjectSource(testId, thisId, false);
-				options = DatabaseConnector.cnn().select()
-						.from(Field.VIEW).ofObject(testId, thisId).orderById()
-						.asArray()._execute();
-			}
+		} else if (nv instanceof NamedValue.FieldValue) {
+			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
+			long thisId = owner.getThisId();
+
+			src = new ObjectSource(testId, thisId, false);
+			options = DatabaseConnector.cnn().select()
+					.from(Field.VIEW).ofObject(testId, thisId).orderById()
+					.asArray()._execute();
+		} else if (nv instanceof NamedValue.ItemValue) {
+			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
+			long thisId = owner.getThisId();
+			int arrayLength = owner.getArrayLength();
+			
+			src = new ObjectSource(testId, thisId, true);
+			options = ArrayIndex.newIndexArray(arrayLength);
 		} else {
-			throw new UnsupportedOperationException(String.valueOf(selected));
+			throw new UnsupportedOperationException(String.valueOf(selectedNamedValueId));
 		}
 
 		LocalsHistoryDialog dialog = new LocalsHistoryDialog(
 				HandlerUtil.getActiveShell(event), 
 				src,
-				selected, 
+				selectedNamedValueId, 
 				options);
 
 		if (dialog.open() == Window.OK) {
@@ -94,8 +75,6 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 				NamedValue variableValue = ((NamedValueNode) result[0]).getValue();
 				long step = variableValue.getStep();
 				TraceNavigatorUI.getGlobal().setStep(step);
-//				TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
-//				traceExplorer.getSelectionAdapter().selectAtStep(step);
 			}
 		}
 		return null;

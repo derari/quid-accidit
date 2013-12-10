@@ -28,6 +28,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.IWorkbenchPartSite;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
@@ -65,30 +66,17 @@ public class LocalsHistoryContainer {
 
 	private long currentStep = 0;
 
-	public LocalsHistoryContainer() {
-		
-	}
+	public LocalsHistoryContainer() { }
 	
 	public void setHistorySource(HistorySource source) {
 		this.source = source;
 	}
 	
-	public void setComboViewerOptions(NamedEntity[] options) {
-		comboViewerInput = new NamedEntity[options.length + 1];
-		comboViewerInput[0] = ALL;
-		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
-	}
-	
-	public void setComboViewerSelection(int namedValueId) {
-		for (int i = 0; i < comboViewerInput.length; i++) {
-			if (comboViewerInput[i].getId() == namedValueId) {
-				comboViewerSelection = comboViewerInput[i];
-				break;
-			}
-		}
-		if (this.comboViewerSelection == null) {
-			this.comboViewerSelection = ALL;
-		}
+	void setSelectionProvider(IWorkbenchPartSite site) {
+		// Sets the selection provider for this site. Only one selection provider per site!
+		
+		site.setSelectionProvider(comboViewer);
+//		site.setSelectionProvider(treeViewer);
 	}
 	
 	public void createPartControl(final Composite container) {		
@@ -127,9 +115,9 @@ public class LocalsHistoryContainer {
 		treeContainer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
 		
 		treeViewer = new TreeViewer(treeContainer, SWT.VIRTUAL | SWT.SINGLE);
+		
 		Tree tree = treeViewer.getTree();
 		tree.setHeaderVisible(true);
-		
 		TreeColumn column0 = new TreeColumn(tree, SWT.LEFT);
 		column0.setText("Name");
 		TreeColumn column1 = new TreeColumn(tree, SWT.LEFT);
@@ -188,10 +176,36 @@ public class LocalsHistoryContainer {
 			}
 		});
 	}
+	
+	/** Schedules a new combo viewer input. Call refresh to apply it. */
+	public void setComboViewerOptions(NamedEntity[] options) {
+		comboViewerInput = new NamedEntity[options.length + 1];
+		comboViewerInput[0] = ALL;
+		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
+	}
 
+	/** Schedules a new combo viewer selection. Call refresh to apply it. */
+	public void setComboViewerSelection(int namedValueId) {
+		for (int i = 0; i < comboViewerInput.length; i++) {
+			if (comboViewerInput[i].getId() == namedValueId) {
+				comboViewerSelection = comboViewerInput[i];
+				return;
+			}
+		}
+		comboViewerSelection = ALL;
+	}
+
+	/** Applies changes to combo viewer's input and selection. */
 	public void refresh() {
+		if (treeViewer.getInput() == null)
+			treeViewer.setInput(contentNode);
 		comboViewer.setInput(comboViewerInput);
 		comboViewer.setSelection(new StructuredSelection(comboViewerSelection));
+	}
+
+	public void reset() {
+		comboViewer.setInput(null);
+		treeViewer.setInput(null);
 	}
 	
 	public NamedValueNode getSelectedElement() {

@@ -28,10 +28,12 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	protected long nextChangeStep;
 	protected long nextGetStep = -1;
 	protected long lastGetStep = -1;
+	
 	protected int id = -1;
 	protected String name;
 	protected Value value;
 	protected String method;
+	
 	private Value owner;
 	
 	public NamedValue() { }

@@ -65,6 +65,8 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		
 		viewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
 		viewer.setLabelProvider(new LocalsLabelProvider());
+		getSite().setSelectionProvider(viewer);
+		
 		rootNode = new MethodNode(viewer);
 		viewer.setInput(rootNode);
 		
@@ -86,8 +88,6 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		final Menu contextMenu = menuManager.createContextMenu(viewer.getTree());
 		viewer.getControl().setMenu(contextMenu);		
 		getSite().registerContextMenu(menuManager, viewer);
-		
-		getSite().setSelectionProvider(viewer);
 		
 		TraceNavigatorUI.getGlobal().addView(this);
 	}

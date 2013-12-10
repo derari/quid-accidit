@@ -13,10 +13,10 @@ import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class LocalsHistoryDialog extends Dialog {
-
-	private Object[] dialogResultCache = null;
 	
 	private LocalsHistoryContainer localsHistory;
+
+	private Object[] dialogResultCache = null;
 	
 	public LocalsHistoryDialog(
 			Shell parent,
@@ -24,11 +24,11 @@ public class LocalsHistoryDialog extends Dialog {
 			int selectedObject, 
 			NamedEntity[] options) {
 		super(parent);
-
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
 		if (source == null) throw new NullPointerException("source");
+		
 		localsHistory = new LocalsHistoryContainer();
 		localsHistory.setHistorySource(source);
 		localsHistory.setComboViewerOptions(options);

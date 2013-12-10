@@ -15,7 +15,7 @@ public abstract class HistorySource {
 	public abstract MiFuture<String> getTitle(MiConnection cnn, long step);
 
 	/* Implementations */
-
+	
 	public static class MethodCallSource extends HistorySource {
 
 		private final long testId;
