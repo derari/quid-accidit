@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.localsHistory;
 
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.swt.layout.GridLayout;
@@ -42,8 +44,19 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		
 		localsHistory = new LocalsHistoryContainer();
 		localsHistory.createPartControl(parent);
-		localsHistory.setSelectionProvider(getSite());
 		
+		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
+			@Override
+			public void doubleClick(DoubleClickEvent event) {
+				NamedValueNode sel = localsHistory.getSelectedElement();
+				if (sel == null || sel.getDepth() != 1) return;
+				
+				NamedValue variableValue = sel.getValue();
+				TraceNavigatorUI.getGlobal().setStep(variableValue.getStep());
+			}
+		});
+
+		getSite().setSelectionProvider(localsHistory.getComboViewer());
 		getSite().getPage().addSelectionListener(this);
 		
 		TraceNavigatorUI.getGlobal().addView(this);
@@ -72,6 +85,13 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		localsHistory.setComboViewerSelection(-1);		
 		localsHistory.refresh();
 	}
+	
+	@Override
+	public void dispose() {
+		TraceNavigatorUI.getGlobal().removeView(this);
+		getSite().getPage().removeSelectionListener(this);
+		super.dispose();
+	}
 
 	@Override
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
@@ -81,9 +101,9 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		ITreeSelection selectedLocals = (ITreeSelection) selection;
 		NamedValueNode node = (NamedValueNode) selectedLocals.getFirstElement();
 		NamedValue namedValue = (NamedValue) node.getValue();
-		
-		HistorySource src = null;
+
 		int selectedNamedValueId = namedValue.getId();
+		HistorySource src = null;
 		NamedEntity[] options = null;
 		
 		if (namedValue instanceof NamedValue.VariableValue) {
@@ -107,7 +127,8 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 			src = new ObjectSource(currentTestId, thisId, true);
 			options = ArrayIndex.newIndexArray(arrayLength);
 		} else {
-			localsHistory.reset();
+			localsHistory.setComboViewerSelection(-1);
+			localsHistory.refresh();
 			return;
 		}
 		
@@ -117,10 +138,7 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		localsHistory.refresh();
 	}
 	
-	@Override
-	public void dispose() {
-		TraceNavigatorUI.getGlobal().removeView(this);
-		getSite().getPage().removeSelectionListener(this);
-		super.dispose();
+	public LocalsHistoryContainer getContainer() {
+		return localsHistory;
 	}
 }

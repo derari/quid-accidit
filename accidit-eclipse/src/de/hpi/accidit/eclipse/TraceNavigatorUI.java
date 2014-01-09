@@ -9,6 +9,7 @@ import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
+import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
@@ -74,6 +75,10 @@ public class TraceNavigatorUI {
 	
 	public LocalsExplorerView getLocalsExplorer() {
 		return findView(LocalsExplorerView.class);
+	}
+	
+	public LocalsHistoryView getLocalsHistoryView() {
+		return findView(LocalsHistoryView.class);
 	}
 	
 	public MiConnection cnn() {

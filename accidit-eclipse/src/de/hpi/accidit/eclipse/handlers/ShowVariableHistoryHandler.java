@@ -32,7 +32,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 		NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
 		NamedValue nv = (NamedValue) nvn.getValue();
 		int selectedNamedValueId = nv.getId();
-		long testId = TraceNavigatorUI.getGlobal().getTestId();
+		int testId = TraceNavigatorUI.getGlobal().getTestId();
 
 		NamedEntity[] options = null;
 		HistorySource src;

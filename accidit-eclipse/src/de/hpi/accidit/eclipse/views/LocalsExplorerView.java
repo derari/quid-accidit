@@ -35,15 +35,13 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValu
 
 public class LocalsExplorerView extends ViewPart implements AcciditView {
 
-	/**
-	 * The ID of the view as specified by the extension.
-	 */
+	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
-	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.revealVariableSetter";
+	
+	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.showVariableHistory";
 
 	private TreeViewer viewer;
 	private MethodNode rootNode;
-	//private LocalsContentProvider contentProvider;
 
 	public LocalsExplorerView() {}
 

@@ -35,7 +35,7 @@
             class="de.hpi.accidit.eclipse.views.LocalsExplorerView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
-            name="Locals and Fields"
+            name="Variables"
             restorable="true">
       </view>
       <view
@@ -60,7 +60,7 @@
             class="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
-            name="Locals History"
+            name="History"
             restorable="true">
       </view>
    </extension>
@@ -176,6 +176,11 @@
             id="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint"
             name="Toggle Accidit Line Breakpoint">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.showFieldsHistories"
+            name="Show Fields Histories">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -274,6 +279,10 @@
       <handler
             class="de.hpi.accidit.eclipse.breakpoints.ToggleLineBreakpointHandler"
             commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.localsHistory.ShowFieldsHistoriesHandler"
+            commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories">
       </handler>
    </extension>
    <extension
@@ -462,6 +471,13 @@
                commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
                id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
                label="Reveal setter"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories"
+               icon="icons/history_book.png"
+               id="de.hpi.accidit.eclipse.popups.showFieldsHistories"
+               label="Show Fields Histories"
                style="push">
          </command>
       </menuContribution>
