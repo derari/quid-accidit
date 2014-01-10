@@ -28,15 +28,20 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
-import org.eclipse.ui.IWorkbenchPartSite;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.localsHistory.HistorySource.MethodCallSource;
+import de.hpi.accidit.eclipse.localsHistory.HistorySource.ObjectSource;
+import de.hpi.accidit.eclipse.model.ArrayIndex;
+import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.Variable;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
+import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
@@ -70,13 +75,6 @@ public class LocalsHistoryContainer {
 	
 	public void setHistorySource(HistorySource source) {
 		this.source = source;
-	}
-	
-	void setSelectionProvider(IWorkbenchPartSite site) {
-		// Sets the selection provider for this site. Only one selection provider per site!
-		
-		site.setSelectionProvider(comboViewer);
-//		site.setSelectionProvider(treeViewer);
 	}
 	
 	public void createPartControl(final Composite container) {		
@@ -156,11 +154,43 @@ public class LocalsHistoryContainer {
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
-				NamedValueNode sel = getSelectedElement();
-				if (sel == null || sel.getDepth() > 1) return;
+				NamedValueNode selectedNode = getSelectedElement();
+				if (selectedNode == null || selectedNode.getDepth() < 2) return;
 				
-				NamedValue variableValue = sel.getValue();
-				TraceNavigatorUI.getGlobal().setStep(variableValue.getStep());
+				int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
+				long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
+				
+				NamedValue namedValue = (NamedValue) selectedNode.getValue();
+				int selectedNamedValueId = namedValue.getId();
+				HistorySource src = null;
+				NamedEntity[] options = null;
+				
+				if (namedValue instanceof NamedValue.VariableValue) {
+					src = new MethodCallSource(currentTestId, currentCallStep);
+					options = DatabaseConnector.cnn().select()
+							.from(Variable.VIEW).inCall(currentTestId, currentCallStep).orderById()
+							.asArray()._execute();
+				} else if (namedValue instanceof NamedValue.FieldValue) {
+					ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
+					long thisId = owner.getThisId();
+					
+					src = new ObjectSource(currentTestId, thisId, false);
+					options = DatabaseConnector.cnn().select()
+							.from(Field.VIEW).ofObject(currentTestId, thisId).orderById()
+							.asArray()._execute();
+				} else if (namedValue instanceof NamedValue.ItemValue) {
+					ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
+					long thisId = owner.getThisId();
+					int arrayLength = owner.getArrayLength();
+					
+					src = new ObjectSource(currentTestId, thisId, true);
+					options = ArrayIndex.newIndexArray(arrayLength);
+				}
+				
+				setHistorySource(src);
+				setComboViewerOptions(options);
+				setComboViewerSelection(selectedNamedValueId);
+				refresh();
 			}
 		});
 		
@@ -197,15 +227,20 @@ public class LocalsHistoryContainer {
 
 	/** Applies changes to combo viewer's input and selection. */
 	public void refresh() {
-		if (treeViewer.getInput() == null)
-			treeViewer.setInput(contentNode);
 		comboViewer.setInput(comboViewerInput);
 		comboViewer.setSelection(new StructuredSelection(comboViewerSelection));
 	}
-
-	public void reset() {
-		comboViewer.setInput(null);
-		treeViewer.setInput(null);
+	
+	public ComboViewer getComboViewer() {
+		return comboViewer;
+	}
+	
+	public TreeViewer getTreeViewer() {
+		return treeViewer;
+	}
+	
+	public Control getControl() {
+		return treeViewer.getControl();
 	}
 	
 	public NamedValueNode getSelectedElement() {
@@ -246,10 +281,6 @@ public class LocalsHistoryContainer {
 			return iv.isPut() ? IMG_PUT : IMG_GET;
 		}
 		return null;
-	}
-	
-	public Control getControl() {
-		return treeViewer.getControl();
 	}
 	
 	public static class HistoryLabelProvider extends LocalsLabelProvider {

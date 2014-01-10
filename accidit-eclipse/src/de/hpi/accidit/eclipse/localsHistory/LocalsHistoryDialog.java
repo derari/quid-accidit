@@ -2,6 +2,8 @@ package de.hpi.accidit.eclipse.localsHistory;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridLayout;
@@ -42,7 +44,15 @@ public class LocalsHistoryDialog extends Dialog {
 		gridLayout.numColumns = 2;
 		
 		localsHistory.createPartControl(container);
-		localsHistory.refresh();		
+		localsHistory.refresh();
+		
+		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
+			@Override
+			public void doubleClick(DoubleClickEvent event) {
+				okPressed();
+			}
+		});
+		
 		return parent;
 	}
 
@@ -66,7 +76,8 @@ public class LocalsHistoryDialog extends Dialog {
 	@Override
 	public void okPressed() {
 		NamedValueNode sel = localsHistory.getSelectedElement();
-		if (sel == null || sel.getDepth() > 1) return;
+		if (sel == null || sel.getDepth() != 1) return;
+		
 		dialogResultCache = new Object[] {sel};
 		super.okPressed();
 	}
