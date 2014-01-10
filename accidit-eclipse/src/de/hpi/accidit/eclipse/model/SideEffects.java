@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.cthul.miro.MiConnection;
+import static org.cthul.miro.DSL.*;
 
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.db.SideEffectsDao;
@@ -47,12 +48,12 @@ public class SideEffects extends Value.ValueWithChildren {
 	@Override
 	protected NamedValue[] fetchChildren() throws Exception {
 		List<NamedValue> children = new ArrayList<>();
-		List<FieldValue> fields = cnn().select()
+		List<FieldValue> fields = select()
 			.from(SideEffectsDao.FIELDS)
 			.inTest(testId)
 			.captureBetween(captureStart, captureEnd)
 			.targetBetween(targetStart, targetEnd)
-			.asList()._execute();
+			.execute(cnn()).asList();
 		children.addAll(fields);
 		return children.toArray(new NamedValue[children.size()]);
 	}

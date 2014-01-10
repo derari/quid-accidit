@@ -1,13 +1,13 @@
 package de.hpi.accidit.eclipse.model;
 
-import org.cthul.miro.dsl.View;
+import org.cthul.miro.view.ViewR;
 
 import de.hpi.accidit.eclipse.model.db.FieldDao;
 import de.hpi.accidit.eclipse.model.db.FieldDao.Query;
 
 public class Field implements NamedEntity {
 
-	public static final View<Query> VIEW = FieldDao.VIEW;
+	public static final ViewR<Query> VIEW = FieldDao.VIEW;
 	
 	private int id;
 	private String name;

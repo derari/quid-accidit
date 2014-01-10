@@ -2,12 +2,12 @@ package de.hpi.accidit.eclipse.model.db;
 
 import java.sql.SQLException;
 
-import org.cthul.miro.dsl.QueryView;
-import org.cthul.miro.dsl.View;
-import org.cthul.miro.map.MappedQueryString;
+import org.cthul.miro.map.MappedQueryStringView;
 import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ReflectiveMapping;
 import org.cthul.miro.result.EntityInitializer;
+import org.cthul.miro.result.ResultBuilders;
+import org.cthul.miro.view.Views;
 
 import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
@@ -15,8 +15,8 @@ import de.hpi.accidit.eclipse.model.Value.Primitive;
 
 public class ValueDao extends ModelDaoBase {
 	
-	public static View<MappedQueryString<Value>> this_inInvocation(int testId, long callStep, long step) {
-		return new QueryView<>(MAPPING, 
+	public static MappedQueryStringView<Value> this_inInvocation(int testId, long callStep, long step) {
+		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class), 
 					"SELECT t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
 					"FROM `CallTrace` t " +
 					"LEFT OUTER JOIN `ObjectTrace` o " +
@@ -29,23 +29,23 @@ public class ValueDao extends ModelDaoBase {
 			.configure(new SetStepAdapter(step));
 	}
 	
-	public static View<MappedQueryString<Value>> ofVariable(int varId, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
 		return new ValueQuery("VariableTrace", "variableId", varId, testId, valueStep)
 					.configure(new SetStepAdapter(step));
 	}
 
-	public static View<MappedQueryString<Value>> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
 		return new ValueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep)
 					.configure(new SetStepAdapter(step));
 	}
 	
-	public static View<MappedQueryString<Value>> ofArray(boolean put, int index, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofArray(boolean put, int index, int testId, long valueStep, long step) {
 		return new ValueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep)
 					.configure(new SetStepAdapter(step));
 	}
 
-	public static View<MappedQueryString<Value>> object(int testId, long thisId, long step) {
-		return new QueryView<>(MAPPING, 
+	public static MappedQueryStringView<Value> object(int testId, long thisId, long step) {
+		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class),
 					"SELECT o.`testId`, 'L' AS `primType`, o.`id` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
 					"FROM `ObjectTrace` o " +
 					"LEFT OUTER JOIN `Type` y " +
@@ -69,7 +69,7 @@ public class ValueDao extends ModelDaoBase {
 			long valueId = (Long) args[2];
 			return Value.newValue(testId, primType, valueId);
 		}
-		protected void injectField(Value record, String field, Object value) throws SQLException {
+		protected void injectField(Value record, String field, Object value) {
 			if (record instanceof Primitive) return;
 			for (String s: C_PARAMS) {
 				if (field.equals(s)) return;
@@ -78,10 +78,10 @@ public class ValueDao extends ModelDaoBase {
 		};
 	};
 	
-	protected static class ValueQuery extends QueryView<Value> {
+	protected static class ValueQuery extends MappedQueryStringView<Value> {
 
 		public ValueQuery(String table, String idField, int id, int testId, long step) {
-			super(MAPPING, 
+			super(MAPPING, ResultBuilders.getSingleResult(Value.class),
 					"SELECT t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
 					"FROM `" + table + "` t " +
 					"LEFT OUTER JOIN `ObjectTrace` o " +

@@ -65,10 +65,10 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		
 		viewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
 		viewer.setLabelProvider(new LocalsLabelProvider());
+		getSite().setSelectionProvider(viewer);
+		
 		rootNode = new MethodNode(viewer);
 		viewer.setInput(rootNode);
-		
-		TraceNavigatorUI.getGlobal().addView(this);
 		
 		viewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
@@ -88,7 +88,8 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		final Menu contextMenu = menuManager.createContextMenu(viewer.getTree());
 		viewer.getControl().setMenu(contextMenu);		
 		getSite().registerContextMenu(menuManager, viewer);
-		getSite().setSelectionProvider(viewer);
+		
+		TraceNavigatorUI.getGlobal().addView(this);
 	}
 	
 	@Override
@@ -112,7 +113,7 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 	}
 	
 	/**
-	 * Returns an array of root elements. Their type is {@link NamedValue.VariableValue}.
+	 * Returns an array of root elements of the type {@link NamedValue.VariableValue}.
 	 * 
 	 * @return
 	 */
@@ -129,9 +130,10 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 	
 	public static class MethodNode extends NamedValueNode {
 		
-		private int testId = -1;
-		private long callStep = -1;
-		private long step;
+//		private int testId = -1;
+//		private long callStep = -1;
+//		private long step;
+		
 		protected NamedValue root;
 
 		public MethodNode(TreeViewer viewer) {
@@ -144,6 +146,7 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 				root = new NamedValue.MethodFrameValue(cnn, testId, call, step);
 				setValue(root);
 				root.onInitialized(asyncUpdate());
+				
 //			} else if (step != this.step) {
 //				updateStep(step);
 ////				root = new NamedValue.MethodFrameValue(testId, call, step);
@@ -154,9 +157,10 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 //////				if (!root.isInitialized()) {
 //////				}
 //			}
-			this.testId = testId;
-			this.callStep = call;
-			this.step = step;
+				
+//			this.testId = testId;
+//			this.callStep = call;
+//			this.step = step;
 		}
 	}
 	

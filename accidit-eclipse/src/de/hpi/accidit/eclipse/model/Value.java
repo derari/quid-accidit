@@ -1,8 +1,9 @@
 package de.hpi.accidit.eclipse.model;
 
+import static org.cthul.miro.DSL.select;
+
 import org.cthul.miro.MiConnection;
-import org.cthul.miro.dsl.View;
-import org.cthul.miro.map.MappedQueryString;
+import org.cthul.miro.map.MappedQueryStringView;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
@@ -13,23 +14,23 @@ import de.hpi.accidit.eclipse.model.db.ValueDao;
 
 public abstract class Value extends ModelBase {
 	
-	public static View<MappedQueryString<Value>> this_inInvocation(int testId, long callStep, long step) {
+	public static MappedQueryStringView<Value> this_inInvocation(int testId, long callStep, long step) {
 		return ValueDao.this_inInvocation(testId, callStep, step);
 	}
 	
-	public static View<MappedQueryString<Value>> ofVariable(int varId, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
 		return ValueDao.ofVariable(varId, testId, valueStep, step);
 	}
 
-	public static View<MappedQueryString<Value>> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
 		return ValueDao.ofField(put, fieldId, testId, valueStep, step);
 	}
 	
-	public static View<MappedQueryString<Value>> ofArray(boolean put, int index, int testId, long valueStep, long step) {
+	public static MappedQueryStringView<Value> ofArray(boolean put, int index, int testId, long valueStep, long step) {
 		return ValueDao.ofArray(put, index, testId, valueStep, step);
 	}
 	
-	public static View<MappedQueryString<Value>> object(int testId, long thisId, long step) {
+	public static MappedQueryStringView<Value> object(int testId, long thisId, long step) {
 		return ValueDao.object(testId, thisId, step);
 	}
 	
@@ -237,15 +238,13 @@ public abstract class Value extends ModelBase {
 		protected NamedValue[] fetchChildren() throws Exception {
 			NamedValue[] c;
 			if (arrayLength == null) {
-				c = DatabaseConnector.cnn()
-						.select().from(NamedValue.FIELD_VIEW)
-						.where().atStep(testId, thisId, step)
-						.asArray().execute();
+				c = select().from(NamedValue.FIELD_VIEW)
+					.where().atStep(testId, thisId, step)
+					.execute(DatabaseConnector.cnn()).asArray();
 			} else {
-				c = DatabaseConnector.cnn()
-						.select().from(NamedValue.ARRAY_ITEM_VIEW)
-						.where().atStep(testId, thisId, step)
-						.asArray().execute();
+				c = select().from(NamedValue.ARRAY_ITEM_VIEW)
+					.where().atStep(testId, thisId, step)
+					.execute(DatabaseConnector.cnn()).asArray();
 			}
 			for (NamedValue n: c) {
 				n.setOwner(this);
@@ -298,13 +297,13 @@ public abstract class Value extends ModelBase {
 
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			Value thisValue = cnn().select()
+			Value thisValue = select()
 					.from(this_inInvocation(testId, callStep, step))
-					.getSingle().execute();
-			NamedValue[] c = cnn().select()
+					.execute(cnn());
+			NamedValue[] c = select()
 					.from(NamedValue.VARIABLE_VIEW)
 					.where().atStep(testId, callStep, step)
-					.asArray().execute();
+					.execute(cnn()).asArray();
 			if (!(thisValue instanceof ObjectSnapshot)) {
 				// static method: `this` is null
 				return c;
@@ -359,13 +358,13 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			VarHistoryQuery qry = cnn()
-					.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+			VarHistoryQuery qry = 
+					select().from(NamedValue.VARIABLE_HISTORY_VIEW)
 					.where().inCall(testId, callStep);
 			if (varId > -1) {
 				qry.byId(varId);
 			}
-			return qry.asArray().execute();
+			return qry.execute(cnn()).asArray();
 		}
 	}
 	
@@ -394,13 +393,13 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			ObjHistoryQuery qry = cnn()
-					.select().from(NamedValue.OBJECT_HISTORY_VIEW)
+			ObjHistoryQuery qry = 
+					select().from(NamedValue.OBJECT_HISTORY_VIEW)
 					.where().ofObject(testId, thisId);
 			if (fieldId > -1) {
 				qry.byId(fieldId);
 			}
-			return qry.asArray().execute();
+			return qry.execute(cnn()).asArray();
 		}
 	}
 	
@@ -429,13 +428,13 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			ArrayHistoryQuery qry = cnn()
-					.select().from(NamedValue.ARRAY_HISTORY_VIEW)
+			ArrayHistoryQuery qry = 
+					select().from(NamedValue.ARRAY_HISTORY_VIEW)
 					.where().ofObject(testId, thisId);
 			if (index > -1) {
 				qry.byId(index);
 			}
-			return qry.asArray().execute();
+			return qry.execute(cnn()).asArray();
 		}
 	}
 

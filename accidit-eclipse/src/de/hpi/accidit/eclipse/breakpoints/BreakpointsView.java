@@ -34,7 +34,7 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 	}
 
 	@Override
-	public void createPartControl(Composite parent) {		
+	public void createPartControl(Composite parent) {
 		GridLayout layout = new GridLayout(4, false);
 		parent.setLayout(layout);
 		this.parent = parent;

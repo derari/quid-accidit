@@ -5,6 +5,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.query.adapter.JdbcAdapter;
+import org.cthul.miro.query.sql.AnsiSql;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -78,17 +80,18 @@ public class DatabaseConnector {
 				if (cnn != null && !cnn.isClosed()) {
 					cnn.close();
 				}
-
-				lastDbString = dbString;
-				cnn = new MiConnection(getValidConnection());
-
+				
+				JdbcAdapter adapter = null;
 				IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 				String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
 				if (dbString.startsWith("jdbc:sap")) {
-					cnn.addPreProcessor(new HanaPP(dbSchema));
+					adapter = new HanaDialect(dbSchema);
 				} else if (dbString.startsWith("jdbc:mysql")) {
-					cnn.addPreProcessor(new MySqlPP(dbSchema));
+					adapter = new MySqlDialect(dbSchema);
 				}
+				
+				lastDbString = dbString;
+				cnn = new MiConnection(adapter, getValidConnection());
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -165,17 +168,17 @@ public class DatabaseConnector {
 
 	/* private classes for query preprocessing. */
 	
-	private static class HanaPP implements MiConnection.QueryPreProcessor {
+	private static class HanaDialect extends AnsiSql {
 		
 		private final String schema;
 		
-		public HanaPP(String schema) {
+		public HanaDialect(String schema) {
 			super();
 			this.schema = schema;
 		}
 		
 		@Override
-		public String apply(String sql) {
+		protected String postProcess(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replace("`", "\"")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "(LEAST(0, IFNULL($1, -1))+1)");
@@ -184,17 +187,17 @@ public class DatabaseConnector {
 		}
 	};
 	
-	private static class MySqlPP implements MiConnection.QueryPreProcessor {
+	private static class MySqlDialect extends AnsiSql {
 		
 		private final String schema;
 		
-		public MySqlPP(String schema) {
+		public MySqlDialect(String schema) {
 			super();
 			this.schema = schema;
 		}
 		
 		@Override
-		public String apply(String sql) {
+		protected String postProcess(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
 			//System.out.println(sql);

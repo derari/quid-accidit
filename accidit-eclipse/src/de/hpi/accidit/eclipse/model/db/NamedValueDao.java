@@ -2,43 +2,58 @@ package de.hpi.accidit.eclipse.model.db;
 
 import java.sql.SQLException;
 
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.dsl.QueryFactoryView;
-import org.cthul.miro.dsl.View;
-import org.cthul.miro.graph.GraphQuery;
-import org.cthul.miro.graph.GraphQueryTemplate;
-import org.cthul.miro.graph.SelectByKey;
+import org.cthul.miro.dml.AbstractMappedSelect;
+import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
+import org.cthul.miro.map.MappedTemplateProvider;
 import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.EntityInitializer;
+import org.cthul.miro.query.sql.DataQuery;
+import org.cthul.miro.result.Results;
+import org.cthul.miro.util.CfgSetField;
+import org.cthul.miro.view.ViewR;
+import org.cthul.miro.view.Views;
 
-import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 
 public class NamedValueDao extends ModelDaoBase {
 	
-	public static final View<VarQuery> VARIABLE_VIEW = new QueryFactoryView<>(VarQuery.class);
-	public static final View<FieldQuery> FIELD_VIEW = new QueryFactoryView<>(FieldQuery.class);
-	public static final View<ItemQuery> ARRAY_ITEM_VIEW = new QueryFactoryView<>(ItemQuery.class);
-	public static final View<VarHistoryQuery> VARIABLE_HISTORY_VIEW = new QueryFactoryView<>(VarHistoryQuery.class);
-	public static final View<ObjHistoryQuery> OBJECT_HISTORY_VIEW = new QueryFactoryView<>(ObjHistoryQuery.class);
-	public static final View<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = new QueryFactoryView<>(ArrayHistoryQuery.class);
+	public static final ViewR<VarQuery> VARIABLE_VIEW = Views.build().r(VarQuery.class);
+	public static final ViewR<FieldQuery> FIELD_VIEW = Views.build().r(FieldQuery.class);
+	public static final ViewR<ItemQuery> ARRAY_ITEM_VIEW = Views.build().r(ItemQuery.class);
+	public static final ViewR<VarHistoryQuery> VARIABLE_HISTORY_VIEW = Views.build().r(VarHistoryQuery.class);
+	public static final ViewR<ObjHistoryQuery> OBJECT_HISTORY_VIEW = Views.build().r(ObjHistoryQuery.class);
+	public static final ViewR<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = Views.build().r(ArrayHistoryQuery.class);
 	
-	private static class NameValueQueryTemplate<E> extends GraphQueryTemplate<E> {{}}
+	private static class NameValueQueryTemplate<E> extends MappedDataQueryTemplateProvider<E> {
+		public NameValueQueryTemplate(Mapping<E> mapping) {
+			super(mapping);
+		}
+	}
 	
-	private static final Mapping<NamedValue> BASE_MAPPING = new ReflectiveMapping<NamedValue>(NamedValue.class);
+	private static class NamedValueQuery<E, This extends NamedValueQuery<E, This>> extends AbstractMappedSelect<E, Results<E>, This> {
+		public NamedValueQuery(MappedTemplateProvider<E> template, String[] select) {
+			super(DataQuery.SELECT, template, Results.<E>getBuilder(), select);
+		}
+		
+		protected void configureStep(int testId, long step) {
+			configure(CfgSetField.newInstance("testId", testId));
+			configure(CfgSetField.newInstance("step", step));
+		}
+	}
+	
+//	private static final Mapping<NamedValue> BASE_MAPPING = new ReflectiveMapping<NamedValue>(NamedValue.class);
 	
 	private static final Mapping<VariableValue> VAR_MAPPING = new ReflectiveMapping<VariableValue>(VariableValue.class);
 	
-	private static final GraphQueryTemplate<VariableValue> VAR_TEMPLATE = new NameValueQueryTemplate<VariableValue>() {{
-		select("m.`name`, m.`id`");
+	private static final MappedTemplateProvider<VariableValue> VAR_TEMPLATE = new NameValueQueryTemplate<VariableValue>(VAR_MAPPING) {{
+		attributes("m.`name`, m.`id`");
 		using("last_and_next")
 			.select("COALESCE(lastSet.`step`, -1) AS `valueStep`")
 			.select("COALESCE(nextSet.`step`, -1) AS `nextChangeStep`");
 //			.select("COALESCE(nextSet.`callStep`, lastSet.`callStep`) AS `callStep`");
-		from("`Variable` m");
+		table("`Variable` m");
 		join("LEFT OUTER JOIN " +
 				 "(SELECT `methodId`, `variableId`, MAX(`step`) AS `step` " +
 			    "FROM `VariableTrace` " +
@@ -61,13 +76,12 @@ public class NamedValueDao extends ModelDaoBase {
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 
-	public static class VarQuery extends GraphQuery<VariableValue> {
+	public static class VarQuery extends NamedValueQuery<VariableValue, VarQuery> {
 
-		public VarQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, VAR_MAPPING, VAR_TEMPLATE, view);
-			select(fields);
+		public VarQuery(String... select) {
+			super(VAR_TEMPLATE, select);
 		}
-		
+
 		public VarQuery where() {
 			return this;
 		}
@@ -75,7 +89,7 @@ public class NamedValueDao extends ModelDaoBase {
 		public VarQuery atStep(int testId, long callStep, long step) {
 			put("lastSet", testId, callStep, step);
 			put("nextSet", testId, callStep, step);
-			configure(new SetStepAdapter(testId, step));
+			configureStep(testId, step);
 			return this;
 		}
 	};
@@ -92,8 +106,8 @@ public class NamedValueDao extends ModelDaoBase {
 		};
 	};
 		
-	private static final GraphQueryTemplate<FieldValue> FIELD_TEMPLATE = new NameValueQueryTemplate<FieldValue>() {{
-		select("m.`name`, m.`id`");
+	private static final MappedTemplateProvider<FieldValue> FIELD_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
+		attributes("m.`name`, m.`id`");
 		using("last_and_next")
 			.select("COALESCE(lastPut.`step`, lastGet.`step`, -1) AS `valueStep`")
 			.select("__ISNOTNULL{lastPut.`step`} AS `valueIsPut`")
@@ -101,7 +115,7 @@ public class NamedValueDao extends ModelDaoBase {
 			.select("COALESCE(nextGet.`step`, -1) AS `nextGetStep`")
 			.select("COALESCE(lastGet.`step`, -1) AS `lastGetStep`");
 		
-		from("`Field` m");
+		table("`Field` m");
 		
 		join("LEFT OUTER JOIN " +
 				"(SELECT MAX(`step`) AS `step`, `fieldId` " +
@@ -138,11 +152,10 @@ public class NamedValueDao extends ModelDaoBase {
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	
-	public static class FieldQuery extends GraphQuery<FieldValue> {
+	public static class FieldQuery extends NamedValueQuery<FieldValue, FieldQuery> {
 
-		public FieldQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, FIELD_MAPPING, FIELD_TEMPLATE, view);
-			select(fields);
+		public FieldQuery(String... select) {
+			super(FIELD_TEMPLATE, select);
 		}
 		
 		public FieldQuery where() {
@@ -154,7 +167,7 @@ public class NamedValueDao extends ModelDaoBase {
 			put("lastGet", testId, thisId, step);
 			put("nextPut", testId, thisId, step);
 			put("nextGet", testId, thisId, step);
-			configure(new SetStepAdapter(testId, step));
+			configureStep(testId, step);
 			return this;
 		}
 	};
@@ -171,14 +184,14 @@ public class NamedValueDao extends ModelDaoBase {
 		};
 	};
 	
-	private static final GraphQueryTemplate<ItemValue> ARRAY_ITEM_TEMPLATE = new NameValueQueryTemplate<ItemValue>() {{
+	private static final MappedTemplateProvider<ItemValue> ARRAY_ITEM_TEMPLATE = new NameValueQueryTemplate<ItemValue>(ARRAY_ITEM_MAPPING) {{
 		select("`index` AS `id`",
 			   "COALESCE(MAX(lastPut_step), MAX(lastGet_step), -1) AS `valueStep`",
 			   "__ISNOTNULL{MIN(lastPut_step)} AS `valueIsPut`",
 			   "COALESCE(MIN(nextPut_step), -1) AS `nextChangeStep`",
 			   "COALESCE(MIN(nextGet_step), -1) AS `nextGetStep`");
 		
-		from("(SELECT * FROM " +
+		table("(SELECT * FROM " +
 				"(SELECT `index`, " +
 				        "MAX(`step`) AS lastPut_step, NULL AS lastGet_step, NULL AS nextPut_step, NULL AS nextGet_step " +
 		         "FROM `ArrayPutTrace` " +
@@ -210,11 +223,10 @@ public class NamedValueDao extends ModelDaoBase {
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	
-	public static class ItemQuery extends GraphQuery<ItemValue> {
+	public static class ItemQuery extends NamedValueQuery<ItemValue, ItemQuery> {
 
-		public ItemQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_ITEM_TEMPLATE, view);
-			select(fields);
+		public ItemQuery(String[] select) {
+			super(ARRAY_ITEM_TEMPLATE, select);
 		}
 		
 		public ItemQuery where() {
@@ -227,16 +239,17 @@ public class NamedValueDao extends ModelDaoBase {
 					testId, thisId, step,
 					testId, thisId, step,
 					testId, thisId, step);
-			configure(new SetStepAdapter(testId, step));
+			configureStep(testId, step);
 			return this;
 		}
 		
 	};
 	
-	private static final GraphQueryTemplate<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>() {{
-		select("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`, t.`step` AS `valueStep`, v.`name` AS `name`");
+	private static final MappedTemplateProvider<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>(VAR_MAPPING) {{
+		attributes("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`", 
+				   "t.`step` AS `valueStep`, v.`name` AS `name`");
 		
-		from("`VariableTrace` t");
+		table("`VariableTrace` t");
 		join("`Variable` v ON t.`variableId` = v.`id` AND t.`methodId` = v.`methodId`");
 		where("call_EQ", "t.`testId` = ? AND t.`callStep` = ?");
 		where("id_EQ", "t.`variableId` = ?");
@@ -244,11 +257,10 @@ public class NamedValueDao extends ModelDaoBase {
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	
-	public static class VarHistoryQuery extends GraphQuery<VariableValue> {
+	public static class VarHistoryQuery extends NamedValueQuery<VariableValue, VarHistoryQuery> {
 
-		public VarHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, VAR_MAPPING, VAR_HISTORY_TEMPLATE, view);
-			select(fields);
+		public VarHistoryQuery(String[] select) {
+			super(VAR_HISTORY_TEMPLATE, select);
 		}
 		
 		public VarHistoryQuery where() {
@@ -261,13 +273,13 @@ public class NamedValueDao extends ModelDaoBase {
 		}
 		
 		public VarHistoryQuery byId(int id) {
-			where("id_EQ", id);
+			where("id =", id);
 			return this;
 		}
 	};
 	
-	private static final GraphQueryTemplate<FieldValue> OBJ_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>() {{
-		select("m.`name`, m.`id`");
+	private static final MappedTemplateProvider<FieldValue> OBJ_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
+		attributes("m.`name`, m.`id`");
 		using("val")
 			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`");
 		using("nextPut")
@@ -287,7 +299,7 @@ public class NamedValueDao extends ModelDaoBase {
 		 
 		ORDER BY val.`step`*/
 		
-		from("`Field` m");
+		table("`Field` m");
 		
 		join("val", 
 			 "JOIN (SELECT `testId`, `step`, `fieldId`, 1 AS `valueIsPut` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? " +
@@ -304,17 +316,15 @@ public class NamedValueDao extends ModelDaoBase {
 		where("id_EQ", "m.`id` = ?");
 		
 		always()
-			.groupBy("m.`id`")
-			.groupBy("val.`step`")
+			.groupBy("m.`id`, val.`step`")
 			.orderBy("val.`step`");
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	
-	public static class ObjHistoryQuery extends GraphQuery<FieldValue> {
+	public static class ObjHistoryQuery extends NamedValueQuery<FieldValue, ObjHistoryQuery> {
 
-		public ObjHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, FIELD_MAPPING, OBJ_HISTORY_TEMPLATE, view);
-			select(fields);
+		public ObjHistoryQuery(String[] fields) {
+			super(OBJ_HISTORY_TEMPLATE, fields);
 		}
 		
 		public ObjHistoryQuery where() {
@@ -332,17 +342,11 @@ public class NamedValueDao extends ModelDaoBase {
 			where("id_EQ", id);
 			return this;
 		}
-		
-		@Override
-		protected String queryString() {
-			System.out.println(super.queryString());
-			return super.queryString();
-		}
 	};
 	
-	private static final GraphQueryTemplate<ItemValue> ARRAY_HISTORY_TEMPLATE = new NameValueQueryTemplate<ItemValue>() {{
-		select("val.`index` AS `id`");
-		select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`");
+	private static final MappedTemplateProvider<ItemValue> ARRAY_HISTORY_TEMPLATE = new NameValueQueryTemplate<ItemValue>(ARRAY_ITEM_MAPPING) {{
+		attributes("val.`index` AS `id`");
+		attributes("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`");
 		using("nextPut")
 			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
 		using("nextGet")
@@ -360,7 +364,7 @@ public class NamedValueDao extends ModelDaoBase {
 		 
 		ORDER BY val.`step`*/
 		
-		from("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
+		table("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
 			  "UNION " +
 			  "SELECT `testId`, `step`, `index`, 0 AS `valueIsPut` FROM `ArrayGetTrace` WHERE `testId` = ? AND `thisId` = ?) " + 
 			 "val");
@@ -380,11 +384,10 @@ public class NamedValueDao extends ModelDaoBase {
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
 	
-	public static class ArrayHistoryQuery extends GraphQuery<ItemValue> {
+	public static class ArrayHistoryQuery extends NamedValueQuery<ItemValue, ArrayHistoryQuery> {
 
-		public ArrayHistoryQuery(MiConnection cnn, String[] fields, View<? extends SelectByKey<?>> view) {
-			super(cnn, ARRAY_ITEM_MAPPING, ARRAY_HISTORY_TEMPLATE, view);
-			select(fields);
+		public ArrayHistoryQuery(String[] fields) {
+			super(ARRAY_HISTORY_TEMPLATE, fields);
 		}
 		
 		public ArrayHistoryQuery where() {
@@ -402,34 +405,28 @@ public class NamedValueDao extends ModelDaoBase {
 			where("id_EQ", id);
 			return this;
 		}
-		
-		@Override
-		protected String queryString() {
-			System.out.println(super.queryString());
-			return super.queryString();
-		}
 	};
 
-	private static class SetStepAdapter implements EntityInitializer<NamedValue> {
-		private final int testId;
-		private final long step;
-		public SetStepAdapter(int testId, long step) {
-			super();
-			this.testId = testId;
-			this.step = step;
-		}
-		
-		@Override
-		public void apply(NamedValue entity) throws SQLException {
-			BASE_MAPPING.setField(entity, "testId", testId);
-			BASE_MAPPING.setField(entity, "step", step);
-		}
-		
-		@Override
-		public void complete() throws SQLException { }
-		
-		@Override
-		public void close() throws SQLException { }
-	}
+//	private static class SetStepAdapter implements EntityInitializer<NamedValue> {
+//		private final int testId;
+//		private final long step;
+//		public SetStepAdapter(int testId, long step) {
+//			super();
+//			this.testId = testId;
+//			this.step = step;
+//		}
+//		
+//		@Override
+//		public void apply(NamedValue entity) throws SQLException {
+//			BASE_MAPPING.setField(entity, "testId", testId);
+//			BASE_MAPPING.setField(entity, "step", step);
+//		}
+//		
+//		@Override
+//		public void complete() throws SQLException { }
+//		
+//		@Override
+//		public void close() throws SQLException { }
+//	}
 
 }

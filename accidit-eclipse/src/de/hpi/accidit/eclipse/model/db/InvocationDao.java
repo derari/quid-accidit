@@ -1,12 +1,14 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.AnnotatedQueryHandler;
-import org.cthul.miro.at.AnnotatedQueryTemplate;
-import org.cthul.miro.at.AnnotatedView;
 import org.cthul.miro.at.Impl;
-import org.cthul.miro.dsl.View;
+import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
+import org.cthul.miro.map.MappedInternalQueryBuilder;
+import org.cthul.miro.map.MappedTemplateProvider;
 import org.cthul.miro.map.Mapping;
 import org.cthul.miro.map.ReflectiveMapping;
+import org.cthul.miro.util.CfgSetField;
+import org.cthul.miro.view.ViewR;
+import org.cthul.miro.view.Views;
 
 import de.hpi.accidit.eclipse.model.Invocation;
 
@@ -22,22 +24,20 @@ public class InvocationDao extends TraceElementDaoBase {
 		};
 	};
 	
-	private static final AnnotatedQueryTemplate<Invocation> TEMPLATE = new AnnotatedQueryTemplate<Invocation>(){{
-		select("e.`testId`, e.`depth`", 
+	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
+		attributes("e.`testId`, e.`depth`", 
 			   "x.`step` AS `exitStep`, x.`returned`, x.`line` AS `exitLine`",
 			   "m.`name` AS `method`, t.`name` AS `type`");
-		from("`CallTrace` e");
+		table("`CallTrace` e");
 		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`step` = x.`callStep`");
 		join("`Method` m ON e.`methodId` = m.`id`");
 		using("m")
 			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
 		
-		where("test_EQ", "e.`testId` = ?",
-			  "depth_EQ", "e.`depth` = ?",
-			  "step_BETWEEN", "e.`step` > ? AND e.`step` < ?");
+		where("step_BETWEEN", "e.`step` > ? AND e.`step` < ?");
 	}};
 	
-	public static final View<Query> VIEW = new AnnotatedView<>(Query.class, MAPPING, TEMPLATE);
+	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
 	
 	@Impl(QueryImpl.class)
 	public static interface Query extends TraceElementDaoBase.Query<Invocation, Query> {
@@ -49,17 +49,17 @@ public class InvocationDao extends TraceElementDaoBase {
 	
 	static class QueryImpl {
 		
-		public static void inInvocation(AnnotatedQueryHandler<Invocation> query, Invocation inv) {
-			query.configure(new InitParent(inv));
-			query.put("testId_EQ", inv.getTestId());
-			query.put("depth_EQ", inv.depth+1);
+		public static void inInvocation(MappedInternalQueryBuilder query, Invocation inv) {
+			query.configure(CfgSetField.newInstance("parent", inv));
+			query.put("testId =", inv.getTestId());
+			query.put("depth =", inv.depth+1);
 			query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
-			query.put("asc_step");
+			query.put("orderBy-step");
 		}
 		
-		public static void rootOfTest(AnnotatedQueryHandler<Invocation> query, int testId) {
-			query.put("testId_EQ", testId);
-			query.put("depth_EQ", 0);
+		public static void rootOfTest(MappedInternalQueryBuilder query, int testId) {
+			query.put("testId =", testId);
+			query.put("depth =", 0);
 		}
 	}
 

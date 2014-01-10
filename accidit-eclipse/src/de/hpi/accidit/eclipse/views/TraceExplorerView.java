@@ -86,7 +86,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		treeViewer.setContentProvider(new TraceContentProvider(treeViewer));
 		treeViewer.setLabelProvider(new TraceLabelProvider());
-		
 		getSite().setSelectionProvider(treeViewer);
 		treeViewer.addSelectionChangedListener(this);
 		
@@ -117,9 +116,9 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	public void saveState(IMemento memento) {
 		super.saveState(memento);
 		IProject prj = DatabaseConnector.getSelectedProject();
-		String projectName = prj != null ? prj.getName() : null;		
+		String projectName = (prj != null) ? prj.getName() : null;		
 		memento.putString(STORE_PROJECT_NAME, projectName);
-		memento.putInteger(STORE_TEST_ID, current.getTestId());
+		if (current != null) memento.putInteger(STORE_TEST_ID, current.getTestId());
 	}
 
 	@Override
