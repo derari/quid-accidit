@@ -1,13 +1,13 @@
 package de.hpi.accidit.eclipse.model;
 
-import org.cthul.miro.dsl.View;
+import org.cthul.miro.view.ViewR;
 
 import de.hpi.accidit.eclipse.model.db.VariableDao;
 import de.hpi.accidit.eclipse.model.db.VariableDao.Query;
 
 public class Variable implements NamedEntity {
 
-	public static final View<Query> VIEW = VariableDao.VIEW;
+	public static final ViewR<Query> VIEW = VariableDao.VIEW;
 	
 	private int id;
 	private String name;

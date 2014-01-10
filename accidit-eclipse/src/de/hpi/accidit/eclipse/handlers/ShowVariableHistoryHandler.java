@@ -8,6 +8,8 @@ import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import static org.cthul.miro.DSL.*;
+
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.localsHistory.HistorySource;
@@ -41,17 +43,17 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 			long callStep = TraceNavigatorUI.getGlobal().getCallStep();
 			
 			src = new MethodCallSource(testId, callStep);
-			options = DatabaseConnector.cnn().select()
-					.from(Variable.VIEW).inCall(testId, callStep).orderById()
-					.asArray()._execute();
+			options = select().from(Variable.VIEW)
+					.inCall(testId, callStep).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (nv instanceof NamedValue.FieldValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
 			long thisId = owner.getThisId();
 
 			src = new ObjectSource(testId, thisId, false);
-			options = DatabaseConnector.cnn().select()
-					.from(Field.VIEW).ofObject(testId, thisId).orderById()
-					.asArray()._execute();
+			options = select().from(Field.VIEW)
+					.ofObject(testId, thisId).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (nv instanceof NamedValue.ItemValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
 			long thisId = owner.getThisId();

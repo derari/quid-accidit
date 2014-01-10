@@ -4,6 +4,7 @@ import org.cthul.miro.MiConnection;
 import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
 import org.cthul.miro.util.FinalFuture;
+import static org.cthul.miro.DSL.*;
 
 import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryContainer.HistoryNode;
 import de.hpi.accidit.eclipse.model.Value;
@@ -57,9 +58,8 @@ public abstract class HistorySource {
 
 		@Override
 		public MiFuture<String> getTitle(MiConnection cnn, long step) {
-			return cnn.select().from(Value.object((int) testId, thisId, step))
-					.getSingle()._submit()
-					.onComplete(new MiFutureAction<MiFuture<Value>, String>() {
+			return select().from(Value.object((int) testId, thisId, step))
+					.submit(cnn).onComplete(new MiFutureAction<MiFuture<Value>, String>() {
 						@Override
 						public String call(MiFuture<Value> arg) throws Exception {
 							if (arg.hasFailed()) {

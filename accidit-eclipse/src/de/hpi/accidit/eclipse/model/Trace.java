@@ -1,5 +1,6 @@
 package de.hpi.accidit.eclipse.model;
 
+import static org.cthul.miro.DSL.*;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 
 public class Trace {
@@ -13,11 +14,10 @@ public class Trace {
 		this.id = id;
 		this.ui = ui;
 		try {
-			root = ui.cnn()
-				.select()
+			root = select()
 				.from(Invocation.VIEW)
 				.where().rootOfTest(id)
-				.asArray().execute();
+				.execute(ui.cnn()).asArray();
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 			root = new TraceElement[0];

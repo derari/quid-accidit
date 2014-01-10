@@ -7,6 +7,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
+import static org.cthul.miro.DSL.*;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
@@ -64,9 +65,9 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		currentCallStep = callStep;
 
 		localsHistory.setHistorySource(new MethodCallSource(testId, callStep));
-		NamedEntity[] options = DatabaseConnector.cnn().select()
-				.from(Variable.VIEW).inCall(testId, callStep).orderById()
-				.asArray()._execute();
+		NamedEntity[] options = select().from(Variable.VIEW)
+				.inCall(testId, callStep).orderById()
+				._execute(DatabaseConnector.cnn())._asArray();
 
 		localsHistory.setComboViewerOptions(options);
 		localsHistory.setComboViewerSelection(-1);		
@@ -88,17 +89,17 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		
 		if (namedValue instanceof NamedValue.VariableValue) {
 			src = new MethodCallSource(currentTestId, currentCallStep);
-			options = DatabaseConnector.cnn().select()
-					.from(Variable.VIEW).inCall(currentTestId, currentCallStep).orderById()
-					.asArray()._execute();
+			options = select().from(Variable.VIEW)
+					.inCall(currentTestId, currentCallStep).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (namedValue instanceof NamedValue.FieldValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
 			
 			src = new ObjectSource(currentTestId, thisId, false);
-			options = DatabaseConnector.cnn().select()
-					.from(Field.VIEW).ofObject(currentTestId, thisId).orderById()
-					.asArray()._execute();
+			options = select().from(Field.VIEW)
+					.ofObject(currentTestId, thisId).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (namedValue instanceof NamedValue.ItemValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
