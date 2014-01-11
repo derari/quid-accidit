@@ -67,25 +67,6 @@
    <extension
          point="org.eclipse.ui.commands">
       <category
-            id="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            name="Open Views">
-      </category>
-      <command
-            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            id="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
-            name="Open Trace Explorer">
-      </command>
-      <command
-            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            id="de.hpi.accidit.eclipse.commands.openNavigatorView"
-            name="Open Navigator">
-      </command>
-      <command
-            categoryId="de.hpi.accidit.eclipse.commands.openViewsCategory"
-            id="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
-            name="Open Locals Explorer ">
-      </command>
-      <category
             id="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             name="User Interactions">
       </category>
@@ -185,14 +166,6 @@
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="de.hpi.accidit.eclipse.handlers.OpenTraceExplorerViewHandler"
-            commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView">
-      </handler>
-      <handler
-            class="de.hpi.accidit.eclipse.handlers.OpenLocalsExplorerViewHandler"
-            commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView">
-      </handler>
-      <handler
             class="de.hpi.accidit.eclipse.handlers.SelectTestCaseHandler"
             commandId="de.hpi.accidit.eclipse.commands.selectTestCase">
       </handler>
@@ -235,10 +208,6 @@
                </iterate>
             </with>
          </activeWhen>  
-      </handler>
-      <handler
-            class="de.hpi.accidit.eclipse.handlers.OpenNavigatorViewHandler"
-            commandId="de.hpi.accidit.eclipse.commands.openNavigatorView">
       </handler>
       <handler
             class="de.hpi.accidit.eclipse.handlers.SelectTestCaseForProjectHandler"
@@ -303,39 +272,11 @@
                label="Accidit"
                mnemonic="M">
             <command
-                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
-                  id="de.hpi.accidit.eclipse.menus.openTraceExplorerView">
-            </command>
-            <command
-                  commandId="de.hpi.accidit.eclipse.commands.openLocalsExplorerView"
-                  id="de.hpi.accidit.eclipse.menus.openLocalsExplorerView">
-            </command>
-            <command
-                  commandId="de.hpi.accidit.eclipse.commands.openNavigatorView"
-                  id="de.hpi.accidit.eclipse.menus.openNavigatorView">
-            </command>
-            <separator
-                  name="accidit-eclipse.separator1"
-                  visible="true">
-            </separator>
-            <command
                   commandId="de.hpi.accidit.eclipse.commands.selectTestCase"
                   icon="icons/a_logo.png"
                   id="de.hpi.accidit.eclipse.menus.selectTestCase">
             </command>
          </menu>
-      </menuContribution>
-      <menuContribution
-            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
-         <toolbar
-               id="de.hpi.accidit.eclipse.toolbars.toolbar">
-            <command
-                  commandId="de.hpi.accidit.eclipse.commands.openTraceExplorerView"
-                  icon="icons/sample.gif"
-                  id="de.hpi.accidit.eclipse.toolbars.openTraceExplorerView"
-                  tooltip="Open the Trace Explorer View">
-            </command>
-         </toolbar>
       </menuContribution>
       <menuContribution
             allPopups="false"
@@ -468,16 +409,16 @@
                style="push">
          </command>
          <command
-               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
-               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
-               label="Reveal setter"
-               style="push">
-         </command>
-         <command
                commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories"
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.popups.showFieldsHistories"
                label="Show Fields Histories"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
+               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
+               label="Reveal setter"
                style="push">
          </command>
       </menuContribution>
