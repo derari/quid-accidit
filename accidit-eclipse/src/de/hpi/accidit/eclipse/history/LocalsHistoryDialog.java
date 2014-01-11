@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.localsHistory;
+package de.hpi.accidit.eclipse.history;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;

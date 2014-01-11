@@ -9,7 +9,7 @@ import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView;
+import de.hpi.accidit.eclipse.history.LocalsHistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;

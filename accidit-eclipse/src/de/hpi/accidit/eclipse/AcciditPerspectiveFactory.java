@@ -5,7 +5,7 @@ import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IPerspectiveFactory;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView;
+import de.hpi.accidit.eclipse.history.LocalsHistoryView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.NavigatorView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;

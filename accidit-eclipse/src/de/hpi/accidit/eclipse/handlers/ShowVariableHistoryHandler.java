@@ -12,10 +12,10 @@ import static org.cthul.miro.DSL.*;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
-import de.hpi.accidit.eclipse.localsHistory.HistorySource;
-import de.hpi.accidit.eclipse.localsHistory.HistorySource.MethodCallSource;
-import de.hpi.accidit.eclipse.localsHistory.HistorySource.ObjectSource;
-import de.hpi.accidit.eclipse.localsHistory.LocalsHistoryDialog;
+import de.hpi.accidit.eclipse.history.HistorySource;
+import de.hpi.accidit.eclipse.history.LocalsHistoryDialog;
+import de.hpi.accidit.eclipse.history.HistorySource.MethodCallSource;
+import de.hpi.accidit.eclipse.history.HistorySource.ObjectSource;
 import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;

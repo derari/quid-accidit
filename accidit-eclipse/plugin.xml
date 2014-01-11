@@ -57,7 +57,7 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
+            class="de.hpi.accidit.eclipse.history.LocalsHistoryView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
             name="History"
@@ -281,7 +281,7 @@
             commandId="de.hpi.accidit.eclipse.commands.toggleAcciditLineBreakpoint">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.localsHistory.ShowFieldsHistoriesHandler"
+            class="de.hpi.accidit.eclipse.history.ShowFieldsHistoriesHandler"
             commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories">
       </handler>
    </extension>
