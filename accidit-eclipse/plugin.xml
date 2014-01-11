@@ -34,7 +34,7 @@
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.VariablesView"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
+            id="de.hpi.accidit.eclipse.views.VariablesView"
             name="Variables"
             restorable="true">
       </view>
@@ -59,7 +59,7 @@
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.history.HistoryView"
             icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
+            id="de.hpi.accidit.eclipse.history.HistoryView"
             name="History"
             restorable="true">
       </view>
@@ -280,7 +280,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="toolbar:de.hpi.accidit.eclipse.views.LocalsExplorerView">
+            locationURI="toolbar:de.hpi.accidit.eclipse.views.VariablesView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
@@ -400,7 +400,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:de.hpi.accidit.eclipse.views.LocalsExplorerView">
+            locationURI="popup:de.hpi.accidit.eclipse.views.VariablesView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"

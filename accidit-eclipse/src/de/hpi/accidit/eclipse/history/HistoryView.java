@@ -29,9 +29,9 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValu
 public class HistoryView extends ViewPart implements AcciditView, ISelectionListener {
 	
 	/** The ID of the view as specified by the extension. */
-	public static final String ID = "de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView";
+	public static final String ID = "de.hpi.accidit.eclipse.history.HistoryView";
 	
-	private HistoryContainer localsHistory;
+	private HistoryContainer historyContainer;
 	
 	private long currentTestId = -1;
 	private long currentCallStep = -1;
@@ -43,13 +43,13 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 		GridLayout layout = new GridLayout(2, false);
 		parent.setLayout(layout);
 		
-		localsHistory = new HistoryContainer();
-		localsHistory.createPartControl(parent);
+		historyContainer = new HistoryContainer();
+		historyContainer.createPartControl(parent);
 		
-		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
+		historyContainer.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
-				NamedValueNode sel = localsHistory.getSelectedElement();
+				NamedValueNode sel = historyContainer.getSelectedElement();
 				if (sel == null || sel.getDepth() != 1) return;
 				
 				NamedValue variableValue = sel.getValue();
@@ -57,7 +57,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 			}
 		});
 
-		getSite().setSelectionProvider(localsHistory.getComboViewer());
+		getSite().setSelectionProvider(historyContainer.getComboViewer());
 		getSite().getPage().addSelectionListener(this);
 		
 		TraceNavigatorUI.getGlobal().addView(this);
@@ -65,7 +65,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 
 	@Override
 	public void setFocus() {
-		localsHistory.getControl().setFocus();
+		historyContainer.getControl().setFocus();
 	}
 
 	@Override
@@ -77,14 +77,14 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 		currentTestId = testId;
 		currentCallStep = callStep;
 
-		localsHistory.setHistorySource(new MethodCallSource(testId, callStep));
+		historyContainer.setHistorySource(new MethodCallSource(testId, callStep));
 		NamedEntity[] options = select().from(Variable.VIEW)
 				.inCall(testId, callStep).orderById()
 				._execute(DatabaseConnector.cnn())._asArray();
 
-		localsHistory.setComboViewerOptions(options);
-		localsHistory.setComboViewerSelection(-1);		
-		localsHistory.refresh();
+		historyContainer.setComboViewerOptions(options);
+		historyContainer.setComboViewerSelection(-1);		
+		historyContainer.refresh();
 	}
 	
 	@Override
@@ -98,9 +98,9 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
 		if (!(part instanceof VariablesView)) return;
 		if (!(selection instanceof ITreeSelection) || selection.isEmpty()) return;
+		ITreeSelection treeSelection = (ITreeSelection) selection;
 		
-		ITreeSelection selectedLocals = (ITreeSelection) selection;
-		NamedValueNode node = (NamedValueNode) selectedLocals.getFirstElement();
+		NamedValueNode node = (NamedValueNode) treeSelection.getFirstElement();
 		NamedValue namedValue = (NamedValue) node.getValue();
 
 		int selectedNamedValueId = namedValue.getId();
@@ -128,18 +128,18 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 			src = new ObjectSource(currentTestId, thisId, true);
 			options = ArrayIndex.newIndexArray(arrayLength);
 		} else {
-			localsHistory.setComboViewerSelection(-1);
-			localsHistory.refresh();
+			historyContainer.setComboViewerSelection(-1);
+			historyContainer.refresh();
 			return;
 		}
 		
-		localsHistory.setHistorySource(src);
-		localsHistory.setComboViewerOptions(options);
-		localsHistory.setComboViewerSelection(selectedNamedValueId);
-		localsHistory.refresh();
+		historyContainer.setHistorySource(src);
+		historyContainer.setComboViewerOptions(options);
+		historyContainer.setComboViewerSelection(selectedNamedValueId);
+		historyContainer.refresh();
 	}
 	
 	public HistoryContainer getContainer() {
-		return localsHistory;
+		return historyContainer;
 	}
 }

@@ -73,11 +73,11 @@ public class TraceNavigatorUI {
 		return findView(BreakpointsView.class);
 	}
 	
-	public VariablesView getLocalsExplorer() {
+	public VariablesView getVariablesView() {
 		return findView(VariablesView.class);
 	}
 	
-	public HistoryView getLocalsHistoryView() {
+	public HistoryView getHistoryView() {
 		return findView(HistoryView.class);
 	}
 	

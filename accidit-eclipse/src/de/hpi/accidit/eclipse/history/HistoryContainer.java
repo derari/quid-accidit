@@ -155,13 +155,13 @@ public class HistoryContainer {
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
-				NamedValueNode selectedNode = getSelectedElement();
-				if (selectedNode == null || selectedNode.getDepth() < 2) return;
-				
 				int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
 				long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
-				
+			
+				NamedValueNode selectedNode = getSelectedElement();
+				if (selectedNode == null || selectedNode.getDepth() < 2) return;
 				NamedValue namedValue = (NamedValue) selectedNode.getValue();
+				
 				int selectedNamedValueId = namedValue.getId();
 				HistorySource src = null;
 				NamedEntity[] options = null;

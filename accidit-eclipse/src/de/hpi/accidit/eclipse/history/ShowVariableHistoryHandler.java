@@ -26,38 +26,37 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
-		ITreeSelection selectedLocals = (ITreeSelection) sel;
-
-		NamedValueNode nvn = (NamedValueNode) selectedLocals.getFirstElement();
+		int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
+		long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
+		
+		ISelection selection = TraceNavigatorUI.getGlobal().getVariablesView().getSelection();
+		ITreeSelection treeSelection = (ITreeSelection) selection;
+		NamedValueNode nvn = (NamedValueNode) treeSelection.getFirstElement();
 		NamedValue nv = (NamedValue) nvn.getValue();
+		
 		int selectedNamedValueId = nv.getId();
-		int testId = TraceNavigatorUI.getGlobal().getTestId();
-
 		NamedEntity[] options = null;
-		HistorySource src;
+		HistorySource src = null;
 
 		if (nv instanceof NamedValue.VariableValue) {
-			long callStep = TraceNavigatorUI.getGlobal().getCallStep();
-			
-			src = new MethodCallSource(testId, callStep);
+			src = new MethodCallSource(currentTestId, currentCallStep);
 			options = select().from(Variable.VIEW)
-					.inCall(testId, callStep).orderById()
+					.inCall(currentTestId, currentCallStep).orderById()
 					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (nv instanceof NamedValue.FieldValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
 			long thisId = owner.getThisId();
 
-			src = new ObjectSource(testId, thisId, false);
+			src = new ObjectSource(currentTestId, thisId, false);
 			options = select().from(Field.VIEW)
-					.ofObject(testId, thisId).orderById()
+					.ofObject(currentTestId, thisId).orderById()
 					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (nv instanceof NamedValue.ItemValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) nv.getOwner();
 			long thisId = owner.getThisId();
 			int arrayLength = owner.getArrayLength();
 			
-			src = new ObjectSource(testId, thisId, true);
+			src = new ObjectSource(currentTestId, thisId, true);
 			options = ArrayIndex.newIndexArray(arrayLength);
 		} else {
 			throw new UnsupportedOperationException(String.valueOf(selectedNamedValueId));

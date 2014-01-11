@@ -16,7 +16,7 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValu
 
 public class HistoryDialog extends Dialog {
 	
-	private HistoryContainer localsHistory;
+	private HistoryContainer historyContainer;
 
 	private Object[] dialogResultCache = null;
 	
@@ -31,10 +31,10 @@ public class HistoryDialog extends Dialog {
 		
 		if (source == null) throw new NullPointerException("source");
 		
-		localsHistory = new HistoryContainer();
-		localsHistory.setHistorySource(source);
-		localsHistory.setComboViewerOptions(options);
-		localsHistory.setComboViewerSelection(selectedObject);
+		historyContainer = new HistoryContainer();
+		historyContainer.setHistorySource(source);
+		historyContainer.setComboViewerOptions(options);
+		historyContainer.setComboViewerSelection(selectedObject);
 	}
 	
 	@Override
@@ -43,10 +43,10 @@ public class HistoryDialog extends Dialog {
 		GridLayout gridLayout = (GridLayout) container.getLayout();
 		gridLayout.numColumns = 2;
 		
-		localsHistory.createPartControl(container);
-		localsHistory.refresh();
+		historyContainer.createPartControl(container);
+		historyContainer.refresh();
 		
-		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
+		historyContainer.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
 				okPressed();
@@ -75,7 +75,7 @@ public class HistoryDialog extends Dialog {
 	
 	@Override
 	public void okPressed() {
-		NamedValueNode sel = localsHistory.getSelectedElement();
+		NamedValueNode sel = historyContainer.getSelectedElement();
 		if (sel == null || sel.getDepth() != 1) return;
 		
 		dialogResultCache = new Object[] {sel};

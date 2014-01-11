@@ -13,7 +13,7 @@ public class RevealVariableSetterHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ITreeSelection selection = (ITreeSelection) TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
+		ITreeSelection selection = (ITreeSelection) TraceNavigatorUI.getGlobal().getVariablesView().getSelection();
 		if (selection.isEmpty()) return null;
 		
 		NamedValue selectedVariable = (NamedValue) selection.getFirstElement();		

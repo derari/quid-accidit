@@ -24,17 +24,16 @@ public class ShowFieldsHistoriesHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ISelection sel = TraceNavigatorUI.getGlobal().getLocalsExplorer().getSelection();
-		ITreeSelection selectedLocals = (ITreeSelection) sel;
-
 		int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
 		long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
 		
-		NamedValueNode node = (NamedValueNode) selectedLocals.getFirstElement();
+		ISelection selection = TraceNavigatorUI.getGlobal().getVariablesView().getSelection();
+		ITreeSelection treeSelection = (ITreeSelection) selection;
+		NamedValueNode node = (NamedValueNode) treeSelection.getFirstElement();
 		NamedValueNode childNode = (NamedValueNode) node.getChild(0);
 		if (childNode == null) return null;
-		NamedValue namedValue = (NamedValue) childNode.getValue();
-				
+		
+		NamedValue namedValue = (NamedValue) childNode.getValue();		
 		HistorySource src = null;
 		NamedEntity[] options = null;
 		
@@ -62,12 +61,12 @@ public class ShowFieldsHistoriesHandler extends AbstractHandler {
 			return null;
 		}
 		
-		HistoryView localsHistoryView = TraceNavigatorUI.getGlobal().getLocalsHistoryView();
-		HistoryContainer localsHistory = localsHistoryView.getContainer();
-		localsHistory.setHistorySource(src);
-		localsHistory.setComboViewerOptions(options);
-		localsHistory.setComboViewerSelection(-1);
-		localsHistory.refresh();
+		HistoryView variablesView = TraceNavigatorUI.getGlobal().getHistoryView();
+		HistoryContainer historyContainer = variablesView.getContainer();
+		historyContainer.setHistorySource(src);
+		historyContainer.setComboViewerOptions(options);
+		historyContainer.setComboViewerSelection(-1);
+		historyContainer.refresh();
 
 		return null;
 	}

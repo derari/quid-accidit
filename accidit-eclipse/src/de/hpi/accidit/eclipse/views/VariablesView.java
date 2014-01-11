@@ -36,7 +36,7 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValu
 public class VariablesView extends ViewPart implements AcciditView {
 
 	/** The ID of the view as specified by the extension. */
-	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
+	public static final String ID = "de.hpi.accidit.eclipse.views.VariablesView";
 	
 	private static final String DEFAULT_COMMAND_ID = "de.hpi.accidit.eclipse.commands.showVariableHistory";
 
