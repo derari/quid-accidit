@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.history;
 
+import static org.cthul.miro.DSL.select;
+
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -38,17 +40,17 @@ public class ShowFieldsHistoriesHandler extends AbstractHandler {
 		
 		if (namedValue instanceof NamedValue.VariableValue) {
 			src = new MethodCallSource(currentTestId, currentCallStep);
-			options = DatabaseConnector.cnn().select()
-					.from(Variable.VIEW).inCall(currentTestId, currentCallStep).orderById()
-					.asArray()._execute();
+			options = select().from(Variable.VIEW)
+					.inCall(currentTestId, currentCallStep).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (namedValue instanceof NamedValue.FieldValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
 			
 			src = new ObjectSource(currentTestId, thisId, false);
-			options = DatabaseConnector.cnn().select()
-					.from(Field.VIEW).ofObject(currentTestId, thisId).orderById()
-					.asArray()._execute();
+			options = select().from(Field.VIEW)
+					.ofObject(currentTestId, thisId).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
 		} else if (namedValue instanceof NamedValue.ItemValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
