@@ -62,8 +62,8 @@ public class ShowFieldsHistoriesHandler extends AbstractHandler {
 			return null;
 		}
 		
-		LocalsHistoryView localsHistoryView = TraceNavigatorUI.getGlobal().getLocalsHistoryView();
-		LocalsHistoryContainer localsHistory = localsHistoryView.getContainer();
+		HistoryView localsHistoryView = TraceNavigatorUI.getGlobal().getLocalsHistoryView();
+		HistoryContainer localsHistory = localsHistoryView.getContainer();
 		localsHistory.setHistorySource(src);
 		localsHistory.setComboViewerOptions(options);
 		localsHistory.setComboViewerSelection(-1);

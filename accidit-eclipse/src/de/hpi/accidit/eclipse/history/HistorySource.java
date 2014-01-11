@@ -6,7 +6,7 @@ import org.cthul.miro.MiFutureAction;
 import org.cthul.miro.util.FinalFuture;
 import static org.cthul.miro.DSL.*;
 
-import de.hpi.accidit.eclipse.history.LocalsHistoryContainer.HistoryNode;
+import de.hpi.accidit.eclipse.history.HistoryContainer.HistoryNode;
 import de.hpi.accidit.eclipse.model.Value;
 
 public abstract class HistorySource {

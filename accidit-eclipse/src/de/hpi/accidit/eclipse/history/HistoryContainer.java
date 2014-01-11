@@ -48,7 +48,7 @@ import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
-public class LocalsHistoryContainer {
+public class HistoryContainer {
 	
 	private static final NamedValue ALL = new NamedValue("(all)");
 	
@@ -56,8 +56,8 @@ public class LocalsHistoryContainer {
 	private static Image IMG_GET = null;
 	static {
 		Display d = Display.getDefault();
-		IMG_PUT = new Image(d, LocalsHistoryView.class.getResourceAsStream("/put.png"));
-		IMG_GET = new Image(d, LocalsHistoryView.class.getResourceAsStream("/get.png"));
+		IMG_PUT = new Image(d, HistoryView.class.getResourceAsStream("/put.png"));
+		IMG_GET = new Image(d, HistoryView.class.getResourceAsStream("/get.png"));
 	}
 	
 	private TreeViewer treeViewer;
@@ -72,7 +72,7 @@ public class LocalsHistoryContainer {
 
 	private long currentStep = 0;
 
-	public LocalsHistoryContainer() { }
+	public HistoryContainer() { }
 	
 	public void setHistorySource(HistorySource source) {
 		this.source = source;
@@ -104,7 +104,7 @@ public class LocalsHistoryContainer {
 				
 				NamedEntity selectedObject = (NamedEntity) selection.getFirstElement();
 				source.show(contentNode, selectedObject.getId());
-				LocalsHistoryContainer.this.comboViewerSelection = selectedObject;
+				HistoryContainer.this.comboViewerSelection = selectedObject;
 				
 				refreshTitleLabel();
 			}

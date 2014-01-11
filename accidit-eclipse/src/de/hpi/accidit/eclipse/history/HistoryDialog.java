@@ -14,13 +14,13 @@ import org.eclipse.swt.widgets.Shell;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
-public class LocalsHistoryDialog extends Dialog {
+public class HistoryDialog extends Dialog {
 	
-	private LocalsHistoryContainer localsHistory;
+	private HistoryContainer localsHistory;
 
 	private Object[] dialogResultCache = null;
 	
-	public LocalsHistoryDialog(
+	public HistoryDialog(
 			Shell parent,
 			HistorySource source,
 			int selectedObject, 
@@ -31,7 +31,7 @@ public class LocalsHistoryDialog extends Dialog {
 		
 		if (source == null) throw new NullPointerException("source");
 		
-		localsHistory = new LocalsHistoryContainer();
+		localsHistory = new HistoryContainer();
 		localsHistory.setHistorySource(source);
 		localsHistory.setComboViewerOptions(options);
 		localsHistory.setComboViewerSelection(selectedObject);

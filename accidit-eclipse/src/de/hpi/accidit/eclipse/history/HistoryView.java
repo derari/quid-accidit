@@ -26,24 +26,24 @@ import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.LocalsExplorerView;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
-public class LocalsHistoryView extends ViewPart implements AcciditView, ISelectionListener {
+public class HistoryView extends ViewPart implements AcciditView, ISelectionListener {
 	
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView";
 	
-	private LocalsHistoryContainer localsHistory;
+	private HistoryContainer localsHistory;
 	
 	private long currentTestId = -1;
 	private long currentCallStep = -1;
 
-	public LocalsHistoryView() {}
+	public HistoryView() {}
 
 	@Override
 	public void createPartControl(final Composite parent) {		
 		GridLayout layout = new GridLayout(2, false);
 		parent.setLayout(layout);
 		
-		localsHistory = new LocalsHistoryContainer();
+		localsHistory = new HistoryContainer();
 		localsHistory.createPartControl(parent);
 		
 		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
@@ -139,7 +139,7 @@ public class LocalsHistoryView extends ViewPart implements AcciditView, ISelecti
 		localsHistory.refresh();
 	}
 	
-	public LocalsHistoryContainer getContainer() {
+	public HistoryContainer getContainer() {
 		return localsHistory;
 	}
 }

@@ -57,7 +57,7 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.history.LocalsHistoryView"
+            class="de.hpi.accidit.eclipse.history.HistoryView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.localsHistory.LocalsHistoryView"
             name="History"

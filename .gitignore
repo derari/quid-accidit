@@ -2,6 +2,7 @@
 .classpath
 .settings
 .DS_Store
+.metadata
 /accidit/jdi-tracer/target/
 /accidit/testapp/target/
 /accidit/bcel-tracer/target/

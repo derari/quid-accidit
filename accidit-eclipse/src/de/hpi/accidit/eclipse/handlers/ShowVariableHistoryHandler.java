@@ -13,7 +13,7 @@ import static org.cthul.miro.DSL.*;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.history.HistorySource;
-import de.hpi.accidit.eclipse.history.LocalsHistoryDialog;
+import de.hpi.accidit.eclipse.history.HistoryDialog;
 import de.hpi.accidit.eclipse.history.HistorySource.MethodCallSource;
 import de.hpi.accidit.eclipse.history.HistorySource.ObjectSource;
 import de.hpi.accidit.eclipse.model.ArrayIndex;
@@ -65,7 +65,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 			throw new UnsupportedOperationException(String.valueOf(selectedNamedValueId));
 		}
 
-		LocalsHistoryDialog dialog = new LocalsHistoryDialog(
+		HistoryDialog dialog = new HistoryDialog(
 				HandlerUtil.getActiveShell(event), 
 				src,
 				selectedNamedValueId, 
