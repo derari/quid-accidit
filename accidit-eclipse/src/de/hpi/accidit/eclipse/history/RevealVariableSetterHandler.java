@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.handlers;
+package de.hpi.accidit.eclipse.history;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;

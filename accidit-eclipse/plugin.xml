@@ -221,7 +221,7 @@
             commandId="de.hpi.accidit.eclipse.commands.stepBackOver">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.ShowVariableHistoryHandler"
+            class="de.hpi.accidit.eclipse.history.ShowVariableHistoryHandler"
             commandId="de.hpi.accidit.eclipse.commands.showVariableHistory">
          <activeWhen>
             <with
@@ -261,7 +261,7 @@
             commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.handlers.RevealVariableSetterHandler"
+            class="de.hpi.accidit.eclipse.history.RevealVariableSetterHandler"
             commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">       
          <activeWhen>
             <with
