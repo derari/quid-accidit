@@ -29,11 +29,11 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
-public class LocalsExplorerView extends ViewPart implements AcciditView {
+public class VariablesView extends ViewPart implements AcciditView {
 
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.LocalsExplorerView";
@@ -43,7 +43,7 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 	private TreeViewer viewer;
 	private MethodNode rootNode;
 
-	public LocalsExplorerView() {}
+	public VariablesView() {}
 
 	@Override
 	public void createPartControl(Composite parent) {		
@@ -62,7 +62,7 @@ public class LocalsExplorerView extends ViewPart implements AcciditView {
 		layout.setColumnData(column1, new ColumnWeightData(60, 50));
 		
 		viewer.setContentProvider(ThreadsafeContentProvider.INSTANCE);
-		viewer.setLabelProvider(new LocalsLabelProvider());
+		viewer.setLabelProvider(new VariablesLabelProvider());
 		getSite().setSelectionProvider(viewer);
 		
 		rootNode = new MethodNode(viewer);

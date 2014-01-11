@@ -43,7 +43,7 @@ import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
-import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
@@ -284,7 +284,7 @@ public class HistoryContainer {
 		return null;
 	}
 	
-	public static class HistoryLabelProvider extends LocalsLabelProvider {
+	public static class HistoryLabelProvider extends VariablesLabelProvider {
 		
 		@Override
 		public String getColumnText(Object element, int columnIndex) {

@@ -12,7 +12,7 @@ import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
@@ -73,8 +73,8 @@ public class TraceNavigatorUI {
 		return findView(BreakpointsView.class);
 	}
 	
-	public LocalsExplorerView getLocalsExplorer() {
-		return findView(LocalsExplorerView.class);
+	public VariablesView getLocalsExplorer() {
+		return findView(VariablesView.class);
 	}
 	
 	public HistoryView getLocalsHistoryView() {

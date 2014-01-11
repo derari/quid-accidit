@@ -23,7 +23,7 @@ import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Variable;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class HistoryView extends ViewPart implements AcciditView, ISelectionListener {
@@ -96,7 +96,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 
 	@Override
 	public void selectionChanged(IWorkbenchPart part, ISelection selection) {
-		if (!(part instanceof LocalsExplorerView)) return;
+		if (!(part instanceof VariablesView)) return;
 		if (!(selection instanceof ITreeSelection) || selection.isEmpty()) return;
 		
 		ITreeSelection selectedLocals = (ITreeSelection) selection;

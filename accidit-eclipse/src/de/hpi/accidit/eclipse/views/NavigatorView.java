@@ -14,7 +14,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
-import de.hpi.accidit.eclipse.views.provider.LocalsLabelProvider;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
@@ -87,7 +87,7 @@ public class NavigatorView extends ViewPart {
 		overComposite.setLayout(defaultLayout);
 		overComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		TreeViewer treeSideEffects = new TreeViewer(overComposite);
-		treeSideEffects.setLabelProvider(new LocalsLabelProvider());
+		treeSideEffects.setLabelProvider(new VariablesLabelProvider());
 		treeSideEffects.setContentProvider(ThreadsafeContentProvider.INSTANCE);
 		sideEffects = new SideEffectsNode(treeSideEffects);
 		

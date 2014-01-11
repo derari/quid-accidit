@@ -32,7 +32,7 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.LocalsExplorerView"
+            class="de.hpi.accidit.eclipse.views.VariablesView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.views.LocalsExplorerView"
             name="Variables"
