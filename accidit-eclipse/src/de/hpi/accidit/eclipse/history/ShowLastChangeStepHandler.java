@@ -9,7 +9,7 @@ import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
-public class RevealVariableSetterHandler extends AbstractHandler {
+public class ShowLastChangeStepHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {

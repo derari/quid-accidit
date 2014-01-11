@@ -149,8 +149,8 @@
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
-            id="de.hpi.accidit.eclipse.commands.revealVariableSetter"
-            name="Reveal Setter">
+            id="de.hpi.accidit.eclipse.commands.showLastChangeStep"
+            name="Show Last Change Step">
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
@@ -230,8 +230,8 @@
             commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.history.RevealVariableSetterHandler"
-            commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter">       
+            class="de.hpi.accidit.eclipse.history.ShowLastChangeStepHandler"
+            commandId="de.hpi.accidit.eclipse.commands.showLastChangeStep">       
          <activeWhen>
             <with
                   variable="selection">
