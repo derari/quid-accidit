@@ -416,9 +416,9 @@
                style="push">
          </command>
          <command
-               commandId="de.hpi.accidit.eclipse.commands.revealVariableSetter"
-               id="de.hpi.accidit.eclipse.popups.revealVariableSetter"
-               label="Reveal setter"
+               commandId="de.hpi.accidit.eclipse.commands.showLastChangeStep"
+               id="de.hpi.accidit.eclipse.popups.showLastChangeStep"
+               label="Show Last Change Step"
                style="push">
          </command>
       </menuContribution>
