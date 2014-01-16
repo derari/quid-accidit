@@ -78,7 +78,7 @@
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showVariableHistory"
-            name="Show history">
+            name="Show Variable History">
       </command>
       <category
             id="de.hpi.accidit.eclipse.commands.stepNavigationCategory"
@@ -239,7 +239,7 @@
                      ifEmpty="false"
                      operator="and">
                   <adapt
-                        type="de.hpi.accidit.eclipse.model.NamedValue$VariableValue">
+                        type="de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider$ContentNode">
                   </adapt>
                </iterate>
             </with>
@@ -405,7 +405,7 @@
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
                id="de.hpi.accidit.eclipse.popups.showVariableHistory"
-               label="Show history"
+               label="Show Variable History"
                style="push">
          </command>
          <command
@@ -417,6 +417,7 @@
          </command>
          <command
                commandId="de.hpi.accidit.eclipse.commands.showLastChangeStep"
+               icon="icons/arrow_large_right.png"
                id="de.hpi.accidit.eclipse.popups.showLastChangeStep"
                label="Show Last Change Step"
                style="push">

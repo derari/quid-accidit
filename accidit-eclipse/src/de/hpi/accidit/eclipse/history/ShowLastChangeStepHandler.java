@@ -7,28 +7,28 @@ import org.eclipse.jface.viewers.ITreeSelection;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.views.TraceExplorerView;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class ShowLastChangeStepHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ITreeSelection selection = (ITreeSelection) TraceNavigatorUI.getGlobal().getVariablesView().getSelection();
-		if (selection.isEmpty()) return null;
-		
-		NamedValue selectedVariable = (NamedValue) selection.getFirstElement();		
-		if (selectedVariable instanceof NamedValue.VariableValue) {
-			TraceExplorerView traceExplorer = TraceNavigatorUI.getGlobal().getTraceExplorer();
-			
-			long step = selectedVariable.getValueStep();
+		ITreeSelection sel = (ITreeSelection) TraceNavigatorUI.getGlobal().getVariablesView().getSelection();
+		if (sel == null || sel.isEmpty()) return null;
+
+		NamedValueNode selection = (NamedValueNode) sel.getFirstElement();
+		if (selection == null || selection.getDepth() != 1) return null;
+
+		NamedValue variableValue = selection.getValue();
+		if (variableValue instanceof NamedValue.VariableValue) {
+			long step = variableValue.getValueStep();
 			if (step < 0) { // the correct step is already selected
-				traceExplorer.setFocus();
+				TraceNavigatorUI.getGlobal().getTraceExplorer().setFocus();
 			} else {
 				TraceNavigatorUI.getGlobal().setStep(step);
-//				traceExplorer.getSelectionAdapter().selectAtStep(step);
 			}
 		}
-		
+
 		return null;
 	}
 }

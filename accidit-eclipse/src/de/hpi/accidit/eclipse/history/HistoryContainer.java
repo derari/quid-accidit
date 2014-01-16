@@ -59,24 +59,18 @@ public class HistoryContainer {
 		IMG_PUT = new Image(d, HistoryView.class.getResourceAsStream("/put.png"));
 		IMG_GET = new Image(d, HistoryView.class.getResourceAsStream("/get.png"));
 	}
+
+	private Label titleLabel;
+	
+	private ComboViewer comboViewer;
 	
 	private TreeViewer treeViewer;
 	private HistoryNode contentNode;
 	private HistorySource source;
-	
-	private ComboViewer comboViewer;
-	private NamedEntity[] comboViewerInput;
-	private NamedEntity comboViewerSelection; //selection in ComboViewer
-
-	private Label titleLabel;
 
 	private long currentStep = 0;
 
 	public HistoryContainer() { }
-	
-	public void setHistorySource(HistorySource source) {
-		this.source = source;
-	}
 	
 	public void createPartControl(final Composite container) {		
 		GridLayout layout = new GridLayout(2, false);
@@ -104,7 +98,7 @@ public class HistoryContainer {
 				
 				NamedEntity selectedObject = (NamedEntity) selection.getFirstElement();
 				source.show(contentNode, selectedObject.getId());
-				HistoryContainer.this.comboViewerSelection = selectedObject;
+//				HistoryContainer.this.comboViewerSelection = selectedObject;
 				
 				refreshTitleLabel();
 			}
@@ -154,44 +148,11 @@ public class HistoryContainer {
 		
 		treeViewer.addDoubleClickListener(new IDoubleClickListener() {
 			@Override
-			public void doubleClick(DoubleClickEvent event) {
-				int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
-				long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
-			
+			public void doubleClick(DoubleClickEvent event) {			
 				NamedValueNode selectedNode = getSelectedElement();
 				if (selectedNode == null || selectedNode.getDepth() < 2) return;
-				NamedValue namedValue = (NamedValue) selectedNode.getValue();
 				
-				int selectedNamedValueId = namedValue.getId();
-				HistorySource src = null;
-				NamedEntity[] options = null;
-				
-				if (namedValue instanceof NamedValue.VariableValue) {
-					src = new MethodCallSource(currentTestId, currentCallStep);
-					options = select().from(Variable.VIEW)
-							.inCall(currentTestId, currentCallStep).orderById()
-							._execute(DatabaseConnector.cnn())._asArray();
-				} else if (namedValue instanceof NamedValue.FieldValue) {
-					ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
-					long thisId = owner.getThisId();
-					
-					src = new ObjectSource(currentTestId, thisId, false);
-					options = select().from(Field.VIEW)
-							.ofObject(currentTestId, thisId).orderById()
-							._execute(DatabaseConnector.cnn())._asArray();
-				} else if (namedValue instanceof NamedValue.ItemValue) {
-					ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
-					long thisId = owner.getThisId();
-					int arrayLength = owner.getArrayLength();
-					
-					src = new ObjectSource(currentTestId, thisId, true);
-					options = ArrayIndex.newIndexArray(arrayLength);
-				}
-				
-				setHistorySource(src);
-				setComboViewerOptions(options);
-				setComboViewerSelection(selectedNamedValueId);
-				refresh();
+				updateFromContentNode(selectedNode);
 			}
 		});
 		
@@ -208,28 +169,78 @@ public class HistoryContainer {
 		});
 	}
 	
-	/** Schedules a new combo viewer input. Call refresh to apply it. */
-	public void setComboViewerOptions(NamedEntity[] options) {
-		comboViewerInput = new NamedEntity[options.length + 1];
+	public void showAll() {
+		setComboViewerSelection(-1);
+	}
+	
+	public void updateFromStep(int currentTestId, long currentCallStep) {
+		this.source = new MethodCallSource(currentTestId, currentCallStep);
+		
+		NamedEntity[] options = select().from(Variable.VIEW)
+				.inCall(currentTestId, currentCallStep).orderById()
+				._execute(DatabaseConnector.cnn())._asArray();
+		setComboViewerOptions(options);
+		setComboViewerSelection(-1);
+	}
+	
+	public void updateFromContentNode(NamedValueNode node) {
+		if (node == null) return;
+		
+		int currentTestId = TraceNavigatorUI.getGlobal().getTestId();
+		long currentCallStep = TraceNavigatorUI.getGlobal().getCallStep();
+		
+		NamedValue namedValue = (NamedValue) node.getValue();
+		int namedValueId = namedValue.getId();
+		HistorySource src = null;
+		NamedEntity[] options = null;
+		
+		if (namedValue instanceof NamedValue.VariableValue) {
+			src = new MethodCallSource(currentTestId, currentCallStep);
+			options = select().from(Variable.VIEW)
+					.inCall(currentTestId, currentCallStep).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
+		} else if (namedValue instanceof NamedValue.FieldValue) {
+			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
+			long thisId = owner.getThisId();
+			
+			src = new ObjectSource(currentTestId, thisId, false);
+			options = select().from(Field.VIEW)
+					.ofObject(currentTestId, thisId).orderById()
+					._execute(DatabaseConnector.cnn())._asArray();
+		} else if (namedValue instanceof NamedValue.ItemValue) {
+			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
+			long thisId = owner.getThisId();
+			int arrayLength = owner.getArrayLength();
+			
+			src = new ObjectSource(currentTestId, thisId, true);
+			options = ArrayIndex.newIndexArray(arrayLength);
+		} else {
+			setComboViewerSelection(-1);
+			return;
+		}
+		
+		this.source = src;
+		setComboViewerOptions(options);
+		setComboViewerSelection(namedValueId);
+	}
+	
+	private void setComboViewerOptions(NamedEntity[] options) {
+		NamedEntity[] comboViewerInput = new NamedEntity[options.length + 1];
 		comboViewerInput[0] = ALL;
 		System.arraycopy(options, 0, comboViewerInput, 1, options.length);
+		comboViewer.setInput(comboViewerInput);
 	}
 
-	/** Schedules a new combo viewer selection. Call refresh to apply it. */
-	public void setComboViewerSelection(int namedValueId) {
+	private void setComboViewerSelection(int namedValueId) {
+		NamedEntity[] comboViewerInput = (NamedEntity[]) comboViewer.getInput();
 		for (int i = 0; i < comboViewerInput.length; i++) {
 			if (comboViewerInput[i].getId() == namedValueId) {
-				comboViewerSelection = comboViewerInput[i];
+				comboViewer.setSelection(new StructuredSelection(comboViewerInput[i]));
 				return;
+				
 			}
 		}
-		comboViewerSelection = ALL;
-	}
-
-	/** Applies changes to combo viewer's input and selection. */
-	public void refresh() {
-		comboViewer.setInput(comboViewerInput);
-		comboViewer.setSelection(new StructuredSelection(comboViewerSelection));
+		comboViewer.setSelection(new StructuredSelection(ALL));
 	}
 	
 	public ComboViewer getComboViewer() {
@@ -283,7 +294,7 @@ public class HistoryContainer {
 		}
 		return null;
 	}
-	
+
 	public static class HistoryLabelProvider extends VariablesLabelProvider {
 		
 		@Override

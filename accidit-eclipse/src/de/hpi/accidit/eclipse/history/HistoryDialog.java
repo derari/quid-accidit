@@ -11,7 +11,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
-import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class HistoryDialog extends Dialog {
@@ -19,22 +18,16 @@ public class HistoryDialog extends Dialog {
 	private HistoryContainer historyContainer;
 
 	private Object[] dialogResultCache = null;
+
+	private NamedValueNode node;
 	
-	public HistoryDialog(
-			Shell parent,
-			HistorySource source,
-			int selectedObject, 
-			NamedEntity[] options) {
+	public HistoryDialog(Shell parent, NamedValueNode node) {
 		super(parent);
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
-		if (source == null) throw new NullPointerException("source");
-		
+		this.node = node;
 		historyContainer = new HistoryContainer();
-		historyContainer.setHistorySource(source);
-		historyContainer.setComboViewerOptions(options);
-		historyContainer.setComboViewerSelection(selectedObject);
 	}
 	
 	@Override
@@ -44,7 +37,7 @@ public class HistoryDialog extends Dialog {
 		gridLayout.numColumns = 2;
 		
 		historyContainer.createPartControl(container);
-		historyContainer.refresh();
+		historyContainer.updateFromContentNode(node);
 		
 		historyContainer.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
 			@Override
