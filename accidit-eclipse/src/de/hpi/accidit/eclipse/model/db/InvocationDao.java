@@ -20,16 +20,22 @@ public class InvocationDao extends TraceElementDaoBase {
 				injectField(record, field, rs.getInt(i) == 1);
 				return;
 			}
+			if (field.equals("exitLine")) {
+				injectField(record, field, rs.getInt(i));
+				return;
+			}
 			super.injectField(record, field, rs, i);
 		};
 	};
 	
 	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
-		attributes("e.`testId`, e.`depth`", 
-			   "x.`step` AS `exitStep`, x.`returned`, x.`line` AS `exitLine`",
+		attributes("e.`testId`, e.`depth`", "e.`exitStep`",
 			   "m.`name` AS `method`, t.`name` AS `type`");
+		using("x")
+			.select("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`");
+		internalSelect("e.`parentStep`");
 		table("`CallTrace` e");
-		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`step` = x.`callStep`");
+		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`exitStep` = x.`step`");
 		join("`Method` m ON e.`methodId` = m.`id`");
 		using("m")
 			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
@@ -53,7 +59,8 @@ public class InvocationDao extends TraceElementDaoBase {
 			query.configure(CfgSetField.newInstance("parent", inv));
 			query.put("testId =", inv.getTestId());
 			query.put("depth =", inv.depth+1);
-			query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
+			query.put("parentStep =", inv.getStep());
+			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 			query.put("orderBy-step");
 		}
 		
