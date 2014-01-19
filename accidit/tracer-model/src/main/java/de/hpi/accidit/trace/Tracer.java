@@ -11,6 +11,7 @@ public class Tracer {
 
     private static Runnable initializer = null;
     private static boolean initialized = false;
+    private static boolean failFastMode = false;
     
     public static void setup(Runnable initializer) {
         Tracer.initializer = initializer;
@@ -56,7 +57,10 @@ public class Tracer {
     public synchronized static void begin() {
         init();
         trace = false;
-        traceSet.begin();
+        ThreadTrace tt = traceSet.begin();
+        if (failFastMode) {
+            tt.failFastMode();
+        }
         incTraceCount();
     }
     
@@ -405,6 +409,10 @@ public class Tracer {
     
     public static void dummyA(Object o) {
         System.out.println(o);
+    }
+
+    public static void failFastMode() {
+        failFastMode = true;
     }
     
     static abstract class EventI {

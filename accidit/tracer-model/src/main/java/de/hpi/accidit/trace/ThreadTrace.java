@@ -54,12 +54,14 @@ public class ThreadTrace {
             msg += " " + invocation;
         }
         if (errorCount >= MAX_ERROR) {
-            endTrace();
+            cancelTrace();
             end = true;
             msg += " trace canceled";
             System.out.println(msg);
         } else if (invocation == null && root != null) {
-            endTrace();
+            // we already left the traced part,
+            // clean up and try to do no harm
+            cancelTrace();
             errorCount = 1000 + MAX_ERROR;
             return;
 //            msg += " trace ended";
@@ -120,7 +122,7 @@ public class ThreadTrace {
         cflow = true;
         try {
             if (getStackSize(1) <= baseStack) {
-                endTrace();
+                cancelTrace();
             }
         } catch (RuntimeException | Error e) {
 //            e.printStackTrace();
@@ -131,15 +133,20 @@ public class ThreadTrace {
         }
     }
     
-    private void endTrace() {
+    private void cancelTrace() {
 //        System.out.println("Ending trace " + id + " (" + invocation);
+        Error e = null;
         if (invocation != null) {
-            Error e = new Error("Trace canceled");
+            e = new Error("Trace canceled");
             ObjectTrace ot = getObjectTrace(e);
             invocation.cancel(ot);
         }
         model.out.end(this);
         endCallback.ended(this);
+//        if (e != null) {
+//            Thread.currentThread().interrupt();
+//            throw e;
+//        }
     }
     
     /** line number before method invocation */
@@ -201,7 +208,7 @@ public class ThreadTrace {
                     }
                     if (s > TRACE_MAX) {
                         System.out.println("--- enough ---");
-                        endTrace();
+                        cancelTrace();
                         throw new AssertionError("enough---");
                     }
                 }
@@ -234,7 +241,7 @@ public class ThreadTrace {
                     invocation.failed(otNoReturn);
                     stack.pop();
                     if (stack.isEmpty()) {
-                        endTrace();
+                        cancelTrace();
                         return;
                     }
                     invocation = stack.peek();
@@ -281,7 +288,7 @@ public class ThreadTrace {
             while (invocation.getDepth() > depth) {
                 stack.pop().failed(ot);
                 if (stack.isEmpty()) {
-                    endTrace();
+                    cancelTrace();
                     return;
                 }
                 invocation = stack.peek();
@@ -398,10 +405,13 @@ public class ThreadTrace {
         return true;
     }
 
+    /** for testing */
+    public void failFastMode() {
+        errorCount = MAX_ERROR;
+    }
+
     public static interface EndCallback {
         
         void ended(ThreadTrace trace);
-        
     }
-    
 }
