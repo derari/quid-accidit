@@ -9,10 +9,9 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.ContentNode;
 
-public class LocalsLabelProvider extends LabelProvider implements
+public class VariablesLabelProvider extends LabelProvider implements
 		ITableLabelProvider, ITableColorProvider {
 	
 	@Override

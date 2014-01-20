@@ -1,4 +1,4 @@
-package de.hpi.accidit.eclipse.localsHistory;
+package de.hpi.accidit.eclipse.history;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -11,30 +11,23 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
-import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
-public class LocalsHistoryDialog extends Dialog {
+public class HistoryDialog extends Dialog {
 	
-	private LocalsHistoryContainer localsHistory;
+	private HistoryContainer historyContainer;
 
 	private Object[] dialogResultCache = null;
+
+	private NamedValueNode node;
 	
-	public LocalsHistoryDialog(
-			Shell parent,
-			HistorySource source,
-			int selectedObject, 
-			NamedEntity[] options) {
+	public HistoryDialog(Shell parent, NamedValueNode node) {
 		super(parent);
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
 		
-		if (source == null) throw new NullPointerException("source");
-		
-		localsHistory = new LocalsHistoryContainer();
-		localsHistory.setHistorySource(source);
-		localsHistory.setComboViewerOptions(options);
-		localsHistory.setComboViewerSelection(selectedObject);
+		this.node = node;
+		historyContainer = new HistoryContainer();
 	}
 	
 	@Override
@@ -43,10 +36,10 @@ public class LocalsHistoryDialog extends Dialog {
 		GridLayout gridLayout = (GridLayout) container.getLayout();
 		gridLayout.numColumns = 2;
 		
-		localsHistory.createPartControl(container);
-		localsHistory.refresh();
+		historyContainer.createPartControl(container);
+		historyContainer.updateFromContentNode(node);
 		
-		localsHistory.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
+		historyContainer.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
 			@Override
 			public void doubleClick(DoubleClickEvent event) {
 				okPressed();
@@ -75,7 +68,7 @@ public class LocalsHistoryDialog extends Dialog {
 	
 	@Override
 	public void okPressed() {
-		NamedValueNode sel = localsHistory.getSelectedElement();
+		NamedValueNode sel = historyContainer.getSelectedElement();
 		if (sel == null || sel.getDepth() != 1) return;
 		
 		dialogResultCache = new Object[] {sel};
