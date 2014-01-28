@@ -1,9 +1,29 @@
 package de.hpi.accidit.db;
 
-public interface Model {
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class Model implements AutoCloseable {
     
-    int lookupTypeId(int id);
+    private final Database db;
+    private final PreparedStatement psFindType;
+
+    public Model(Database db) throws SQLException {
+        this.db = db;
+        psFindType = db.prepare("");
+    }
     
-    int lookupType(int id, String name);
+    public void addType(String[] row) {
+        
+    }
     
+    
+    @Override
+    public void close() throws SQLException {
+        
+    }
+    
+    private static final int TYPE_ID = Database.fieldIndex("Type", "id");
+    private static final int TYPE_NAME = Database.fieldIndex("Type", "name");
+
 }

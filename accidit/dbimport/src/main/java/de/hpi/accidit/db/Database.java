@@ -7,7 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Database {
@@ -42,6 +44,10 @@ public class Database {
 
     public void importData(String csvDir) throws Exception {
         batchImport.importData(csvDir);
+    }
+    
+    public PreparedStatement prepare(String s) throws SQLException {
+        return cnn.prepareStatement(s);
     }
     
     private static void runSql(Connection cnn, String sqlFile, Map<String, String> replace) throws Exception {
@@ -97,8 +103,11 @@ public class Database {
         }
     }
     
-    protected abstract static class Import {
+    protected abstract static class Import implements AutoCloseable {
         public abstract void importData(String csvDir) throws Exception; 
+
+        @Override
+        public abstract void close();
     }
     
     protected class CsvScriptImport extends Import {
@@ -108,120 +117,206 @@ public class Database {
             replace2.put("$CSVDIR$", csvDir.replace('\\', '/'));
             runSql(cnn, dbType + "/csvimport.sql", replace2);
         }
+
+        @Override
+        public void close() {
+        }
     }
     
     protected class InsertScriptImport extends Import {
         
-        private final String sqlTemplate;
-        private final String fieldTemplate;
+//        private final String sqlTemplate;
+//        private final String fieldTemplate;
+        private final BulkImport bulk;
 
         public InsertScriptImport(String sqlTemplate, String fieldTemplate) {
-            this.sqlTemplate = sqlTemplate;
-            this.fieldTemplate = fieldTemplate;
+            this.bulk = new BulkImport(sqlTemplate, fieldTemplate);
         }
         
-        private void importData(File data, String table, String[] fields, String[] types) throws Exception {
-            final int MAX_BATCH = 1 << 16;
-            long total = 0;
-            long curBatch = 0;
-            CSVReader reader = new CSVReader(new InputStreamReader(new FileInputStream(data), "utf-8"), ';');
-            long time = System.currentTimeMillis();
-            try (PreparedStatement ps = cnn.prepareStatement(makeQueryString(sqlTemplate, fieldTemplate, dbSchema, table, fields))) {
-                String[] row = reader.readNext();
-                while (row != null) {
-                    setArgs(ps, types, row);
-                    ps.addBatch();
-                    curBatch++;
-                    if (curBatch >= MAX_BATCH) {
-                        ps.executeBatch();
-                        total += curBatch;
-                        System.out.printf("> %7d (+%d) (%.3f s) %n", total, curBatch, (System.currentTimeMillis() - time)/1000d);
-                        curBatch = 0;
-                    }
-                    row = reader.readNext();
-                }
-                ps.executeBatch();
-                total += curBatch;
-                System.out.printf("> %7d (+%d) (%.3f s) %n", total, curBatch, (System.currentTimeMillis()- time)/1000d);
-            }
-        }
-        
-        private void setArgs(PreparedStatement ps, String[] types, String[] values) throws SQLException {
-            for (int i = 0; i < types.length; i++) {
-                String t = types[i];
-                String v = values[i];
-                if (t.endsWith("?") && (v == null || v.equals("NULL"))) {
-                    int st;
-                    switch (t.charAt(0)) {
-                        case 's':
-                            st = Types.VARCHAR;
-                            break;
-                        case 'c':
-                            st = Types.CHAR;
-                            break;
-                        case 'i':
-                            st = Types.INTEGER;
-                            break;
-                        case 'l':
-                            st = Types.BIGINT;
-                            break;
-                        default:
-                            throw new IllegalArgumentException(t);
-                    }
-                    ps.setNull(i+1, st);
-                } else {
-                    switch (t.charAt(0)) {
-                        case 's':
-                        case 'c':
-                            ps.setString(i+1, v);
-                            break;
-                        case 'i':
-                            ps.setInt(i+1, Integer.parseInt(v));
-                            break;
-                        case 'l':
-                            ps.setLong(i+1, Long.parseLong(v));
-                            break;
-                        default:
-                            throw new IllegalArgumentException(t);
-                    }
-                }
-            }
-        }
         @Override
         public void importData(String csvDir) throws Exception {
             for (String[][] table: TABLES) {
                 File f = new File(csvDir, table[0][1]);
-                importData(f, table[0][0], table[1], table[2]);
+                importData(f, table[0][0]);
             }
         }
-    }
-    
-    public class BulkImport implements AutoCloseable {
         
-        private final String sqlTemplate;
-        private final String fieldTemplate;
-        private String query = null;
-        private String[] types = null;
-        private boolean close;
-
-        public BulkImport(String sqlTemplate, String fieldTemplate) {
-            this.sqlTemplate = sqlTemplate;
-            this.fieldTemplate = fieldTemplate;
-        }
-        
-        public void setTable(String table) {
-            for (String[][] meta: TABLES) {
-                if (meta[0][0].equals(table)) {
-                    query = makeQueryString(sqlTemplate, fieldTemplate, dbSchema, table, meta[1]);
-                    types = meta[2];
-                    return;
-                }
+        private void importData(File data, String table) throws Exception {
+            CSVReader reader = new CSVReader(new InputStreamReader(new FileInputStream(data), "utf-8"), ';');
+            bulk.setTable(table);
+            String[] row = reader.readNext();
+            while (row != null) {
+                bulk.addRow(row);
+                row = reader.readNext();
             }
         }
 
         @Override
         public void close() {
-            
+            bulk.close();
+        }
+    }
+
+    private static int MAX_INSERT = 1 << 16;
+    
+    public class BulkImport implements AutoCloseable {
+        
+        private final String sqlTemplate;
+        private final String fieldTemplate;
+        private final List<String[]> rows = new ArrayList<>(MAX_INSERT);
+        private final Thread thread;
+        private long startTime = 0;
+        private long total = 0;
+        private String[][] nextTable = null;
+        private PreparedStatement ps = null;
+        private int[] types = null;
+        private boolean[] nullable = null;
+        private volatile boolean closed = false;
+
+        public BulkImport(String sqlTemplate, String fieldTemplate) {
+            this.sqlTemplate = sqlTemplate;
+            this.fieldTemplate = fieldTemplate;
+            this.thread = setUpThread();
+        }
+        
+        private Thread setUpThread() {
+            Thread t = new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        String[][] curTable = {};
+                        String[][] buf = {};
+                        int count;
+                        while (!closed) {
+                            synchronized (rows) {
+                                rows.wait();
+                                if (nextTable != curTable) {
+                                    curTable = nextTable;
+                                    makeStatement(curTable);
+                                }
+                                count = rows.size();
+                                buf = rows.toArray(buf);
+                                rows.clear();
+                                rows.notifyAll();
+                            }
+                            if (count > 0) {
+                                insertData(buf, count);
+                            }
+                        }
+                    } catch (InterruptedException ex) {
+                        // exit thread
+                    } catch (Exception ex) {
+                        ex.printStackTrace(System.out);
+                    }
+                    closed = true;
+                }
+            };
+            t.start();
+            return t;
+        }
+        
+        public void setTable(String table) throws SQLException {
+            submitData();
+            for (String[][] meta: TABLES) {
+                if (meta[0][0].equals(table)) {
+                    setTable(meta);
+                    return;
+                }
+            }
+            throw new IllegalArgumentException(table);
+        }
+        
+        private void setTable(String[][] meta) throws SQLException {
+            startTime = System.currentTimeMillis();
+            makeStatement(meta);
+            String[] typeList = meta[2];
+            types = new int[typeList.length];
+            nullable = new boolean[typeList.length];
+            for (int i = 0; i < typeList.length; i++) {
+                String t = typeList[i];
+                types[i] = getType(t);
+                nullable[i] = isNullable(t);
+            }
+        }
+        
+        private void makeStatement(String[][] meta) throws SQLException {
+            if (ps != null) {
+                ps.close();
+            }
+            String query = makeQueryString(sqlTemplate, fieldTemplate, dbSchema, meta[0][0], meta[1]);
+            System.out.println(query);
+            ps = cnn.prepareStatement(query);
+        }
+        
+        private int getType(String t) {
+            switch (t.charAt(0)) {
+                case 's':
+                    return Types.VARCHAR;
+                case 'c':
+                    return Types.CHAR;
+                case 'i':
+                    return Types.INTEGER;
+                case 'l':
+                    return Types.BIGINT;
+                default:
+                    throw new IllegalArgumentException(t);
+            }
+        }
+        
+        private boolean isNullable(String t) {
+            return t.endsWith("?");
+        }
+        
+        public void addRow(String[] row) {
+            if (closed) {
+                throw new IllegalStateException("closed");
+            }
+            rows.add(row);
+            if (rows.size() >= MAX_INSERT) {
+                submitData();
+            }
+        }
+
+        private void submitData() {
+            if (rows.isEmpty() || closed) return;
+            synchronized (rows) {
+                rows.notifyAll();
+                try {
+                    rows.wait();
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+        
+        private void insertData(final String[][] data, final int count) throws SQLException {
+            for (int i = 0; i < count; i++) {
+                insertRow(data[i]);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            total += count;
+            System.out.printf("> %7d (+%d) (%.3f s) %n", total, count, (System.currentTimeMillis()- startTime)/1000d);
+        }
+
+        private void insertRow(final String[] row) throws SQLException {
+            for (int i = 0; i < row.length; i++) {
+                String v = row[i];
+                if (nullable[i] && (v == null && v.equals("NULL"))) {
+                    ps.setNull(i+1, types[i]);
+                } else {
+                    ps.setObject(i+1, v, types[i]);
+                }
+            }
+        }
+        
+        @Override
+        public void close() {
+            submitData();
+            synchronized (rows) {
+                closed = true;
+                rows.notifyAll();
+            }
         }
     }
     
@@ -275,6 +370,20 @@ public class Database {
                     {"testId", "callStep", "step", "thisId", "index", "primType", "valueId", "line"},
                     {"i", "l", "l", "l", "i", "c", "l", "i?"}},
             };
+    
+    public static int fieldIndex(String table, String field) {
+        for (String[][] meta: TABLES) {
+            if (meta[0][0].equals(table)) {
+                String[] fields = meta[1];
+                for (int i = 0; i < fields.length; i++) {
+                    if (fields[i].equals(field)) {
+                        return i;
+                    }
+                }
+            }
+        }
+        throw new IllegalArgumentException(table + "." + field);
+    }
     
     private static String makeQueryString(String sqlTemplate, String fieldTemplate, String dbSchema, String table, String[] fields) {
         StringBuilder sbFields = new StringBuilder();
