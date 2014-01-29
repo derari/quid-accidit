@@ -4,6 +4,7 @@ import au.com.bytecode.opencsv.CSVReader;
 import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
@@ -27,10 +28,28 @@ public class Database {
         replace.put("$SCHEMA$", schema);
         switch (dbType) {
             case "hana":
-                batchImport = new InsertScriptImport("INSERT INTO \"$SCHEMA$\".\"$TABLE$\" ($FIELDS$) VALUES ($VALUES$)", "\"$FIELD$\"");
+                batchImport = new InsertScriptImport(insertIntoString(), fieldString());
                 break;
             default:
                 batchImport = new CsvScriptImport();
+        }
+    }
+    
+    private String insertIntoString() {
+        switch (dbType) {
+            case "mysql":
+                return "INSERT INTO `$SCHEMA$`.`$TABLE$` ($FIELDS$) VALUES ($VALUES$)";
+            default: 
+                return "INSERT INTO \"$SCHEMA$\".\"$TABLE$\" ($FIELDS$) VALUES ($VALUES$)";
+        }
+    }
+    
+    private String fieldString() {
+        switch (dbType) {
+            case "mysql":
+                return "`$FIELD$`";
+            default: 
+                return "\"$FIELD$\"";
         }
     }
     
@@ -46,8 +65,21 @@ public class Database {
         batchImport.importData(csvDir);
     }
     
+    public BulkImport bulkImport() {
+        return new BulkImport(insertIntoString(), fieldString());
+    }
+    
     public PreparedStatement prepare(String s) throws SQLException {
         return cnn.prepareStatement(s);
+    }
+    
+    public int getMaxId(String table) throws SQLException {
+        String sql = "SELECT MAX(id) FROM " + table;
+        try (Statement stmt = cnn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            rs.next();
+            return rs.getInt(1);
+        }
     }
     
     private static void runSql(Connection cnn, String sqlFile, Map<String, String> replace) throws Exception {
