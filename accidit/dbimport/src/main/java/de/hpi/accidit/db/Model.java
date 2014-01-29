@@ -11,6 +11,7 @@ public class Model implements AutoCloseable {
     private final Database db;
     private final Database.BulkImport bulkImport;
     private final PreparedStatement psFindType;
+    private final PreparedStatement psMethodsForType;
     private final List<Integer> typeMap = new ArrayList<>(1024);
     private int nextTypeId;
 
@@ -18,6 +19,7 @@ public class Model implements AutoCloseable {
         this.db = db;
         bulkImport = db.bulkImport();
         psFindType = db.prepare("SELECT `id` FROM `Type` WHERE `name` = ?");
+        psMethodsForType = db.prepare("SELECT `id`, `name`, `signature`, `hashcode` FROM `Method` WHERE `declaringTypeId` = ?");
         nextTypeId = db.getMaxId("Type") + 1;
     }
     
@@ -62,4 +64,7 @@ public class Model implements AutoCloseable {
     private static final int TYPE_ID = Database.fieldIndex("Type", "id");
     private static final int TYPE_NAME = Database.fieldIndex("Type", "name");
 
+    private class TypeData {
+        
+    }
 }

@@ -199,7 +199,7 @@ public class Database {
         private final Thread thread;
         private long startTime = 0;
         private long total = 0;
-        private String[][] nextTable = null;
+        private String[][] makeNextStatement = null;
         private PreparedStatement ps = null;
         private int[] types = null;
         private boolean[] nullable = null;
@@ -222,13 +222,13 @@ public class Database {
                         while (!closed) {
                             synchronized (rows) {
                                 rows.wait();
-                                if (nextTable != curTable) {
-                                    curTable = nextTable;
-                                    makeStatement(curTable);
-                                }
                                 count = rows.size();
                                 buf = rows.toArray(buf);
                                 rows.clear();
+                                if (count > 0 && makeNextStatement != curTable) {
+                                    curTable = makeNextStatement;
+                                    makeStatement(curTable);
+                                }
                                 rows.notifyAll();
                             }
                             if (count > 0) {
@@ -260,7 +260,8 @@ public class Database {
         
         private void setTable(String[][] meta) throws SQLException {
             startTime = System.currentTimeMillis();
-            makeStatement(meta);
+//            makeStatement(meta);
+            makeNextStatement = meta;
             String[] typeList = meta[2];
             types = new int[typeList.length];
             nullable = new boolean[typeList.length];
@@ -435,7 +436,7 @@ public class Database {
                 .replace("$FIELDS$", sbFields)
                 .replace("$VALUES$", sbValues)
                 ;
-        System.out.println(q);
+        //System.out.println(q);
         return q;
     }
 }
