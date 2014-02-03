@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.Queue;
 
@@ -174,21 +175,147 @@ public class Import {
             db.importData(csvDir);
         } else {
             try (Model m = new Model(db);
-                 CSVReader rType = reader("mType");) {
+                 RowIterator rType = reader("mType");
+                 RowIterator rMethod = reader("mMethod");
+                 RowIterator rVariable = reader("mVariable");
+                 RowIterator rField = reader("mField");
+                 RowIterator rTrace = reader("tTrace");
+                 RowIterator rObject = reader("tObject");
+                 RowIterator rCall = reader("tCall");
+                 RowIterator rExit = reader("tExit");
+                 RowIterator rThrow = reader("tThrow");
+                 RowIterator rCatch = reader("tCatch");
+                 RowIterator rVarSet = reader("tVariable");
+                 RowIterator rPut = reader("tPut");
+                 RowIterator rGet = reader("tGet");
+                 RowIterator rAPut = reader("tArrayPut");
+                 RowIterator rAGet = reader("tArrayGet");
+                ) {
                 m.beginTypes();
-                String[] row = rType.readNext();
-                while (row != null) {
+                for (String[] row: rType) {
                     m.addType(row);
-                    row = rType.readNext();
                 }
                 m.beginMethods();
+                for (String[] row: rMethod) {
+                    m.addMethod(row);
+                }
+                m.beginVariables();
+                for (String[] row: rVariable) {
+                    m.addVariable(row);
+                }
+                m.beginFields();
+                for (String[] row: rField) {
+                    m.addField(row);
+                }
+                m.beginTraces();
+                for (String[] row: rTrace) {
+                    m.addTrace(row);
+                }
+                m.beginObjects();
+                for (String[] row: rObject) {
+                    m.addObject(row);
+                }
+                m.beginCalls();
+                for (String[] row: rCall) {
+                    m.addCall(row);
+                }
+                m.beginExits();
+                for (String[] row: rExit) {
+                    m.addExit(row);
+                }
+                m.beginThrows();
+                for (String[] row: rThrow) {
+                    m.addException(row);
+                }
+                m.beginCatchs();
+                for (String[] row: rCatch) {
+                    m.addException(row);
+                }
+                m.beginVariableSets();
+                for (String[] row: rVarSet) {
+                    m.addVariableSet(row);
+                }
+                m.beginFieldPuts();
+                for (String[] row: rPut) {
+                    m.addFieldAccess(row);
+                }
+                m.beginFieldGets();
+                for (String[] row: rGet) {
+                    m.addFieldAccess(row);
+                }
+                m.beginArrayPuts();
+                for (String[] row: rAPut) {
+                    m.addArrayAccess(row);
+                }
+                m.beginArrayGets();
+                for (String[] row: rAGet) {
+                    m.addArrayAccess(row);
+                }
             }
         }
         time = System.currentTimeMillis() - time;
         System.out.printf("%nDONE. %ds%n", time/1000);
     }
 
-    protected CSVReader reader(String file) throws UnsupportedEncodingException, FileNotFoundException {
-        return new CSVReader(new InputStreamReader(new FileInputStream(csvDir + "/" + file + ".csv"), "utf-8"), ';');
+    protected RowIterator reader(String file) throws UnsupportedEncodingException, FileNotFoundException {
+        return new RowIterator(file);
+    }
+    
+    public class RowIterator implements Iterable<String[]>, AutoCloseable {
+
+        String file;
+        CSVReader r = null;
+        String[] next = null;
+
+        public RowIterator(String file) {
+            this.file = file;
+        }
+        
+        private void fetch() {
+            try {
+                next = r.readNext();
+                if (next == null) {
+                    r.close();
+                    r = null;
+                }
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        
+        @Override
+        public Iterator<String[]> iterator() {
+            try {
+                if (r != null) throw new IllegalStateException("iterator exists");
+                r = new CSVReader(new InputStreamReader(new FileInputStream(csvDir + "/" + file + ".csv"), "utf-8"), ';');
+                fetch();
+            } catch (FileNotFoundException | UnsupportedEncodingException ex) {
+                throw new RuntimeException(ex);
+            }
+            return new Iterator<String[]>() {
+                @Override
+                public boolean hasNext() {
+                    return next != null;
+                }
+
+                @Override
+                public String[] next() {
+                    String[] result = next;
+                    fetch();
+                    return result;
+                }
+
+                @Override
+                public void remove() {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (r != null) r.close();
+        }
+        
     }
 }

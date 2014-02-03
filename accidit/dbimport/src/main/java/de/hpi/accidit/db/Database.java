@@ -204,6 +204,7 @@ public class Database {
         private int[] types = null;
         private boolean[] nullable = null;
         private volatile boolean closed = false;
+        private boolean submitted = false;
 
         public BulkImport(String sqlTemplate, String fieldTemplate) {
             this.sqlTemplate = sqlTemplate;
@@ -221,7 +222,9 @@ public class Database {
                         int count;
                         while (!closed) {
                             synchronized (rows) {
-                                rows.wait();
+                                if (!submitted) {
+                                    rows.wait();
+                                }
                                 count = rows.size();
                                 buf = rows.toArray(buf);
                                 rows.clear();
@@ -229,6 +232,7 @@ public class Database {
                                     curTable = makeNextStatement;
                                     makeStatement(curTable);
                                 }
+                                submitted = false;
                                 rows.notifyAll();
                             }
                             if (count > 0) {
@@ -262,6 +266,12 @@ public class Database {
             startTime = System.currentTimeMillis();
 //            makeStatement(meta);
             makeNextStatement = meta;
+        }
+        
+        private void makeStatement(String[][] meta) throws SQLException {
+            if (ps != null) {
+                ps.close();
+            }
             String[] typeList = meta[2];
             types = new int[typeList.length];
             nullable = new boolean[typeList.length];
@@ -269,12 +279,6 @@ public class Database {
                 String t = typeList[i];
                 types[i] = getType(t);
                 nullable[i] = isNullable(t);
-            }
-        }
-        
-        private void makeStatement(String[][] meta) throws SQLException {
-            if (ps != null) {
-                ps.close();
             }
             String query = makeQueryString(sqlTemplate, fieldTemplate, dbSchema, meta[0][0], meta[1]);
             System.out.println(query);
@@ -313,6 +317,7 @@ public class Database {
         private void submitData() {
             if (rows.isEmpty() || closed) return;
             synchronized (rows) {
+                submitted = true;
                 rows.notifyAll();
                 try {
                     rows.wait();
@@ -335,7 +340,7 @@ public class Database {
         private void insertRow(final String[] row) throws SQLException {
             for (int i = 0; i < row.length; i++) {
                 String v = row[i];
-                if (nullable[i] && (v == null && v.equals("NULL"))) {
+                if (nullable[i] && (v == null || v.equals("NULL"))) {
                     ps.setNull(i+1, types[i]);
                 } else {
                     ps.setObject(i+1, v, types[i]);
@@ -404,7 +409,7 @@ public class Database {
                     {"i", "l", "l", "l", "i", "c", "l", "i?"}},
             };
     
-    public static int fieldIndex(String table, String field) {
+    public static int csvFieldIndex(String table, String field) {
         for (String[][] meta: TABLES) {
             if (meta[0][0].equals(table)) {
                 String[] fields = meta[1];

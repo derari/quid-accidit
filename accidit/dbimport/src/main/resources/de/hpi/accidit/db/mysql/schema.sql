@@ -93,8 +93,8 @@ CREATE INDEX `fk_ObjectTrace_Type_idx` ON `$SCHEMA$`.`ObjectTrace` (`typeId` ASC
 -- -----------------------------------------------------
 CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`CallTrace` (
   `testId` INT NOT NULL ,
-  `parentStep` BIGINT NOT NULL ,
-  `step` BIGINT NULL ,
+  `parentStep` BIGINT NULL ,
+  `step` BIGINT NOT NULL ,
   `exitStep` BIGINT NOT NULL ,
   `methodId` INT NOT NULL ,
   `thisId` BIGINT NULL ,
