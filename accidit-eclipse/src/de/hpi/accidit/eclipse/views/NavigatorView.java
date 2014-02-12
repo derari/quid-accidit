@@ -3,8 +3,10 @@ package de.hpi.accidit.eclipse.views;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -25,12 +27,12 @@ public class NavigatorView extends ViewPart {
 	 */
 	public static final String ID = "de.hpi.accidit.eclipse.views.NavigatorView";
 	
-	private Composite leftComposite;
-	private Composite intoComposite;
-	private Composite downLeftComposite;
-	private Composite overComposite;
-	
-	private SideEffectsNode sideEffects;
+	private Composite nwComposite;
+	private Composite neComposite;
+	private Composite swComposite;
+	private Composite seComposite;
+		
+	private SideEffectsNode sideEffectsBefore;
 	
 	private boolean currentlyLeftFilled = false;
 	
@@ -41,23 +43,20 @@ public class NavigatorView extends ViewPart {
 		GridLayout layout = new GridLayout(3, false);
 		parent.setLayout(layout);
 		
-		leftComposite = new Group(parent, SWT.NONE);
-		RowLayout defaultLayout = new RowLayout();
-		leftComposite.setLayout(defaultLayout);
-		leftComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
-		Label leftLabel = new Label(leftComposite, SWT.NONE);
-		leftLabel.setText("left");
+		FillLayout defaultLayout = new FillLayout();
+		
+		nwComposite = new Composite(parent, SWT.NONE);
+		nwComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
+		nwComposite.setLayout(defaultLayout);
 		
 		Label upArrow = new Label(parent, SWT.NONE);
 		Image upImage = Activator.getImageDescriptor("icons/go-up.png").createImage();
 		upArrow.setImage(upImage);
 		upArrow.setLayoutData(new GridData(SWT.CENTER, SWT.BOTTOM, false, false));
 		
-		intoComposite = new Group(parent, SWT.NONE);
-		intoComposite.setLayout(defaultLayout);
-		intoComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		Label intoLabel = new Label(intoComposite, SWT.NONE);
-		intoLabel.setText("Into");
+		neComposite = new Composite(parent, SWT.NONE);
+		neComposite.setLayout(defaultLayout);
+		neComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		
 		Label leftArrow = new Label(parent, SWT.NONE);
 		Image leftImage = Activator.getImageDescriptor("icons/go-previous.png").createImage();
@@ -72,29 +71,30 @@ public class NavigatorView extends ViewPart {
 		rightArrow.setImage(rightImage);
 		rightArrow.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
-		downLeftComposite = new Group(parent, SWT.NONE);
-		downLeftComposite.setLayout(defaultLayout);
-		downLeftComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
-		Label downLeftLabel = new Label(downLeftComposite, SWT.NONE);
-		downLeftLabel.setText("Over");
+		swComposite = new Group(parent, SWT.NONE);
+		swComposite.setLayout(defaultLayout);
+		swComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
 		
 		Label downArrow = new Label(parent, SWT.NONE);
 		Image downImage = Activator.getImageDescriptor("icons/go-down.png").createImage();
 		downArrow.setImage(downImage);
 		downArrow.setLayoutData(new GridData(SWT.CENTER, SWT.TOP, false, false));
 		
-		overComposite = new Group(parent, SWT.NONE);
-		overComposite.setLayout(defaultLayout);
-		overComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		TreeViewer treeSideEffects = new TreeViewer(overComposite);
-		treeSideEffects.setLabelProvider(new VariablesLabelProvider());
-		treeSideEffects.setContentProvider(ThreadsafeContentProvider.INSTANCE);
-		sideEffects = new SideEffectsNode(treeSideEffects);
-		
-		parent.pack();
-				
-		Display.getDefault().addFilter(SWT.KeyDown, new Listener(){
+		seComposite = new Composite(parent, SWT.NONE);
+		seComposite.setLayout(defaultLayout);
+		seComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
+		parent.pack();
+
+		TreeViewer sideEffectsBeforeTree = new TreeViewer(nwComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
+		sideEffectsBeforeTree.setUseHashlookup(true);
+		TreeViewer sideEffectsAfterTree;
+		TreeViewer sideEffectsIntoTree;
+		TreeViewer callSummaryTree;
+
+
+		
+		Display.getDefault().addFilter(SWT.KeyDown, new Listener() {
 			@Override
 			public void handleEvent(org.eclipse.swt.widgets.Event event) {
 				if (event.type != SWT.KeyDown)  return;
@@ -109,15 +109,15 @@ public class NavigatorView extends ViewPart {
 	}
 	
 	public void switchLayout() {
-		setFillLeftSide(!currentlyLeftFilled, leftComposite.getParent());
+		setFillLeftSide(!currentlyLeftFilled, nwComposite.getParent());
 		currentlyLeftFilled = !currentlyLeftFilled;
 	}
 	
 	public void setFillLeftSide(boolean leftSide, Composite parent) {
-		setHorizontalFill(leftComposite, leftSide);
-		setHorizontalFill(downLeftComposite, leftSide);
-		setHorizontalFill(intoComposite, !leftSide);
-		setHorizontalFill(overComposite, !leftSide);
+		setHorizontalFill(nwComposite, leftSide);
+		setHorizontalFill(swComposite, leftSide);
+		setHorizontalFill(neComposite, !leftSide);
+		setHorizontalFill(seComposite, !leftSide);
 		parent.layout();
 	}
 	

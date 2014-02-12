@@ -7,14 +7,14 @@ import java.util.concurrent.Callable;
  *
  * @author Arian Treffer
  */
-public class Tracer {
+public class Tracer2 {
 
     private static Runnable initializer = null;
     private static boolean initialized = false;
     private static boolean failFastMode = false;
     
     public static void setup(Runnable initializer) {
-        Tracer.initializer = initializer;
+        Tracer2.initializer = initializer;
     }
     
     private static synchronized void init() {
@@ -386,7 +386,7 @@ public class Tracer {
     };
     
     /**
-     * Synchronize on Tracer.class before calling this!
+     * Synchronize on Tracer2.class before calling this!
      * @return Should be passed to resumeTrace
      */
     public static boolean pauseTrace() {
@@ -418,7 +418,7 @@ public class Tracer {
     static abstract class EventI {
         
         public final void trace(int i) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -437,7 +437,7 @@ public class Tracer {
     static abstract class EventIA {
         
         public final void trace(int i, Object a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -451,7 +451,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -465,7 +465,7 @@ public class Tracer {
         }
         
         public final void trace(int i, long a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -479,7 +479,7 @@ public class Tracer {
         }
         
         public final void trace(int i, float a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -493,7 +493,7 @@ public class Tracer {
         }
         
         public final void trace(int i, double a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -512,7 +512,7 @@ public class Tracer {
     static abstract class EventIIA {
         
         public final void trace(int i, int j, Object a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -526,7 +526,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, int a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -540,7 +540,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, long a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -554,7 +554,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, float a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -568,7 +568,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, double a) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -587,7 +587,7 @@ public class Tracer {
     static abstract class EventIIAA {
         
         public final void trace(int i, int j, Object a, Object b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -601,7 +601,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, Object a, int b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -615,7 +615,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, Object a, long b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -629,7 +629,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, Object a, float b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -643,7 +643,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, Object a, double b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -662,7 +662,7 @@ public class Tracer {
         static abstract class EventIIIA {
         
         public final void trace(int i, int j, int a, Object b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -676,7 +676,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, int a, int b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -690,7 +690,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, int a, long b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -704,7 +704,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, int a, float b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {
@@ -718,7 +718,7 @@ public class Tracer {
         }
         
         public final void trace(int i, int j, int a, double b) {
-            synchronized (Tracer.class) {
+            synchronized (Tracer2.class) {
                 if (!trace) return;
                 trace = false;
                 try {

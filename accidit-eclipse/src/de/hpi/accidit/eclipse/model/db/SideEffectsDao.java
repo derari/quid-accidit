@@ -28,7 +28,7 @@ public class SideEffectsDao extends ModelDaoBase {
 				"(SELECT MAX(`step`) AS `step`, `fieldId`, `thisId` " +
 				 "FROM `PutTrace` " +
 				 "WHERE `testId` = ? AND `step` >= ? AND `step` <= ? " +
-				 "GROUP BY `fieldId`) " +
+				 "GROUP BY `thisId`, `fieldId`) " +
 			 "lastPut ON lastPut.`fieldId` = m.`id`");
 		join("LEFT OUTER JOIN " +
 				"(SELECT MIN(`step`) AS `step`, `fieldId`, `thisId` " +
