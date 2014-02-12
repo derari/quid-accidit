@@ -258,10 +258,26 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	
 	public static class FieldValue extends NamedValue {
 		
+		public FieldValue() {
+		}
+		
+		public FieldValue(int testId, int fieldId, long valueStep, boolean valueIsPut, String name) {
+			this.testId = testId;
+			this.id = fieldId;
+			this.valueStep = valueStep;
+			this.step = valueStep;
+			this.valueIsPut = valueIsPut;
+			this.name = name;
+		}
+		
 		private boolean valueIsPut;
 		
 		public boolean isPut() {
 			return valueIsPut;
+		}
+		
+		public int getFieldId() {
+			return getId();
 		}
 		
 		@Override

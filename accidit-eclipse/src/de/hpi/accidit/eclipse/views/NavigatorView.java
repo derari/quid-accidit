@@ -6,21 +6,22 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowData;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
-import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
-import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.Invocation;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.SideEffects;
+import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.ContentNode;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 
-public class NavigatorView extends ViewPart {
+public class NavigatorView extends ViewPart implements AcciditView {
 
 	/**
 	 * The ID of the view as specified by the extension.
@@ -31,7 +32,11 @@ public class NavigatorView extends ViewPart {
 	private Composite neComposite;
 	private Composite swComposite;
 	private Composite seComposite;
-		
+	
+	private int currentTest = -1;
+	private long currentCall = -1;
+	
+	SideEffects sideEffects;
 	private SideEffectsNode sideEffectsBefore;
 	
 	private boolean currentlyLeftFilled = false;
@@ -88,24 +93,64 @@ public class NavigatorView extends ViewPart {
 
 		TreeViewer sideEffectsBeforeTree = new TreeViewer(nwComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
 		sideEffectsBeforeTree.setUseHashlookup(true);
-		TreeViewer sideEffectsAfterTree;
-		TreeViewer sideEffectsIntoTree;
-		TreeViewer callSummaryTree;
-
-
+		TreeViewer sideEffectsAfterTree = new TreeViewer(swComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
+		sideEffectsAfterTree.setUseHashlookup(true);
+		TreeViewer sideEffectsIntoTree = new TreeViewer(neComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
+		sideEffectsIntoTree.setUseHashlookup(true);
+		TreeViewer callSummaryTree = new TreeViewer(seComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
+		callSummaryTree.setUseHashlookup(true);
 		
-		Display.getDefault().addFilter(SWT.KeyDown, new Listener() {
-			@Override
-			public void handleEvent(org.eclipse.swt.widgets.Event event) {
-				if (event.type != SWT.KeyDown)  return;
-				if(!(getSite().getPage().getActivePart() instanceof NavigatorView)) return; // check if navigator view has focus
-				
-				switch(event.keyCode) {
-				case SWT.ARROW_DOWN: System.out.println("arrow down!"); break;
-				default: break;
-				}
-			}	
-		});
+		sideEffectsBefore = new SideEffectsNode(sideEffectsBeforeTree);
+		sideEffectsBeforeTree.setLabelProvider(new SideEffectsLabelProvider());
+
+		TraceNavigatorUI.getGlobal().addView(this);
+		
+//		Display.getDefault().addFilter(SWT.KeyDown, new Listener() {
+//			@Override
+//			public void handleEvent(org.eclipse.swt.widgets.Event event) {
+//				if (event.type != SWT.KeyDown)  return;
+//				if(!(getSite().getPage().getActivePart() instanceof NavigatorView)) return; // check if navigator view has focus
+//				
+//				switch(event.keyCode) {
+//				case SWT.ARROW_DOWN: System.out.println("arrow down!"); break;
+//				default: break;
+//				}
+//			}	
+//		});
+	}
+	
+	@Override
+	public void dispose() {
+		TraceNavigatorUI.getGlobal().removeView(this);
+		super.dispose();
+	}
+	
+	@Override
+	public void setStep(TraceElement te) {
+		if (te.getTestId() != currentTest || te.getCallStep() != currentCall) {
+			if (te.parent != null) {
+				System.out.println("!!!!!!!!" + te.parent.getStep());
+				sideEffects = new SideEffects(
+						TraceNavigatorUI.getGlobal().cnn(), 
+						te.getTestId(), te.parent.getStep(), te.parent.exitStep);
+			} else if (te instanceof Invocation) {
+				System.out.println("root");
+				Invocation root = (Invocation) te;
+				sideEffects = new SideEffects(
+						TraceNavigatorUI.getGlobal().cnn(), 
+						te.getTestId(), root.getStep(), root.exitStep,
+						root.getStep(), root.exitStep);
+			} else {
+				System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+				System.out.println(te);
+				sideEffects = new SideEffects(
+						TraceNavigatorUI.getGlobal().cnn(), 
+						te.getTestId(), 0, 0, 0, 0);
+			}
+			currentTest = te.getTestId();
+			currentCall = te.getCallStep();
+		}
+		sideEffectsBefore.setStep(sideEffects, te.getStep());
 	}
 	
 	public void switchLayout() {
@@ -133,13 +178,35 @@ public class NavigatorView extends ViewPart {
 //		upComposite.setFocus();
 	}
 	
-	private static class SideEffectsNode extends NamedValueNode {
+	private static class SideEffectsNode extends ContentNode {
 
+		private SideEffects se;
+		
 		public SideEffectsNode(TreeViewer viewer) {
 			super(viewer);
 		}
 		
-		//public void setStep(long testId, )
+		public void setStep(SideEffects se, long step) {
+			this.se = se;
+			setValue(se);
+		}
+		
+		@Override
+		protected void initialize() {
+			super.initialize();
+			int i = 0;
+			for (NamedValue nv: se.getChildren()) {
+				getChild(i++).setValue(nv);
+			}
+		}
+		
+		@Override
+		protected ContentNode newNode() {
+			return new NamedValueNode(this);
+		}
+	}
+	
+	private static class SideEffectsLabelProvider extends VariablesLabelProvider {
 		
 	}
 }

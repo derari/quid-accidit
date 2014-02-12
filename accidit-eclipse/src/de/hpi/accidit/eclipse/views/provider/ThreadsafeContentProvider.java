@@ -74,6 +74,9 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			this.viewer = viewer;
 			this.parent = null;
 			this.depth = 0;
+			if (viewer.getContentProvider() == null) {
+				viewer.setContentProvider(INSTANCE);
+			}
 		}
 		
 		public ContentNode(ContentNode parent) {
@@ -90,6 +93,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			return value;
 		}
 		
+		/** Changes the internal value and, if necessary, updates node asynchronously */
 		public void setValue(Object value) {
 			Object old = this.value;
 			this.value = value;
@@ -122,6 +126,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			this.size = size;
 		}
 		
+		/** Causes recursive update */
 		protected void invalidate() {
 			isInvalid = true;
 			updateSelf();
@@ -135,6 +140,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			isInvalid = false;
 		}
 		
+		/** Initialized node if necessary, synchronous */
 		protected synchronized void makeInitialized() {
 			isActive = true;
 			if (initRequired) {
@@ -143,6 +149,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			}
 		}
 		
+		/** Initializer code of the node, synchronous */
 		protected void initialize() {
 		}
 		
@@ -155,11 +162,11 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			updateChildCount();
 		}
 		
-		public void updateChildCount() {
+		private void updateChildCount() {
 			updateChildCount(lastSize);
 		}
 		
-		public void updateChildCount(int lastCount) {
+		private void updateChildCount(int lastCount) {
 			makeInitialized();
 			int count = getSize();
 			if (lastCount != count) {
