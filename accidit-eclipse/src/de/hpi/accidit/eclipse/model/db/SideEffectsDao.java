@@ -24,7 +24,7 @@ public class SideEffectsDao extends ModelDaoBase {
 		@Override
 		protected void apply(ResultSet rs, FieldEffect fe) throws SQLException {
 			int iThis = getFieldIndex(rs, "thisId");
-			int iField = getFieldIndex(rs, "fieldId");
+			int iField = getFieldIndex(rs, "id");
 			int iStep = getFieldIndex(rs, "read");
 			rs.previous();
 			while (rs.next() 
@@ -44,7 +44,7 @@ public class SideEffectsDao extends ModelDaoBase {
 	
 	public static class FieldSE {
 
-		private long testId = -1;
+		private int testId = -1;
 		private long capStart = -1;
 		private long capEnd = -1;
 		private long tgtStart = -1;
@@ -53,7 +53,7 @@ public class SideEffectsDao extends ModelDaoBase {
 		public FieldSE(String[] fields) {
 		}
 		
-		public FieldSE inTest(long testId) {
+		public FieldSE inTest(int testId) {
 			this.testId = testId;
 			return this;
 		}
@@ -77,7 +77,7 @@ public class SideEffectsDao extends ModelDaoBase {
 					testId, tgtStart, tgtEnd)
 				.configure(CfgSetField.newInstance("testId", testId))
 				.configure(FIELD_EFFECT_READS)
-				.select()._execute(cnn);
+				.select("valueStep", "thisId", "id", "name")._execute(cnn);
 		}
 	}
 	

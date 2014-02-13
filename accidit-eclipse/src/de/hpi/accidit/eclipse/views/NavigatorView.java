@@ -102,6 +102,7 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		
 		sideEffectsBefore = new SideEffectsNode(sideEffectsBeforeTree);
 		sideEffectsBeforeTree.setLabelProvider(new SideEffectsLabelProvider());
+		sideEffectsBeforeTree.setInput(sideEffectsBefore);
 
 		TraceNavigatorUI.getGlobal().addView(this);
 		
@@ -128,27 +129,24 @@ public class NavigatorView extends ViewPart implements AcciditView {
 	@Override
 	public void setStep(TraceElement te) {
 		if (te.getTestId() != currentTest || te.getCallStep() != currentCall) {
+			currentTest = te.getTestId();
+			currentCall = te.getCallStep();
 			if (te.parent != null) {
-				System.out.println("!!!!!!!!" + te.parent.getStep());
 				sideEffects = new SideEffects(
 						TraceNavigatorUI.getGlobal().cnn(), 
 						te.getTestId(), te.parent.getStep(), te.parent.exitStep);
 			} else if (te instanceof Invocation) {
-				System.out.println("root");
 				Invocation root = (Invocation) te;
 				sideEffects = new SideEffects(
 						TraceNavigatorUI.getGlobal().cnn(), 
 						te.getTestId(), root.getStep(), root.exitStep,
 						root.getStep(), root.exitStep);
 			} else {
-				System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-				System.out.println(te);
+				currentCall = -1;
 				sideEffects = new SideEffects(
 						TraceNavigatorUI.getGlobal().cnn(), 
 						te.getTestId(), 0, 0, 0, 0);
 			}
-			currentTest = te.getTestId();
-			currentCall = te.getCallStep();
 		}
 		sideEffectsBefore.setStep(sideEffects, te.getStep());
 	}
@@ -189,6 +187,7 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		public void setStep(SideEffects se, long step) {
 			this.se = se;
 			setValue(se);
+			se.onInitialized(asyncUpdate());
 		}
 		
 		@Override
@@ -198,6 +197,7 @@ public class NavigatorView extends ViewPart implements AcciditView {
 			for (NamedValue nv: se.getChildren()) {
 				getChild(i++).setValue(nv);
 			}
+			setSize(i);
 		}
 		
 		@Override

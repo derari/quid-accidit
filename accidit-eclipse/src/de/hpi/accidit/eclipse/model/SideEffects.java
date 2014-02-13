@@ -136,10 +136,13 @@ public class SideEffects extends Value.ValueWithChildren {
 		}
 	}
 	
-	public class FieldEffect extends FieldValue {
+	public static class FieldEffect extends FieldValue {
 		
 		private final List<FieldValue> reads = new ArrayList<>();
 		private long thisId;
+		
+		public FieldEffect() {
+		}
 		
 		public long getThisId() {
 			return thisId;
