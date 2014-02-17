@@ -187,18 +187,22 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		public void setStep(SideEffects se, long step) {
 			this.se = se;
 			setValue(se);
-			se.onInitialized(asyncUpdate());
+			se.onInitialized(onValueInitialized());
 		}
 		
-		@Override
-		protected void initialize() {
-			super.initialize();
-			int i = 0;
-			for (NamedValue nv: se.getChildren()) {
-				getChild(i++).setValue(nv);
-			}
-			setSize(i);
-		}
+//		@Override
+//		protected void initialize() {
+//			super.initialize();
+//			if (!se.isInitialized()) {
+//				setSize(0);
+//				return;
+//			}
+//			int i = 0;
+//			for (NamedValue nv: se.getChildren()) {
+//				getChild(i++).setValue(nv);
+//			}
+//			setSize(i);
+//		}
 		
 		@Override
 		protected ContentNode newNode() {

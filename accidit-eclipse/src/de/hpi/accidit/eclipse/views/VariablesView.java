@@ -143,7 +143,6 @@ public class VariablesView extends ViewPart implements AcciditView {
 				MiConnection cnn = DatabaseConnector.cnn();
 				root = new NamedValue.MethodFrameValue(cnn, testId, call, step);
 				setValue(root);
-				root.onInitialized(asyncUpdate());
 				
 //			} else if (step != this.step) {
 //				updateStep(step);

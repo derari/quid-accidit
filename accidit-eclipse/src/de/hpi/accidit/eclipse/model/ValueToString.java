@@ -108,7 +108,8 @@ public class ValueToString {
 			return name;
 		}
 		int i = name.lastIndexOf('.');
-		return name.substring(i) + " (size = " + size + ")";
+		if (i >= 0) name = name.substring(i); 
+		return name + " (size = " + size + ")";
 	}
 	
 	private static String getSize(Value collection) {

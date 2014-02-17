@@ -5,11 +5,13 @@ import java.util.List;
 
 import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
+import org.cthul.miro.util.FinalFuture;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.widgets.Display;
 
+import de.hpi.accidit.eclipse.model.ModelBase;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
@@ -46,6 +48,31 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 	
 	public static class ContentNode {
 		
+		/* 1) ContentProvider#update*
+		 *      -update* 
+		 *        -makeActive
+		 *           -ensureValueInitialized
+		 *             +reinitializeValue
+		 *           -ensureNodeUpdated
+		 *      viewer.update*
+		 *      
+		 * 2) onValueInitialized
+		 *      +valueHasUpdated
+		 * 
+		 * 3) valueHasUpdated
+		 *      -syncUpdateNode
+		 *      -updateViewer
+		 *      
+		 * 4) reinitializeValue
+		 *     -triggerValueInit
+		 *       ->onValueInitialized
+		 *     -ensureNodeUpdated
+		 *     
+		 * 5) setValue
+		 *     -reinitializeValue
+		 * 
+		 */
+		
 		protected final TreeViewer viewer;
 		protected final ContentNode parent;
 		private final int depth;
@@ -53,18 +80,20 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		private Object value;
 		private int size = 0;
 		private int lastSize = -1;
-		private boolean initRequired = false;
-		private boolean isActive = false;
-		private boolean isInvalid = true;
 		
-		private final DoInUiThread<Object> asyncUpdate = new DoInUiThread<Object>() {
+		private boolean nodeIsActive = false;
+		private boolean nodeUpdateRequired = false;
+		private boolean valueInitRequired = true;
+		private boolean valueIsInitialized = false;
+		
+		private final DoInUiThread<Object> onValueInitialized = new DoInUiThread<Object>() {
 			@Override
 			protected void run(Object value, Throwable error) {
 				if (error != null) {
 					error.printStackTrace(System.err);
 				} else {
 					if (preAsyncUpdate(value)) {
-						updateSelf();
+						valueHasUpdated();
 					}
 				}
 			}
@@ -85,21 +114,16 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			this.depth = parent.depth + 1;
 		}
 		
-		public boolean isInvalid() {
-			return isInvalid;
-		}
-		
 		public Object getValue() {
 			return value;
 		}
 		
-		/** Changes the internal value and, if necessary, updates node asynchronously */
-		public void setValue(Object value) {
+		protected synchronized void setValue(Object value) {
 			Object old = this.value;
 			this.value = value;
-			if (old != value || isInvalid) {
-				initRequired = true;
-				initIfActive();
+			if (old != value) {
+				reinitializeValue();
+				runUpdate();
 			}
 		}
 		
@@ -122,103 +146,137 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			return size;
 		}
 		
-		public void setSize(int size) {
+		protected void setSize(int size) {
 			this.size = size;
 		}
 		
-		/** Causes recursive update */
-		protected void invalidate() {
-			isInvalid = true;
-			updateSelf();
-			int s = getSize();
-			for (int i = 0; i < s; i++) {
-				getChild(i).invalidate();
-			}
-		}
-		
-		protected void makeValid() {
-			isInvalid = false;
-		}
-		
-		/** Initialized node if necessary, synchronous */
-		protected synchronized void makeInitialized() {
-			isActive = true;
-			if (initRequired) {
-				initRequired = false;
-				initialize();
-			}
-		}
-		
-		/** Initializer code of the node, synchronous */
-		protected void initialize() {
-		}
-		
-		protected boolean preAsyncUpdate(Object value) {
-			return value == getValue();
-		}
-		
-		public void makeActive() {
-			// implicit call to makeInitialized();
-			updateChildCount();
-		}
+		// via ContentProvider
 		
 		private void updateChildCount() {
 			updateChildCount(lastSize);
 		}
 		
-		private void updateChildCount(int lastCount) {
-			makeInitialized();
+		synchronized void updateChildCount(int lastCount) {
+			makeActive();
 			int count = getSize();
 			if (lastCount != count) {
-//				int i = lastCount < 0 ? 0 : lastCount;
 				lastSize = count;
 				viewer.setChildCount(this, count);
-				
-//				for (; i < count; i++) {
-//					update(i);
-//				}
 			}
 		}
 		
-		public void updateChild(int i) {
-			makeInitialized();
+		synchronized void updateChild(int i) {
+			makeActive();
 			ContentNode c = getChild(i);
 			viewer.replace(this, i, c);
 			c.makeActive();
 		}
 		
-		public void initIfActive() {
-			if (isActive) {
-				makeInitialized();
+		// State Automaton
+		
+		/** Makes the node displayable */
+		private void makeActive() {
+			nodeIsActive = true;
+			ensureValueInitialized();
+			ensureNodeUpdated();
+		}
+		
+		private void ensureValueInitialized() {
+			if (!valueInitRequired) return;
+			reinitializeValue();
+		}
+		
+		protected synchronized void reinitializeValue() {
+			if (!nodeIsActive) {
+				valueInitRequired = true;
+				valueIsInitialized = false;
+				return;
+			}
+			triggerValueInitialize();
+			runUpdate();
+		}
+		
+		/**
+		 * Lets the value initialize, then updates this node.
+		 */
+		private void triggerValueInitialize() {
+			valueInitRequired = false;
+			valueIsInitialized = false;
+			final Object value = getValue();
+			if (value instanceof ModelBase) {
+				((ModelBase) value).onInitialized(onValueInitialized());
+			} else {
+				new Thread() {
+					public void run() {
+						try {
+							initializeValueAsynch(value);
+							FinalFuture<Object> f = new FinalFuture<Object>(value);
+							onValueInitialized().call(f);
+						} catch (Throwable e) {
+							e.printStackTrace();
+						}
+					};
+				}.start();
 			}
 		}
 		
-		protected void updateSelf() {
-			isActive = true;
-			makeActive();
-			viewer.update(this, null); 
-//			int s = getSize();
-//			for (int i = 0; i < s; i++) {
-//				getChild(i).updateIfActive();
-//			}
+		protected void initializeValueAsynch(Object value) throws Exception { }
+		
+		private synchronized void valueHasUpdated() {
+			valueIsInitialized = true;
+			nodeUpdateRequired = true;
+			ensureNodeUpdated();
+			updateViewer();
 		}
 		
+		private synchronized void valueHasChanged() {
+			if (nodeUpdateRequired) {
+				ensureNodeUpdated();
+				updateViewer();
+			}
+		}
+		
+		private synchronized void ensureNodeUpdated() {
+			if (!nodeUpdateRequired) return;
+			if (!nodeIsActive) return;
+			nodeUpdateRequired = false;
+			updateNode(valueIsInitialized);
+		}
+		
+		/** Initializer code of the node, synchronous */
+		protected void updateNode(boolean valueIsInitialized) {
+		}
+		
+		private void updateViewer() {
+			int count = getSize();
+			if (lastSize != count) {
+				lastSize = count;
+				viewer.setChildCount(this, count);
+			}
+			viewer.update(this, null);
+		}
+		
+		protected boolean preAsyncUpdate(Object value) {
+			return value == getValue();
+		}
+
+		
 		protected void runUpdate() {
+			nodeUpdateRequired = true;
 			final Object value = getValue();
 			Display.getDefault().asyncExec(new Runnable() {
 				@Override
 				public void run() {
 					if (preAsyncUpdate(value)) {
-						updateSelf();
+						valueHasChanged();
 					}
 				}
 			});			
 		}
 		
-		public MiFutureAction<MiFuture<?>, ?> asyncUpdate() {
-			return asyncUpdate;
+		public MiFutureAction<MiFuture<?>, ?> onValueInitialized() {
+			return onValueInitialized;
 		}
-		
 	}
 	
 	public static class NamedValueNode extends ContentNode {
@@ -241,8 +299,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 					((NamedValueNode) getChild(i)).updateStep(newStep);
 				}
 			} else {
-				invalidate();
-				nv.onInitialized(asyncUpdate());
+				reinitializeValue();
 			}
 		}
 		
@@ -263,30 +320,16 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		@Override
-		protected synchronized void initialize() {
-			if (!nv.isInitialized()) {
+		protected void updateNode(boolean valueIsInitialized) {
+			if (!valueIsInitialized) {
 				setSize(0);
+				return;
 			}
-			nv.onInitialized(asyncUpdate());
-		}
-		
-		@Override
-		protected boolean preAsyncUpdate(Object value) {
-			if (value != nv) {
-//				System.out.println("Skipped " + value);
-				return false;
-			}
-//			System.out.println("Initialized " + nv + " " + nv.getValue().getChildren().length);
-			if (!nv.isInitialized()) {
-				return false;
-			}
-			makeValid();
 			NamedValue[] children = nv.getValue().getChildren();
 			setSize(children.length);
 			for (int i = 0; i < children.length; i++) {
 				getChild(i).setValue(children[i]);
 			}
-			return super.preAsyncUpdate(value);
 		}
 		
 		@Override
@@ -294,5 +337,4 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			return new NamedValueNode(this);
 		}
 	}
-	
 }
