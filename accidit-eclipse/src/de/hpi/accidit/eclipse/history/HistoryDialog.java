@@ -27,7 +27,7 @@ public class HistoryDialog extends Dialog {
 		setBlockOnOpen(true);
 		
 		this.node = node;
-		historyContainer = new HistoryContainer();
+		historyContainer = new HistoryContainer(null);
 	}
 	
 	@Override

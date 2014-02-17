@@ -162,6 +162,20 @@
             id="de.hpi.accidit.eclipse.commands.showFieldsHistories"
             name="Show Fields Histories">
       </command>
+      <category
+            id="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            name="Content Nodes Pathway">
+      </category>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            id="de.hpi.accidit.eclipse.commands.goBack"
+            name="Go Back">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            id="de.hpi.accidit.eclipse.commands.goForward"
+            name="Go Forward">
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -252,6 +266,30 @@
       <handler
             class="de.hpi.accidit.eclipse.history.ShowFieldsHistoriesHandler"
             commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.history.GoBackHandler"
+            commandId="de.hpi.accidit.eclipse.commands.goBack">
+         <activeWhen>
+            <with
+                  variable="de.hpi.accidit.eclipse.history.backState">
+               <equals
+                     value="true">
+               </equals>
+            </with>
+         </activeWhen>
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.history.GoForwardHandler"
+            commandId="de.hpi.accidit.eclipse.commands.goForward">
+         <activeWhen>
+            <with
+                  variable="de.hpi.accidit.eclipse.history.forwardState">
+               <equals
+                     value="true">
+               </equals>
+            </with>
+         </activeWhen>
       </handler>
    </extension>
    <extension
@@ -434,6 +472,46 @@
                style="toggle">
          </command>
       </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.history.HistoryView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.goBack"
+               icon="icons/go_back.png"
+               id="de.hpi.accidit.eclipse.toolbars.goBack"
+               label="Go Back"
+               style="push">
+            <!--
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="de.hpi.accidit.eclipse.history.backState">
+                  <equals
+                        value="true">
+                  </equals>
+               </with>
+            </visibleWhen>
+            -->
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.goForward"
+               icon="icons/go_forward.png"
+               id="de.hpi.accidit.eclipse.toolbars.goForward"
+               label="Go Forward"
+               style="push">
+            <!--
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="de.hpi.accidit.eclipse.history.forwardState">
+                  <equals
+                        value="true">
+                  </equals>
+               </with>
+            </visibleWhen>
+            -->
+         </command>
+      </menuContribution>
    </extension>
    <extension
          point="org.eclipse.ui.perspectives">
@@ -482,6 +560,20 @@
             includeOnPreferencePage="true"
             verticalRulerPreferenceKey="myMarkerIndicationInVerticalRuler">
       </specification>
+   </extension>
+   <extension
+         point="org.eclipse.ui.services">
+      <sourceProvider
+            provider="de.hpi.accidit.eclipse.history.CommandsState">
+         <variable
+               name="de.hpi.accidit.eclipse.history.forwardState"
+               priorityLevel="workbench">
+         </variable>
+   
+         <variable
+               name="de.hpi.accidit.eclipse.history.backState"
+               priorityLevel="workbench">
+         </variable>   </sourceProvider>
    </extension>
 
 </plugin>

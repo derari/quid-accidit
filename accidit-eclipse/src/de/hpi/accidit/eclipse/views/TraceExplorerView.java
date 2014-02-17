@@ -92,7 +92,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		ui = TraceNavigatorUI.getGlobal();
 		ui.setTraceExplorer(this);
 		
-		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
+		treeViewer.getControl().addKeyListener(new TraceExplorerKeyAdapter());
 		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
 		
 		// restore project name
@@ -184,16 +184,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	}
 	
 	/** Class to manipulate selections of the TraceExplorer's treeViewer */ 
-	/* - handlers.Step*Handler (6), done:
-	 *     stepOver -> selectNextElement
-	 *     stepInto -> selectFirstChildElement
-	 *     StepOut -> selectParentElement + selectNextElement
-	 *     stepBackOver -> selectPreviousElement
-	 *     stepBackOut -> selectParentElement
-	 *     stepBackInto -> selectPreviousElement + selectLastChildElement
-	 * - handlers.ShowVariableHistoryHandler, done:
-	 * 		showVariableHistory -> selectAtStep
-	 */
 	public class TreeViewerSelectionAdapter {
 		
 		/** Selects the currently selected trace element's parent. */
