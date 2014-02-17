@@ -114,18 +114,34 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			this.depth = parent.depth + 1;
 		}
 		
-		public Object getValue() {
+		protected Object getValue() {
 			return value;
 		}
 		
-		protected synchronized void setValue(Object value) {
+		public Object getNodeValue() {
+			makeActive();
+			return getValue();
+		}
+		
+		protected final synchronized void setValue(Object value) {
 			Object old = this.value;
 			this.value = value;
 			if (old != value) {
+				valueChanged(value);
 				reinitializeValue();
-				runUpdate();
 			}
 		}
+		
+		protected final synchronized void setValueSoftUpdate(Object value) {
+			Object old = this.value;
+			this.value = value;
+			if (old != value) {
+				valueChanged(value);
+				initializeValue();
+			}
+		}
+		
+		protected void valueChanged(Object value) { }
 		
 		public ContentNode getChild(int i) {
 			while (children.size() <= i) {
@@ -176,6 +192,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		
 		/** Makes the node displayable */
 		private void makeActive() {
+			if (nodeIsActive) return;
 			nodeIsActive = true;
 			ensureValueInitialized();
 			ensureNodeUpdated();
@@ -183,17 +200,22 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		
 		private void ensureValueInitialized() {
 			if (!valueInitRequired) return;
-			reinitializeValue();
+			initializeValue();
 		}
 		
 		protected synchronized void reinitializeValue() {
-			if (!nodeIsActive) {
-				valueInitRequired = true;
-				valueIsInitialized = false;
-				return;
-			}
+			nodeUpdateRequired = true;
+			initializeValue();
+		}
+		
+		private void initializeValue() {
+//			if (!nodeIsActive) {
+//				valueInitRequired = true;
+//				valueIsInitialized = false;
+//				return;
+//			}
 			triggerValueInitialize();
-			runUpdate();
+			runNodeUpdate();
 		}
 		
 		/**
@@ -225,11 +247,10 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		private synchronized void valueHasUpdated() {
 			valueIsInitialized = true;
 			nodeUpdateRequired = true;
-			ensureNodeUpdated();
-			updateViewer();
+			ensureViewUpdated();
 		}
 		
-		private synchronized void valueHasChanged() {
+		private synchronized void ensureViewUpdated() {
 			if (nodeUpdateRequired) {
 				ensureNodeUpdated();
 				updateViewer();
@@ -250,8 +271,12 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		private void updateViewer() {
 			int count = getSize();
 			if (lastSize != count) {
-				lastSize = count;
 				viewer.setChildCount(this, count);
+				int i = lastSize;
+				lastSize = count;
+				for (i = i < 0 ? 0 : i; i < count; i++) {
+					viewer.replace(this, i, getChild(i));
+				}
 			}
 			viewer.update(this, null);
 		}
@@ -261,17 +286,18 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 
 		
-		protected void runUpdate() {
-			nodeUpdateRequired = true;
-			final Object value = getValue();
-			Display.getDefault().asyncExec(new Runnable() {
-				@Override
-				public void run() {
-					if (preAsyncUpdate(value)) {
-						valueHasChanged();
-					}
-				}
-			});			
+		protected void runNodeUpdate() {
+//			nodeUpdateRequired = true;
+			ensureViewUpdated();
+//			final Object value = getValue();
+//			Display.getDefault().asyncExec(new Runnable() {
+//				@Override
+//				public void run() {
+//					if (preAsyncUpdate(value)) {
+//						valueHasChanged();
+//					}
+//				}
+//			});			
 		}
 		
 		public MiFutureAction<MiFuture<?>, ?> onValueInitialized() {
@@ -304,14 +330,13 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		@Override
-		public void setValue(Object value) {
+		protected void valueChanged(Object value) {
 			nv = (NamedValue) value;
 			if (nv != null && !lastName.equals(nv.getName())) {
 				viewer.setExpandedState(this, false);
 				lastName = nv.getName();
 				if (lastName == null) lastName = "";
 			}
-			super.setValue(value);
 		}
 		
 		@Override
@@ -323,6 +348,11 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		protected void updateNode(boolean valueIsInitialized) {
 			if (!valueIsInitialized) {
 				setSize(0);
+				return;
+			}
+			if (!nv.isInitialized() || nv.getValue() == null) {
+				System.out.println("!!!!");
+				reinitializeValue();
 				return;
 			}
 			NamedValue[] children = nv.getValue().getChildren();

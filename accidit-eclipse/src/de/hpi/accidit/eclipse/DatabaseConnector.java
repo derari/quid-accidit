@@ -200,7 +200,7 @@ public class DatabaseConnector {
 		protected String postProcess(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
-			//System.out.println(sql);
+			System.out.println(sql);
 			return sql;
 		}
 	};

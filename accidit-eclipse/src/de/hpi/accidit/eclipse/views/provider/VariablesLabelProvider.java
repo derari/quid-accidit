@@ -34,7 +34,7 @@ public class VariablesLabelProvider extends LabelProvider implements
 	public String getColumnText(Object element, int columnIndex) {
 		if (element instanceof ContentNode) {
 			ContentNode cn = (ContentNode) element;
-			element = cn.getValue();
+			element = cn.getNodeValue();
 		}
 		if (!(element instanceof NamedValue)) {
 			return String.valueOf(element);
