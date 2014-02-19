@@ -119,7 +119,9 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		public Object getNodeValue() {
-			makeActive();
+			if (valueInitRequired) {
+				initializeValue();
+			}
 			return getValue();
 		}
 		
@@ -168,9 +170,9 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		
 		// via ContentProvider
 		
-		private void updateChildCount() {
-			updateChildCount(lastSize);
-		}
+//		private void updateChildCount() {
+//			updateChildCount(lastSize);
+//		}
 		
 		synchronized void updateChildCount(int lastCount) {
 			makeActive();
@@ -186,6 +188,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			ContentNode c = getChild(i);
 			viewer.replace(this, i, c);
 			c.makeActive();
+			c.updateViewer();
 		}
 		
 		// State Automaton
@@ -194,6 +197,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		private void makeActive() {
 			if (nodeIsActive) return;
 			nodeIsActive = true;
+			nodeUpdateRequired = true;
 			ensureValueInitialized();
 			ensureNodeUpdated();
 		}
@@ -208,7 +212,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			initializeValue();
 		}
 		
-		private void initializeValue() {
+		protected void initializeValue() {
 //			if (!nodeIsActive) {
 //				valueInitRequired = true;
 //				valueIsInitialized = false;
@@ -251,6 +255,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		private synchronized void ensureViewUpdated() {
+			if (!nodeIsActive) return;
 			if (nodeUpdateRequired) {
 				ensureNodeUpdated();
 				updateViewer();
@@ -269,14 +274,15 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 		}
 		
 		private void updateViewer() {
+			if (!nodeIsActive) return;
 			int count = getSize();
 			if (lastSize != count) {
 				viewer.setChildCount(this, count);
-				int i = lastSize;
+//				int i = lastSize;
 				lastSize = count;
-				for (i = i < 0 ? 0 : i; i < count; i++) {
-					viewer.replace(this, i, getChild(i));
-				}
+//				for (i = i < 0 ? 0 : i; i < count; i++) {
+//					viewer.replace(this, i, getChild(i));
+//				}
 			}
 			viewer.update(this, null);
 		}
@@ -287,6 +293,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 
 		
 		protected void runNodeUpdate() {
+			if (!nodeIsActive) return;
 //			nodeUpdateRequired = true;
 			ensureViewUpdated();
 //			final Object value = getValue();
@@ -329,6 +336,10 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			}
 		}
 		
+		public void setNamedValue(NamedValue nv) {
+			setValue(nv);
+		}
+		
 		@Override
 		protected void valueChanged(Object value) {
 			nv = (NamedValue) value;
@@ -350,10 +361,10 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 				setSize(0);
 				return;
 			}
-			if (!nv.isInitialized() || nv.getValue() == null) {
+			if (nv == null) {
+				if (getValue() == null) return;
 				System.out.println("!!!!");
-				reinitializeValue();
-				return;
+				nv = (NamedValue) getValue();
 			}
 			NamedValue[] children = nv.getValue().getChildren();
 			setSize(children.length);

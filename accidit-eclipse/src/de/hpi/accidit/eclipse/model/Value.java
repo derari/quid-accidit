@@ -195,11 +195,12 @@ public abstract class Value extends ModelBase {
 			this.thisId = id;
 		}
 		
-		public ObjectSnapshot(MiConnection cnn, int testId, long id, long step) {
+		public ObjectSnapshot(MiConnection cnn, int testId, long id, long step, String typeName) {
 			super(cnn);
 			this.testId = testId;
 			this.thisId = id;
 			this.step = step;
+			this.typeName = typeName;
 		}
 		
 		public Integer getArrayLength() {

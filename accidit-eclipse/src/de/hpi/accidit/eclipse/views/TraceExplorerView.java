@@ -97,16 +97,20 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		// restore project name
 		if (memento != null) {
-			String projectName = memento.getString(STORE_PROJECT_NAME);
-			if (projectName != null && DatabaseConnector.getSelectedProject() == null) {
-				IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-				if (project != null) {
-					DatabaseConnector.setSelectedProject(project);
+			try {
+				String projectName = memento.getString(STORE_PROJECT_NAME);
+				if (projectName != null && DatabaseConnector.getSelectedProject() == null) {
+					IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+					if (project != null) {
+						DatabaseConnector.setSelectedProject(project);
+					}
 				}
+				Integer testId = memento.getInteger(STORE_TEST_ID);
+				if (testId == null) testId = 0;
+				TraceNavigatorUI.getGlobal().setTestId(testId);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			Integer testId = memento.getInteger(STORE_TEST_ID);
-			if (testId == null) testId = 0;
-			TraceNavigatorUI.getGlobal().setTestId(testId);
 		}
 	}
 	

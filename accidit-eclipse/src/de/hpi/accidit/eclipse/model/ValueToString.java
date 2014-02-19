@@ -61,7 +61,8 @@ public class ValueToString {
 			case "value":
 				if (nv.getValue() instanceof Primitive) {
 					System.out.println(
-							"Error? Primitive 'value' in " + simpleLongName(v) +": " + simpleLongName(v));
+							"Error? Primitive 'value' in " + simpleLongName(v) +": " + nv.getValue().getLongString());
+					break;
 				}
 				vValue = (ObjectSnapshot) nv.getValue();
 				break;

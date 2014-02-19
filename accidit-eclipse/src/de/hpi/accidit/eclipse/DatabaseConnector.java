@@ -2,11 +2,23 @@ package de.hpi.accidit.eclipse;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.query.QueryType;
+import org.cthul.miro.query.adapter.AbstractQueryBuilder;
 import org.cthul.miro.query.adapter.JdbcAdapter;
+import org.cthul.miro.query.parts.QueryPart;
 import org.cthul.miro.query.sql.AnsiSql;
+import org.cthul.miro.query.sql.BasicQuery;
+import org.cthul.miro.query.sql.DataQuery;
+import org.cthul.miro.query.sql.DataQueryPart;
+import org.cthul.miro.query.sql.StringQueryBuilder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -200,8 +212,137 @@ public class DatabaseConnector {
 		protected String postProcess(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
-			System.out.println(sql);
+//			System.out.println(sql);
 			return sql;
 		}
+		
+		protected <T> T newQueryBuilder(QueryType<?> queryType) {
+	        if (queryType instanceof DataQuery.Type) {
+	            switch ((DataQuery.Type) queryType) {
+	                case SELECT:
+	                    return (T) new MySelectQuery(this);
+                    default:
+	            }
+	        }
+	        if (queryType == BasicQuery.STRING) {
+	            return (T) new MyStringQuery();
+	        }
+	        return super.newQueryBuilder(queryType);
+	    }
+		
+		public static class MySelectQuery extends SelectQuery {
+
+			public MySelectQuery(AnsiSql dialect) {
+				super(dialect);
+			}
+			
+			@Override
+			public ResultSet execute(Connection connection) throws SQLException {
+				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
+				tt.start();
+				try {
+					return super.execute(connection);
+				} finally {
+					tt.done = true;
+				}
+			}
+		}
+		
+		public static class MyStringQuery extends AbstractQueryBuilder<StringQueryBuilder<?>> implements StringQueryBuilder<StringQueryBuilder<?>> {
+
+	        private final List<Object[]> batches = new ArrayList<>();
+	        private String query = null;
+	        
+	        public MyStringQuery() {
+	            super(0);
+	        }
+
+	        @Override
+	        protected StringQueryBuilder<?> addPart(DataQueryPart type, QueryPart part) {
+	            throw new UnsupportedOperationException();
+	        }
+
+	        @Override
+	        protected void buildQuery(StringBuilder sql) {
+	            sql.append(query);
+	        }
+
+	        @Override
+	        protected void collectArguments(List<Object> args, int batch) {
+	            args.addAll(Arrays.asList(batches.get(batch)));
+	        }
+
+	        @Override
+	        public QueryType<StringQueryBuilder<?>> getQueryType() {
+	            return BasicQuery.STRING;
+	        }
+
+	        @Override
+	        public StringQueryBuilder<?> query(String query) {
+	            this.query = query;
+	            return this;
+	        }
+
+	        @Override
+	        public StringQueryBuilder<?> batch(Object... values) {
+	            batches.add(values);
+	            return this;
+	        }
+
+	        @Override
+	        public int getBatchCount() {
+	            if (batches.size() == 1) return 0;
+	            return batches.size();
+	        }
+	        
+	        @Override
+			public ResultSet execute(Connection connection) throws SQLException {
+				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
+				tt.start();
+				try {
+					return super.execute(connection);
+				} finally {
+					tt.done = true;
+				}
+			}
+	    }
+		
+		private static final AtomicInteger count = new AtomicInteger(0);
+		
+		private static class TimerThread extends Thread {
+			
+			private final int n = count.getAndIncrement();
+			private final String query;
+			private final Object[] args;
+			private volatile boolean done = false;
+			
+			public TimerThread(String query, Object[] args) {
+				this.query = query;
+				this.args = args;
+			}
+			
+			@Override
+			public void run() {
+				boolean first = true;
+				long t = System.currentTimeMillis();
+				long w = 3500;
+				while (!done) {
+					try {
+						Thread.sleep(w);
+					} catch (InterruptedException e) {
+						return;
+					}
+					if (first) {
+						if (done) return;
+						System.out.println(n + ": " + query);
+						System.out.println(n + ": " + Arrays.toString(args));
+						w = 1000;
+						first = false;
+					}
+					System.out.println(n + ": " + (System.currentTimeMillis() - t)/1000 + "s");
+				}
+			}
+		}
+		
 	};
 }

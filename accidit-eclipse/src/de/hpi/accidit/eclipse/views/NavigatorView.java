@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.views;
 
+import org.eclipse.jface.layout.TreeColumnLayout;
+import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -7,8 +9,8 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
@@ -16,6 +18,7 @@ import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.SideEffects;
+import de.hpi.accidit.eclipse.model.SideEffects.InstanceEffects;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.ContentNode;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
@@ -76,7 +79,7 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		rightArrow.setImage(rightImage);
 		rightArrow.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 
-		swComposite = new Group(parent, SWT.NONE);
+		swComposite = new Composite(parent, SWT.NONE);
 		swComposite.setLayout(defaultLayout);
 		swComposite.setLayoutData(new GridData(SWT.LEFT, SWT.FILL, false, true));
 		
@@ -100,9 +103,22 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		TreeViewer callSummaryTree = new TreeViewer(seComposite, SWT.H_SCROLL | SWT.V_SCROLL | SWT.VIRTUAL);
 		callSummaryTree.setUseHashlookup(true);
 		
+		TreeColumn column0 = new TreeColumn(sideEffectsBeforeTree.getTree(), SWT.LEFT);
+		column0.setText("Name");
+		TreeColumn column1 = new TreeColumn(sideEffectsBeforeTree.getTree(), SWT.LEFT);
+		column1.setText("Value");
+		TreeColumn column2 = new TreeColumn(sideEffectsBeforeTree.getTree(), SWT.LEFT);
+		column2.setText("Step");
+		
 		sideEffectsBefore = new SideEffectsNode(sideEffectsBeforeTree);
 		sideEffectsBeforeTree.setLabelProvider(new SideEffectsLabelProvider());
 		sideEffectsBeforeTree.setInput(sideEffectsBefore);
+		
+		TreeColumnLayout tlayout = new TreeColumnLayout();
+		nwComposite.setLayout(tlayout);
+		tlayout.setColumnData(column0, new ColumnWeightData(40, 40));
+		tlayout.setColumnData(column1, new ColumnWeightData(60, 50));
+		tlayout.setColumnData(column2, new ColumnWeightData(10, 20));
 
 		TraceNavigatorUI.getGlobal().addView(this);
 		
@@ -187,22 +203,23 @@ public class NavigatorView extends ViewPart implements AcciditView {
 		public void setStep(SideEffects se, long step) {
 			this.se = se;
 			setValue(se);
-			se.onInitialized(onValueInitialized());
 		}
 		
-//		@Override
-//		protected void initialize() {
-//			super.initialize();
-//			if (!se.isInitialized()) {
-//				setSize(0);
-//				return;
-//			}
-//			int i = 0;
-//			for (NamedValue nv: se.getChildren()) {
-//				getChild(i++).setValue(nv);
-//			}
-//			setSize(i);
-//		}
+		@Override
+		protected void updateNode(boolean valueIsInitialized) {
+			System.out.println("Navigator: " + valueIsInitialized);
+			if (!valueIsInitialized || se == null) {
+				setSize(0);
+				return;
+			}
+//			new Exception().printStackTrace();
+			NamedValue[] instances = se.getChildren();
+			for (int i = 0; i < instances.length; i++) {
+				((NamedValueNode) getChild(i)).setNamedValue(instances[i]);
+			}
+			setSize(instances.length);
+			System.out.println("Navigator: " + instances.length);
+		}
 		
 		@Override
 		protected ContentNode newNode() {
@@ -211,6 +228,33 @@ public class NavigatorView extends ViewPart implements AcciditView {
 	}
 	
 	private static class SideEffectsLabelProvider extends VariablesLabelProvider {
+		
+		@Override
+		public String getColumnText(Object element, int columnIndex) {
+			if (element instanceof ContentNode) {
+				ContentNode cn = (ContentNode) element;
+				element = cn.getNodeValue();
+			}
+			if (!(element instanceof NamedValue)) {
+				System.out.println(":(" + element);
+				return String.valueOf(element);
+			}
+			NamedValue nv = (NamedValue) element;
+			switch (columnIndex) {
+			case 0: 
+				return nv.getName();
+			case 1: 
+				if (nv.isInitialized()) {
+					if (nv instanceof InstanceEffects) {
+						return "---";
+					}
+					return nv.getValue().getLongString();
+				} else {
+					return "Pending...";
+				}
+			}
+			return "-";
+		}
 		
 	}
 }

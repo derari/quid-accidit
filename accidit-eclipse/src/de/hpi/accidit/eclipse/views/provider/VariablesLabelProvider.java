@@ -37,11 +37,14 @@ public class VariablesLabelProvider extends LabelProvider implements
 			element = cn.getNodeValue();
 		}
 		if (!(element instanceof NamedValue)) {
+			System.out.println(":(" + element);
 			return String.valueOf(element);
 		}
 		NamedValue nv = (NamedValue) element;
 		switch (columnIndex) {
-		case 0: return nv.getName();
+		case 0: 
+			System.out.println("." + nv.getName());
+			return nv.getName();
 		case 1: 
 			if (nv.isInitialized()) {
 				return nv.getValue().getLongString();
@@ -55,7 +58,7 @@ public class VariablesLabelProvider extends LabelProvider implements
 	@Override
 	public Color getForeground(Object element, int columnIndex) {
 		if (element instanceof ContentNode) {
-			element = ((ContentNode) element).getValue();
+			element = ((ContentNode) element).getNodeValue();
 		}
 		if (!(element instanceof NamedValue)) {
 			return null;

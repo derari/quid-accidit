@@ -25,7 +25,7 @@ public class SideEffectsDao extends ModelDaoBase {
 		protected void apply(ResultSet rs, FieldEffect fe) throws SQLException {
 			int iThis = getFieldIndex(rs, "thisId");
 			int iField = getFieldIndex(rs, "id");
-			int iStep = getFieldIndex(rs, "read");
+			int iStep = getFieldIndex(rs, "nextGetStep");
 			rs.previous();
 			while (rs.next() 
 					&& rs.getLong(iThis) == fe.getThisId() 
@@ -73,23 +73,25 @@ public class SideEffectsDao extends ModelDaoBase {
 		public Results<FieldEffect> _execute(MiConnection cnn) {
 			return Views.query(FIELD_EFFECT_MAPPING, FIELD_EFFECT_QUERY, 
 					testId, capStart, capEnd,
-					testId, tgtStart, tgtEnd,
+					testId, tgtEnd,
 					testId, tgtStart, tgtEnd)
 				.configure(CfgSetField.newInstance("testId", testId))
+				.configure(CfgSetField.newInstance("valueIsPut", true))
 				.configure(FIELD_EFFECT_READS)
-				.select("valueStep", "thisId", "id", "name")._execute(cnn);
+				.select("valueStep", "thisId", "id", "name", "nextGetStep")._execute(cnn);
 		}
 	}
 	
 	private static final String FIELD_EFFECT_QUERY = 
-			"SELECT sideEffect.`step` AS `valueStep`, sideEffect.`thisId`, f.`id`, f.`name`, nextRead.`step` AS `read` "+
+			"SELECT sideEffect.`step` AS `valueStep`, sideEffect.`thisId`, f.`id`, f.`name`, nextRead.`step` AS `nextGetStep` "+
 			"FROM `Field` f " +
 			"JOIN (SELECT MAX(`step`) AS `step`, `thisId`, `fieldId` " +
 					"FROM `PutTrace` WHERE `testId` = ? AND `step` BETWEEN ? AND ? " + // testId, capStart, capEnd 
-					"GROUP BY `thisId`, `fieldId`) sideEffect ON f.`id` = sideEffect.`fieldId`" +
-			"LEFT JOIN `PutTrace` nextChange ON nextChange.`testId` = ? AND nextChange.`step` BETWEEN ? AND ? " + // testId, tgtStart, tgtEnd
+					"GROUP BY `thisId`, `fieldId`) sideEffect ON f.`id` = sideEffect.`fieldId` " +
+			"LEFT JOIN `PutTrace` nextChange ON nextChange.`testId` = ? AND nextChange.`step` > sideEffect.`step` AND nextChange.`step` <= ? " + // testId, tgtEnd
 					"AND nextChange.`thisId` = sideEffect.`thisId` AND nextChange.`fieldId` = sideEffect.`fieldId` " +
 			"JOIN `GetTrace` nextRead ON nextRead.`testId` = ? AND nextRead.`thisId` = sideEffect.`thisId` AND nextRead.`fieldId` = sideEffect.`fieldId` " + //testId
+					"AND nextRead.`step` > sideEffect.`step` AND nextRead.`step` > ? " + // tgtStart
 			"GROUP BY sideEffect.`step`, sideEffect.`thisId`, sideEffect.`fieldId`, nextRead.`step` "+
-			"HAVING nextRead.`step` BETWEEN ? AND COALESCE(MIN(nextChange.step), ?);"; // tgtStart, tgtEnd
+			"HAVING nextRead.`step` < COALESCE(MIN(nextChange.step), ?);"; // tgtEnd
 }

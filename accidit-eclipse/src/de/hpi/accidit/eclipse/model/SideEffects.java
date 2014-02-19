@@ -68,29 +68,33 @@ public class SideEffects extends Value.ValueWithChildren {
 			}
 			inst.events.add(fe);
 		}
-		
+		System.out.println(instances.size() + " instances with SEs");
 		Set<NamedValue> children = new TreeSet<>();
 		children.addAll(instances.values());
 		return children.toArray(new NamedValue[children.size()]);
 	}
 	
-	private class InstanceEffects extends NamedValue implements Comparable<InstanceEffects> {
+	public class InstanceEffects extends NamedValue implements Comparable<InstanceEffects> {
 		
 		private long thisId;
-		private ObjectSnapshot object;
+		private Value object;
 		private List<NamedValue> events = new ArrayList<>();
 		
 		public InstanceEffects(long thisId) {
 			this.thisId = thisId;
-			object = new ObjectSnapshot(SideEffects.this.cnn(),
-										SideEffects.this.testId,
-										thisId,
-										SideEffects.this.targetStart);
+		}
+		
+		private Value getObject() {
+			if (object == null) {
+				object = Value.object(SideEffects.this.testId, thisId, SideEffects.this.captureEnd)
+						.select()._execute(SideEffects.this.cnn());
+			}
+			return object;
 		}
 		
 		@Override
 		protected void lazyInitialize() throws Exception {
-			object.getLongString();
+			getObject();
 			super.lazyInitialize();
 		}
 		
@@ -101,7 +105,7 @@ public class SideEffects extends Value.ValueWithChildren {
 		
 		@Override
 		public String getName() {
-			return object.getLongString();
+			return getObject().getLongString();
 		}
 
 		@Override
@@ -154,6 +158,37 @@ public class SideEffects extends Value.ValueWithChildren {
 		
 		public List<FieldValue> getReads() {
 			return reads;
+		}
+		
+		@Override
+		protected Value fetchValue() throws Exception {
+			return new FieldEffectValue(this, super.fetchValue());
+		}
+	}
+	
+	private static class FieldEffectValue extends ValueWithChildren {
+		
+		private final FieldEffect ie;
+		private final Value value;
+		
+		public FieldEffectValue(FieldEffect ie, Value value) {
+			this.ie = ie;
+			this.value = value;
+		}
+		
+		@Override
+		protected NamedValue[] fetchChildren() throws Exception {
+			return ie.reads.toArray(new NamedValue[0]);
+		}
+
+		@Override
+		public String getShortString() {
+			return value.getShortString();
+		}
+
+		@Override
+		public String getLongString() {
+			return value.getLongString();
 		}
 	}
 }
