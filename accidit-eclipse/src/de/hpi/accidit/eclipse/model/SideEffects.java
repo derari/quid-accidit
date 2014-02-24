@@ -12,6 +12,7 @@ import java.util.TreeSet;
 import org.cthul.miro.MiConnection;
 
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
+import de.hpi.accidit.eclipse.model.db.ObjectOccurranceDao;
 import de.hpi.accidit.eclipse.model.db.SideEffectsDao;
 
 public class SideEffects extends Value.ValueWithChildren {
@@ -68,6 +69,10 @@ public class SideEffects extends Value.ValueWithChildren {
 			}
 			inst.events.add(fe);
 		}
+			select().from(ObjectOccurranceDao.OBJECTS)
+			.inTest(testId)
+			.beforeStep(captureEnd);
+		
 		System.out.println(instances.size() + " instances with SEs");
 		Set<NamedValue> children = new TreeSet<>();
 		children.addAll(instances.values());
@@ -79,6 +84,7 @@ public class SideEffects extends Value.ValueWithChildren {
 		private long thisId;
 		private Value object;
 		private List<NamedValue> events = new ArrayList<>();
+		private boolean newInstance = false;
 		
 		public InstanceEffects(long thisId) {
 			this.thisId = thisId;
@@ -90,6 +96,10 @@ public class SideEffects extends Value.ValueWithChildren {
 						.select()._execute(SideEffects.this.cnn());
 			}
 			return object;
+		}
+		
+		public long getThisId() {
+			return thisId;
 		}
 		
 		@Override
@@ -105,7 +115,9 @@ public class SideEffects extends Value.ValueWithChildren {
 		
 		@Override
 		public String getName() {
-			return getObject().getLongString();
+			String s = getObject().getLongString();
+			if (newInstance) s = "* " + s;
+			return s;
 		}
 
 		@Override
