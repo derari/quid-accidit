@@ -11,5 +11,10 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/ngdbc.jar"/>
+	<classpathentry kind="lib" path="lib/soot-2.5.0.jar" sourcepath="lib/soot-2.5.0-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/accidit-eclipse/lib/soot-2.5.0-doc.zip!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

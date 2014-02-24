@@ -69,10 +69,10 @@ public class SideEffects extends Value.ValueWithChildren {
 			}
 			inst.events.add(fe);
 		}
-			select().from(ObjectOccurranceDao.OBJECTS)
-			.inTest(testId)
-			.beforeStep(captureEnd);
-		
+//			select().from(ObjectOccurranceDao.OBJECTS)
+//			.inTest(testId)
+//			.beforeStep(captureEnd);
+//		
 		System.out.println(instances.size() + " instances with SEs");
 		Set<NamedValue> children = new TreeSet<>();
 		children.addAll(instances.values());
