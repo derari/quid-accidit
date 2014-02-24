@@ -113,9 +113,11 @@ public class Import {
         final String currentSchemaKey = "currentschema=";
         int start = dbString.indexOf(currentSchemaKey);
         if (start < 0) {
-            URI uri = URI.create(dbString);
+            int i = dbString.indexOf("//");
+            URI uri = URI.create(dbString.substring(i));
             String path = uri.getPath();
             if (path != null && !path.isEmpty()) {
+                if (path.startsWith("/")) path = path.substring(1);
                 return path;
             }
             throw new IllegalArgumentException("No schema given: " + dbString);
