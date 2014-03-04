@@ -1,17 +1,17 @@
 package de.hpi.accidit.eclipse.slice;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class DataDependencyGraph {
 	
-	Deque<DataDependency> conditionStack = new ArrayDeque<>();
+	List<DataDependency> controlDependencies = new ArrayList<>();
 	Map<Token, DataDependency> dependencies;
 	Map<String, DataDependency> variableValues = new TreeMap<>();
 	Map<String, DataDependency> currentDependencies = new TreeMap<>();
@@ -22,6 +22,13 @@ public class DataDependencyGraph {
 	}
 
 	public void setVariable(int line, String name, DataDependency value) {
+		if (!controlDependencies.isEmpty()) {
+//			List<DataDependency> deps = new ArrayList<>(controlDependencies);
+//			deps.add(value);
+//			value = DataDependency.all(deps);
+			value = DataDependency.complex(DataDependency.all(controlDependencies), value);
+		}
+		
 		Token t = Token.variable(name, line);
 		variableValues.put(name, value);
 		dependencies.put(t, value);
@@ -33,16 +40,24 @@ public class DataDependencyGraph {
 	}
 	
 	public void pushCondition(DataDependency cond) {
-		conditionStack.push(cond);
+		controlDependencies.add(cond);
 	}
 	
 	public void setReturn(int line, DataDependency value) {
-//		if (!conditionStack.isEmpty()) {
-//			List<DataDependency> deps = new ArrayList<>(conditionStack);
+		setExit(line, "<return>", value);
+	}
+	
+	public void setThrow(int line, DataDependency value) {
+		setExit(line, "<throw>", value);
+	}
+	
+	protected void setExit(int line, String name, DataDependency value) {
+//		if (!controlDependencies.isEmpty()) {
+//			List<DataDependency> deps = new ArrayList<>(controlDependencies);
 //			deps.add(value);
 //			value = DataDependency.all(deps);
 //		}
-		setVariable(line, "<return>", value);
+		setVariable(line, name, value);
 	}
 	
 	public void setOther(Token t, DataDependency value) {
@@ -56,25 +71,37 @@ public class DataDependencyGraph {
 //		dest.dependencies.putAll(dependencies);
 		dest.currentDependencies.clear();
 		dest.currentDependencies.putAll(currentDependencies);
-		dest.conditionStack.clear();
-		dest.conditionStack.addAll(conditionStack);
+		dest.controlDependencies.clear();
+		dest.controlDependencies.addAll(controlDependencies);
 	}
 	
 	public void merge(DataDependencyGraph in, DataDependencyGraph dest) {
 		copyTo(dest);
 		dest.dependencies.putAll(in.dependencies);
-		DataDependency condition = dest.conditionStack.poll();
-		if (condition == null) {
-			System.out.println(" ! no condition !");
-			condition = DataDependency.constant();
+		
+		int maxStackSize = Math.min(dest.controlDependencies.size(), in.controlDependencies.size());
+		int stackSize = Math.max(0, maxStackSize-1); // pop at least one element
+		for (int i = 0; i < maxStackSize; i++) {
+			if (!dest.controlDependencies.get(i).equals(in.controlDependencies.get(i))) {
+				stackSize = i;
+			}
 		}
+		
+		List<DataDependency> dp1 = dest.controlDependencies.subList(stackSize, dest.controlDependencies.size());
+		List<DataDependency> dp2 = in.controlDependencies.subList(stackSize, in.controlDependencies.size());
+		Set<DataDependency> mergeDependencies = new TreeSet<>();
+		mergeDependencies.addAll(dp1);
+		mergeDependencies.addAll(dp2);
+		DataDependency condition = DataDependency.all(mergeDependencies);
+		dp1.clear();
+		
 		Map<String, DataDependency> inMap = new HashMap<>(in.currentDependencies);
 		for (Map.Entry<String, DataDependency> e: currentDependencies.entrySet()) {
 			String var = e.getKey();
 			DataDependency v1 = e.getValue();
 			DataDependency v2 = inMap.remove(var);
 			if (v2 != null && !v1.equals(v2)) {
-				DataDependency v = DataDependency.conditional(condition, v1, v2);
+				DataDependency v = DataDependency.complex(condition, DataDependency.choice(v1, v2));
 				dest.currentDependencies.put(var, v);
 				dest.variableValues.put(var, v);
 			}
@@ -86,8 +113,12 @@ public class DataDependencyGraph {
 	@Override
 	public String toString() {
 		String s = "";
+		for (DataDependency dd: controlDependencies) {
+			s += //dd + 
+					"/";
+		}
 		for (Map.Entry<String, DataDependency> e: variableValues.entrySet()) {
-			s += e.getKey() + " = " + e.getValue() + "; ";
+			s += " " + e.getKey() + " = " + e.getValue() + ";";
 		}
 		return s;
 	}

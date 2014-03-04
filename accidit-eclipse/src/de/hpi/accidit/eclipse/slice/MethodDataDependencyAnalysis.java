@@ -12,17 +12,21 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
-import soot.jimple.ArrayRef;
+import soot.jimple.AssignStmt;
+import soot.jimple.CaughtExceptionRef;
 import soot.jimple.Constant;
+import soot.jimple.DefinitionStmt;
 import soot.jimple.GotoStmt;
 import soot.jimple.IfStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.InvokeStmt;
+import soot.jimple.LookupSwitchStmt;
+import soot.jimple.NewExpr;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.ThisRef;
-import soot.jimple.internal.JArrayRef;
-import soot.jimple.internal.JAssignStmt;
-import soot.jimple.internal.JGotoStmt;
-import soot.jimple.internal.JIdentityStmt;
+import soot.jimple.ThrowStmt;
 import soot.jimple.internal.JInstanceFieldRef;
 import soot.jimple.internal.JimpleLocal;
 import soot.options.Options;
@@ -32,58 +36,79 @@ import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.UnitGraph;
 import soot.toolkits.scalar.ForwardFlowAnalysis;
 
-public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph> {
+public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, DataDependencyGraph> {
 	
-	public static void main(String[] args) {
+	static {
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
-		
-		String db = "jdbc:mysql://localhost:3306/accidit?user=root&password=root";
-		
 		String cp = Scene.v().defaultClassPath();
 		
-//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-//		String mvn = "C:/Users/derari/.m2";
-		String drools = "/Users/at/projects/drools";
-		String mvn = "/Users/at/.m2";
+		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+		String mvn = "C:/Users/derari/.m2";
+		String sep = ";";
+//		String drools = "/Users/at/projects/drools";
+//		String mvn = "/Users/at/.m2";
+//		String sep = ":";
 		
-		Scene.v().setSootClassPath(cp + ":" + 
-					drools + "/drools-core/target/classes:" +
-					drools + "/drools B/drools-core/target/test-classes:" +
-					mvn + "/repository/junit/junit/4.11/junit-4.11.jar:" +
-					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:" +
-					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar:" +
-					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar:" +
+		Scene.v().setSootClassPath(cp + sep + 
+					drools + "/drools-core/target/classes" + sep +
+					drools + "/drools-core/target/test-classes" + sep +
+					mvn + "/repository/junit/junit/4.11/junit-4.11.jar" + sep +
+					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" + sep +
+					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
+//					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
 					"");
-		
-		String className = "org.drools.base.evaluators.TimeIntervalParser";
-//		String className = "org.drools.base.evaluators.TimeIntervalParserTest";
-
-		SootClass sClass = Scene.v().loadClassAndSupport(className);
+	}
+	
+	public static Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
+		Body b = sMethod.retrieveActiveBody();
+//		Body b = sMethod.getSource().getBody(sMethod, "");
+		UnitGraph graph = new ExceptionalUnitGraph(b);
+		MethodDataDependencyAnalysis analysis = new MethodDataDependencyAnalysis(graph);
+//		System.out.println(slice.toString());
+		return analysis.dependencies;
+	}
+	
+	public static Map<Token, DataDependency> analyseMethod(String clazz, String method, String signature) {
+		SootClass sClass = Scene.v().loadClassAndSupport(clazz);
 		sClass.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
 		
 		SootMethod sMethod = null;
 		for (SootMethod m0: sClass.getMethods()) {
-			if (m0.getName().equals("parse")) {
+			if (m0.getName().equals(method) && matchSignature(m0, signature)) {
 				sMethod = m0;
 				System.out.println(m0);
 				break;
 			}
 		}
+		if (sMethod == null) {
+			throw new RuntimeException("Method not found: " + clazz + "#" + method + signature);
+		}
+		return analyseMethod(sMethod);
+	}
+	
+	private static boolean matchSignature(SootMethod m, String signature) {
+		return m.getBytecodeSignature().endsWith(signature + ">");
+	}
+	
+	public static void main(String[] args) {
 		
+//		String clazz = "org.drools.base.evaluators.TimeIntervalParser";
+//		String method = "parse";
+//		String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
+		String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
+		String method = "sootTest";
+		String signature = "(I)I";
+
 		
-		Body b = sMethod.retrieveActiveBody();
-//		Body b = sMethod.getSource().getBody(sMethod, "");
-		UnitGraph graph = new ExceptionalUnitGraph(b);
-		DynamicSlice slice = new DynamicSlice(graph);
-		System.out.println(slice.toString());
+		Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+		System.out.println(printMap(map));
 		
-		// org.drools.base.evaluators.TimeIntervalParserTest #testParse3
 	}
 	
 	Map<Token, DataDependency> dependencies = new TreeMap<>();
 	
-	public DynamicSlice(UnitGraph g) {
+	public MethodDataDependencyAnalysis(UnitGraph g) {
 		super(g);
 		doAnalysis();
 		
@@ -117,19 +142,33 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 			JimpleLocal l = (JimpleLocal) rv;
 			return out.getVariableDependency(l.getName());
 			
-		} else if (rv instanceof JInstanceFieldRef) {
-			JInstanceFieldRef f = (JInstanceFieldRef) rv;
+		} else if (rv instanceof InstanceFieldRef) {
+			InstanceFieldRef f = (InstanceFieldRef) rv;
 			String name = f.getField().getName();
 			DataDependency inst = getDataDependency(f.getBase(), out, line);
 			return DataDependency.field(inst, name, line);
 			
+		} else if (rv instanceof StaticFieldRef) {
+			StaticFieldRef f = (StaticFieldRef) rv;
+			String name = f.getField().getName();
+			DataDependency inst = DataDependency.constant();
+			return DataDependency.field(inst, name, line);
+			
+		} else if (rv instanceof CaughtExceptionRef) {
+			//CaughtExceptionRef e = (CaughtExceptionRef) rv;
+			return DataDependency.constant();
+			
 		} else if (rv instanceof Constant) {
 			return DataDependency.constant();
+			
+		} else if (rv instanceof NewExpr) {
+			return getDataDependenciesOfBoxes(rv.getUseBoxes(), out, line);
 			
 		} else if (!rv.getUseBoxes().isEmpty()) {
 			return getDataDependenciesOfBoxes(rv.getUseBoxes(), out, line);
 		}
 		
+		System.out.println(rv.getClass() + " " + rv);
 		return null;
 	}
 	
@@ -149,36 +188,44 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 	protected void flowThrough(DataDependencyGraph in, Unit d, DataDependencyGraph out) {
 		int line = getLineNumber(d);
 		boolean logUnit = false;
+		Object logObject = null;
 		boolean isReturn = false;
+		boolean isThrow = false;
+		
 		Value leftValue = null;
 		DataDependency value = null;
 		in.copyTo(out);
-		if (d instanceof JIdentityStmt) {
-			JIdentityStmt jId = (JIdentityStmt) d;
-			leftValue = jId.leftBox.getValue();
+		if (d instanceof DefinitionStmt) {
+			DefinitionStmt jId = (DefinitionStmt) d;
+			leftValue = jId.getLeftOp();
 			
-			Value rv = jId.rightBox.getValue();
+			Value rv = jId.getRightOp();
 			value = getDataDependency(rv, out, line);
+			if (rv instanceof CaughtExceptionRef) {
+				
+			}
 			
-		} else if (d instanceof JAssignStmt) {
-			JAssignStmt jA = (JAssignStmt) d;
-			leftValue = jA.leftBox.getValue();
-			
-			Value rv = jA.rightBox.getValue();
-			value = getDataDependency(rv, out, line);
+		} else if (d instanceof InvokeStmt) {
+			value = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
 			
 		} else if (d instanceof IfStmt) {
 			IfStmt ifStmt = (IfStmt) d;
 			DataDependency condition = getDataDependenciesOfBoxes(ifStmt.getCondition().getUseBoxes(), out, line);
 			out.pushCondition(condition);
 			
+		} else if (d instanceof LookupSwitchStmt) {
+			DataDependency condition = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
+			out.pushCondition(condition);
+			
 		} else if (d instanceof GotoStmt) {
-			GotoStmt gotoStmt = (GotoStmt) d;
-			JGotoStmt s;
+			// no-op
+			
+		} else if (d instanceof ThrowStmt) {
+			value = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
+			isThrow = true;
 			
 		} else if (d instanceof ReturnStmt) {
-			ReturnStmt retStmt = (ReturnStmt) d;
-			value = getDataDependenciesOfBoxes(retStmt.getUseBoxes(), out, line);
+			value = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
 			isReturn = true;
 
 		} else {
@@ -198,14 +245,23 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 			} else {
 				logUnit = true;
 			}
-		} else if (value != null) {
+		} else if (isThrow) {
+			if (value != null) {
+				out.setThrow(line, value);
+			} else {
+				logUnit = true;
+			}
+		}  else if (value != null) {
 			Token t = Token.variable("?assign?", line);
 			out.setOther(t, value);
 		} 
 			
-//		if (logUnit) 
+		if (logUnit || logObject != null) 
+//		{
+//			System.out.println("!!!!!");
+//		}
 		{
-			logThrough(d, null, out);
+			logThrough(d, logObject, out);
 		}
 	}
 
@@ -221,9 +277,9 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 
 	@Override
 	protected void merge(DataDependencyGraph in1, DataDependencyGraph in2, DataDependencyGraph out) {
-		System.out.println("merge\n    " + in1 + "\n  + " + in2);
+//		System.out.println("merge\n    " + in1 + "\n  + " + in2);
 		in1.merge(in2, out);
-		System.out.println("  = " + out);
+//		System.out.println("  = " + out);
 	}
 
 	@Override
@@ -233,8 +289,12 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 	
 	@Override
 	public String toString() {
+		return printMap(dependencies);
+	}
+	
+	public static String printMap(Map<?,?> map) {
 		String s = "";
-		for (Map.Entry<Token, DataDependency> e: dependencies.entrySet()) {
+		for (Map.Entry<?, ?> e: map.entrySet()) {
 			s += e.getKey() + " = " + e.getValue() + "\n";
 		}
 		return s;
