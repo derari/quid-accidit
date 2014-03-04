@@ -3,12 +3,16 @@ package de.hpi.accidit.eclipse.slice;
 public class Token implements Comparable<Token> {
 	
 	public static Token variable(String var, int line) {
-		return new Token(var + ":" + line);
+		return new Token(line + ":" + var);
 	}
 	
-	public static Token result(String clazz, String method) {
-		return new Token("<-" + clazz + "#" + method);
-	}
+//	public static Token element(int index, int line) {
+//		return new Token("[" + index + "]:" + line);
+//	}
+//	
+//	public static Token field(String name, int line) {
+//		return new Token("[" + name + "]:" + line);
+//	}
 	
 	private final String key;
 	

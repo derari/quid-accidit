@@ -21,6 +21,10 @@ public abstract class DataDependency {
 		return new Field(instance, name, line);
 	}
 	
+	public static DataDependency element(DataDependency instance, int index, int line) {
+		return new Element(instance, index, line);
+	}
+	
 	public static DataDependency all(Collection<? extends DataDependency> all) {
 		List<DataDependency> list = new ArrayList<>();
 		for (DataDependency dd: all) {
@@ -114,7 +118,25 @@ public abstract class DataDependency {
 		
 		@Override
 		public String toString() {
-			return instance + "#" + field + ":" + line;
+			return instance + "." + field + ":" + line;
+		}
+	}
+	
+	public static class Element extends Direct {
+		
+		DataDependency instance;
+		int index;
+		int line;
+		public Element(DataDependency instance, int index, int line) {
+			super();
+			this.instance = instance;
+			this.index = index;
+			this.line = line;
+		}
+		
+		@Override
+		public String toString() {
+			return instance + "[" + index + "]:" + line;
 		}
 	}
 	

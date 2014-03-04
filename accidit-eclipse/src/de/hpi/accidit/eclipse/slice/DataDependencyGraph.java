@@ -45,6 +45,10 @@ public class DataDependencyGraph {
 		setVariable(line, "<return>", value);
 	}
 	
+	public void setOther(Token t, DataDependency value) {
+		dependencies.put(t, value);
+	}
+	
 	public void copyTo(DataDependencyGraph dest) {
 		dest.variableValues.clear();
 		dest.variableValues.putAll(variableValues);
@@ -64,16 +68,19 @@ public class DataDependencyGraph {
 			System.out.println(" ! no condition !");
 			condition = DataDependency.constant();
 		}
+		Map<String, DataDependency> inMap = new HashMap<>(in.currentDependencies);
 		for (Map.Entry<String, DataDependency> e: currentDependencies.entrySet()) {
 			String var = e.getKey();
 			DataDependency v1 = e.getValue();
-			DataDependency v2 = in.getVariableDependency(var);
+			DataDependency v2 = inMap.remove(var);
 			if (v2 != null && !v1.equals(v2)) {
 				DataDependency v = DataDependency.conditional(condition, v1, v2);
 				dest.currentDependencies.put(var, v);
 				dest.variableValues.put(var, v);
 			}
 		}
+		dest.currentDependencies.putAll(inMap);
+		dest.variableValues.putAll(inMap);
 	}
 	
 	@Override

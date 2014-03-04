@@ -12,12 +12,14 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
+import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
 import soot.jimple.GotoStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
 import soot.jimple.ThisRef;
+import soot.jimple.internal.JArrayRef;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JGotoStmt;
 import soot.jimple.internal.JIdentityStmt;
@@ -38,16 +40,23 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 		String db = "jdbc:mysql://localhost:3306/accidit?user=root&password=root";
 		
 		String cp = Scene.v().defaultClassPath();
-		Scene.v().setSootClassPath(cp + ";" + 
-					"C:/Users/derari/hpi/phd/testprojects/drools B/drools-core/target/classes;" +
-					"C:/Users/derari/hpi/phd/testprojects/drools B/drools-core/target/test-classes;" +
-					"C:/Users/derari/.m2/repository/junit/junit/4.11/junit-4.11.jar;" +
-					"C:/Users/derari/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar;" +
-					"C:/Users/derari/.m2/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar;" +
+		
+//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+//		String mvn = "C:/Users/derari/.m2";
+		String drools = "/Users/at/projects/drools";
+		String mvn = "/Users/at/.m2";
+		
+		Scene.v().setSootClassPath(cp + ":" + 
+					drools + "/drools-core/target/classes:" +
+					drools + "/drools B/drools-core/target/test-classes:" +
+					mvn + "/repository/junit/junit/4.11/junit-4.11.jar:" +
+					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:" +
+					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar:" +
+					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar:" +
 					"");
 		
-//		String className = "org.drools.base.evaluators.TimeIntervalParser";
-		String className = "org.drools.base.evaluators.TimeIntervalParserTest";
+		String className = "org.drools.base.evaluators.TimeIntervalParser";
+//		String className = "org.drools.base.evaluators.TimeIntervalParserTest";
 
 		SootClass sClass = Scene.v().loadClassAndSupport(className);
 		sClass.setApplicationClass();
@@ -55,7 +64,7 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 		
 		SootMethod sMethod = null;
 		for (SootMethod m0: sClass.getMethods()) {
-			if (m0.getName().equals("sootTest")) {
+			if (m0.getName().equals("parse")) {
 				sMethod = m0;
 				System.out.println(m0);
 				break;
@@ -141,21 +150,19 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 		int line = getLineNumber(d);
 		boolean logUnit = false;
 		boolean isReturn = false;
-		JimpleLocal local = null;
+		Value leftValue = null;
 		DataDependency value = null;
 		in.copyTo(out);
 		if (d instanceof JIdentityStmt) {
 			JIdentityStmt jId = (JIdentityStmt) d;
-			Value lv = jId.leftBox.getValue();
-			local = (JimpleLocal) lv;
+			leftValue = jId.leftBox.getValue();
 			
 			Value rv = jId.rightBox.getValue();
 			value = getDataDependency(rv, out, line);
 			
 		} else if (d instanceof JAssignStmt) {
 			JAssignStmt jA = (JAssignStmt) d;
-			Value lv = jA.leftBox.getValue();
-			local = (JimpleLocal) lv;
+			leftValue = jA.leftBox.getValue();
 			
 			Value rv = jA.rightBox.getValue();
 			value = getDataDependency(rv, out, line);
@@ -177,6 +184,8 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 		} else {
 			logUnit = true;
 		}
+		JimpleLocal local = null;
+		if (leftValue instanceof JimpleLocal) local = (JimpleLocal) leftValue;
 		if (local != null) {
 			if (value != null) {
 				out.setVariable(line, local.getName(), value);
@@ -189,7 +198,10 @@ public class DynamicSlice extends ForwardFlowAnalysis<Unit, DataDependencyGraph>
 			} else {
 				logUnit = true;
 			}
-		}
+		} else if (value != null) {
+			Token t = Token.variable("?assign?", line);
+			out.setOther(t, value);
+		} 
 			
 //		if (logUnit) 
 		{
