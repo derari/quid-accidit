@@ -246,7 +246,7 @@ public class NamedValueDao extends ModelDaoBase {
 	};
 	
 	private static final MappedTemplateProvider<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>(VAR_MAPPING) {{
-		attributes("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`", 
+		attributes("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`, t.`line`", 
 				   "t.`step` AS `valueStep`, v.`name` AS `name`");
 		
 		table("`VariableTrace` t");

@@ -163,6 +163,14 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			this.line = line;
 		}
 		
+		public String getVar() {
+			return var;
+		}
+		
+		public int getLine() {
+			return line;
+		}
+		
 		@Override
 		public String toString() {
 			return var + ":" + line;
@@ -307,6 +315,10 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			}
 		}
 		
+		public Set<DataDependency> getAll() {
+			return all;
+		}
+		
 		@Override
 		public String toString() {
 			return Arrays.toString(all.toArray());
@@ -408,6 +420,14 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		protected void flattenAll(Set<DataDependency> bag) {
 			control.flattenAll(bag);
 			value.flattenAll(bag);
+		}
+		
+		public DataDependency getControl() {
+			return control;
+		}
+		
+		public DataDependency getValue() {
+			return value;
 		}
 		
 		@Override

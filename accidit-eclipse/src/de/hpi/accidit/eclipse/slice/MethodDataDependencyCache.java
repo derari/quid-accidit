@@ -1,6 +1,6 @@
 package de.hpi.accidit.eclipse.slice;
 
-import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,18 +12,18 @@ public class MethodDataDependencyCache {
 		return cache._getDependencyGraph(clazz, method, signature);
 	}
 
-	private final Map<String, SoftReference<Map<Token, DataDependency>>> map = new HashMap<>();
+	private final Map<String, WeakReference<Map<Token, DataDependency>>> map = new HashMap<>();
 	
 	protected MethodDataDependencyCache() {
 	}
 	
 	public synchronized Map<Token, DataDependency> _getDependencyGraph(String clazz, String method, String signature) {
 		String key = clazz + "#" + method + signature;
-		SoftReference<Map<Token, DataDependency>> ref = map.get(key);
+		WeakReference<Map<Token, DataDependency>> ref = map.get(key);
 		Map<Token, DataDependency> graph = ref != null ? ref.get() : null;
 		if (graph == null) {
 			graph = MethodDataDependencyAnalysis.analyseMethod(clazz, method, signature);
-			ref = new SoftReference<>(graph);
+			ref = new WeakReference<>(graph);
 			map.put(key, ref);
 		}
 		return graph;

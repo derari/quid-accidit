@@ -1,6 +1,9 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import org.cthul.miro.at.Impl;
+import org.cthul.miro.at.Put;
+import org.cthul.miro.at.Require;
+import org.cthul.miro.at.Where;
 import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
 import org.cthul.miro.map.MappedInternalQueryBuilder;
 import org.cthul.miro.map.MappedTemplateProvider;
@@ -30,7 +33,9 @@ public class InvocationDao extends TraceElementDaoBase {
 	
 	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
 		attributes("e.`testId`, e.`depth`", "e.`exitStep`",
-			   "m.`name` AS `method`, t.`name` AS `type`");
+				"x.`line` AS `exitLine`", 
+				"m.`name` AS `method`, t.`name` AS `type`");
+		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
 		using("x")
 			.select("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`");
 		internalSelect("e.`parentStep`");
@@ -51,6 +56,16 @@ public class InvocationDao extends TraceElementDaoBase {
 		Query inInvocation(Invocation inv);
 		
 		Query rootOfTest(int i);
+		
+		@Put("methodId =")
+		Query ofMethod(int id);
+		
+		@Require({"m", "t"})
+		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
+		Query ofMethod(String clazz, String name, String signature);
+		
+		@Put("exitStep =")
+		Query atExitStep(long step);
 	}
 	
 	static class QueryImpl {

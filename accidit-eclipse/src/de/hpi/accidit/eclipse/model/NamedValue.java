@@ -34,6 +34,7 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	protected String name;
 	protected Value value;
 	protected String method;
+	protected int line = -1;
 	
 	private Value owner;
 	
@@ -88,6 +89,10 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public int getLine() {
+		return line;
 	}
 	
 	@Override

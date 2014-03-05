@@ -34,18 +34,18 @@ import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.UnitGraph;
 import soot.toolkits.scalar.ForwardFlowAnalysis;
 
-public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, DataDependencyGraph> {
+public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, DataDependencyFlow> {
 	
 	static {
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-//		String mvn = "C:/Users/derari/.m2";
-//		String sep = ";";
-		String drools = "/Users/at/projects/drools";
-		String mvn = "/Users/at/.m2";
-		String sep = ":";
+		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+		String mvn = "C:/Users/derari/.m2";
+		String sep = ";";
+//		String drools = "/Users/at/projects/drools";
+//		String mvn = "/Users/at/.m2";
+//		String sep = ":";
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -53,7 +53,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 					mvn + "/repository/junit/junit/4.11/junit-4.11.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
-					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
+//					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
 					"");
 	}
 	
@@ -118,7 +118,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		return -1;
 	}
 	
-	private void logThrough(Unit d, Object o, DataDependencyGraph out) {
+	private void logThrough(Unit d, Object o, DataDependencyFlow out) {
 		System.out.println("~~~~ " + d.getClass().getSimpleName() + " " + d);
 		if (o != null) {
 			System.out.println("    " + o.getClass() + " " + o);
@@ -126,7 +126,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		System.out.println("    " + out);
 	}
 	
-	private DataDependency getDataDependency(Value rv, DataDependencyGraph out, int line) {
+	private DataDependency getDataDependency(Value rv, DataDependencyFlow out, int line) {
 		
 		if (rv instanceof ThisRef) {
 			return DataDependency.thisValue();
@@ -169,7 +169,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		return null;
 	}
 	
-	private DataDependency getDataDependenciesOfBoxes(List<?> boxes, DataDependencyGraph out, int line) {
+	private DataDependency getDataDependenciesOfBoxes(List<?> boxes, DataDependencyFlow out, int line) {
 		
 		@SuppressWarnings({ "rawtypes", "unchecked" })
 		List<ValueBox> useBoxes = (List) boxes;
@@ -183,7 +183,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 	
 	@Override
-	protected void flowThrough(DataDependencyGraph in, Unit d, DataDependencyGraph out) {
+	protected void flowThrough(DataDependencyFlow in, Unit d, DataDependencyFlow out) {
 		int line = getLineNumber(d);
 		boolean logUnit = false;
 		Object logObject = null;
@@ -264,24 +264,24 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 
 	@Override
-	protected DataDependencyGraph newInitialFlow() {
-		return new DataDependencyGraph(dependencies);
+	protected DataDependencyFlow newInitialFlow() {
+		return new DataDependencyFlow(dependencies);
 	}
 
 	@Override
-	protected DataDependencyGraph entryInitialFlow() {
+	protected DataDependencyFlow entryInitialFlow() {
 		return newInitialFlow();
 	}
 
 	@Override
-	protected void merge(DataDependencyGraph in1, DataDependencyGraph in2, DataDependencyGraph out) {
+	protected void merge(DataDependencyFlow in1, DataDependencyFlow in2, DataDependencyFlow out) {
 //		System.out.println("merge\n    " + in1 + "\n  + " + in2);
 		in1.merge(in2, out);
 //		System.out.println("  = " + out);
 	}
 
 	@Override
-	protected void copy(DataDependencyGraph source, DataDependencyGraph dest) {
+	protected void copy(DataDependencyFlow source, DataDependencyFlow dest) {
 		source.copyTo(dest);
 	}
 	

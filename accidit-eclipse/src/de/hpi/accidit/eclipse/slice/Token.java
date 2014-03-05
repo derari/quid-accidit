@@ -6,6 +6,10 @@ public class Token implements Comparable<Token> {
 		return new Token(line + ":" + var);
 	}
 	
+	public static Token result(int line) {
+		return new Token(line + ":" + "<return>");
+	}
+	
 //	public static Token element(int index, int line) {
 //		return new Token("[" + index + "]:" + line);
 //	}

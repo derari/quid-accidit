@@ -34,6 +34,8 @@ public class DatabaseConnector {
 //	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
 	
 	private volatile static boolean initialized = false;
+	private static String overrideDBString = null;
+	private static String overrideSchema = null;
 	
 	/**
 	 * The function to create a database connection.
@@ -61,8 +63,18 @@ public class DatabaseConnector {
 	public static void setSelectedProject(IProject project) {
 		selectedProject = project;
 	}
+	
+	public static void overrideDBString(String string) {
+		overrideDBString = string;
+	}
+	
+	public static void overrideSchema(String string) {
+		overrideSchema = string;
+	}
 
 	private static String getDBString() {
+		if (overrideDBString != null) return overrideDBString;
+		
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		
 		String dbAddress = DatabaseSettingsRetriever
@@ -93,9 +105,15 @@ public class DatabaseConnector {
 					cnn.close();
 				}
 				
+				
 				JdbcAdapter adapter = null;
-				IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-				String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
+				String dbSchema;
+				if (overrideSchema == null) {
+					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+					dbSchema = store.getString(Configuration.CONNECTION_SCHEMA);
+				} else {
+					dbSchema = overrideSchema;
+				}
 				if (dbString.startsWith("jdbc:sap")) {
 					adapter = new HanaDialect(dbSchema);
 				} else if (dbString.startsWith("jdbc:mysql")) {

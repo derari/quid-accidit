@@ -9,14 +9,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-public class DataDependencyGraph {
+public class DataDependencyFlow {
 	
 	List<DataDependency> controlDependencies = new ArrayList<>();
 	Map<Token, DataDependency> dependencies;
 	Map<String, DataDependency> variableValues = new TreeMap<>();
 	Map<String, DataDependency> currentDependencies = new TreeMap<>();
 	
-	public DataDependencyGraph(Map<Token, DataDependency> dependencies) {
+	public DataDependencyFlow(Map<Token, DataDependency> dependencies) {
 		super();
 		this.dependencies = dependencies;
 	}
@@ -64,7 +64,7 @@ public class DataDependencyGraph {
 		dependencies.put(t, value);
 	}
 	
-	public void copyTo(DataDependencyGraph dest) {
+	public void copyTo(DataDependencyFlow dest) {
 		dest.variableValues.clear();
 		dest.variableValues.putAll(variableValues);
 //		dest.dependencies.clear();
@@ -75,7 +75,7 @@ public class DataDependencyGraph {
 		dest.controlDependencies.addAll(controlDependencies);
 	}
 	
-	public void merge(DataDependencyGraph in, DataDependencyGraph dest) {
+	public void merge(DataDependencyFlow in, DataDependencyFlow dest) {
 		copyTo(dest);
 		dest.dependencies.putAll(in.dependencies);
 		
@@ -140,7 +140,7 @@ public class DataDependencyGraph {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		DataDependencyGraph other = (DataDependencyGraph) obj;
+		DataDependencyFlow other = (DataDependencyFlow) obj;
 		if (currentDependencies == null) {
 			if (other.currentDependencies != null)
 				return false;

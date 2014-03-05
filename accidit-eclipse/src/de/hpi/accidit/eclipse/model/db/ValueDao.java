@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import org.cthul.miro.map.MappedQueryStringView;
 import org.cthul.miro.map.Mapping;
@@ -94,7 +95,7 @@ public class ValueDao extends ModelDaoBase {
 			configure(SET_CONNECTION);
 		}
 	}
-		
+	
 	private static class SetStepAdapter implements EntityInitializer<Value> {
 		
 		private final long step;
