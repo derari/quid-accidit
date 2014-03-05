@@ -12,7 +12,6 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
-import soot.jimple.AssignStmt;
 import soot.jimple.CaughtExceptionRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
@@ -27,7 +26,6 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.ThisRef;
 import soot.jimple.ThrowStmt;
-import soot.jimple.internal.JInstanceFieldRef;
 import soot.jimple.internal.JimpleLocal;
 import soot.options.Options;
 import soot.tagkit.LineNumberTag;
@@ -42,12 +40,12 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-		String mvn = "C:/Users/derari/.m2";
-		String sep = ";";
-//		String drools = "/Users/at/projects/drools";
-//		String mvn = "/Users/at/.m2";
-//		String sep = ":";
+//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+//		String mvn = "C:/Users/derari/.m2";
+//		String sep = ";";
+		String drools = "/Users/at/projects/drools";
+		String mvn = "/Users/at/.m2";
+		String sep = ":";
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -55,11 +53,11 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 					mvn + "/repository/junit/junit/4.11/junit-4.11.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
-//					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
+					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
 					"");
 	}
 	
-	public static Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
+	public static synchronized Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
 		Body b = sMethod.retrieveActiveBody();
 //		Body b = sMethod.getSource().getBody(sMethod, "");
 		UnitGraph graph = new ExceptionalUnitGraph(b);
@@ -68,7 +66,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		return analysis.dependencies;
 	}
 	
-	public static Map<Token, DataDependency> analyseMethod(String clazz, String method, String signature) {
+	public static synchronized Map<Token, DataDependency> analyseMethod(String clazz, String method, String signature) {
 		SootClass sClass = Scene.v().loadClassAndSupport(clazz);
 		sClass.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
@@ -93,12 +91,12 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	
 	public static void main(String[] args) {
 		
-//		String clazz = "org.drools.base.evaluators.TimeIntervalParser";
-//		String method = "parse";
-//		String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
-		String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
-		String method = "sootTest";
-		String signature = "(I)I";
+		String clazz = "org.drools.base.evaluators.TimeIntervalParser";
+		String method = "parse";
+		String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
+//		String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
+//		String method = "sootTest";
+//		String signature = "(I)I";
 
 		
 		Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
@@ -108,10 +106,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	
 	Map<Token, DataDependency> dependencies = new TreeMap<>();
 	
-	public MethodDataDependencyAnalysis(UnitGraph g) {
+	private MethodDataDependencyAnalysis(UnitGraph g) {
 		super(g);
 		doAnalysis();
-		
 	}
 	
 	private int getLineNumber(Unit d) {
@@ -156,7 +153,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			
 		} else if (rv instanceof CaughtExceptionRef) {
 			//CaughtExceptionRef e = (CaughtExceptionRef) rv;
-			return DataDependency.constant();
+			return DataDependency.caughtException();
 			
 		} else if (rv instanceof Constant) {
 			return DataDependency.constant();
@@ -172,9 +169,10 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		return null;
 	}
 	
-	private DataDependency getDataDependenciesOfBoxes(List boxes, DataDependencyGraph out, int line) {
+	private DataDependency getDataDependenciesOfBoxes(List<?> boxes, DataDependencyGraph out, int line) {
 		
-		List<ValueBox> useBoxes = boxes;
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<ValueBox> useBoxes = (List) boxes;
 		List<DataDependency> dependencies = new ArrayList<>();
 		for (ValueBox vb: useBoxes) {
 			DataDependency dd = getDataDependency(vb.getValue(), out, line);

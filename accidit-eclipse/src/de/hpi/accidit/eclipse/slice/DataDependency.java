@@ -115,6 +115,7 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	private static final ThisValue THIS = new ThisValue();
 	private static final Constant CONST = new Constant();
+	private static final Catch CATCH = new Catch();
 	
 	public static DataDependency thisValue() {
 		return THIS;
@@ -122,6 +123,10 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static DataDependency constant() {
 		return CONST;
+	}
+	
+	public static DataDependency caughtException() {
+		return CATCH;
 	}
 	
 	public static abstract class Atomic extends DataDependency {
@@ -276,6 +281,13 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		@Override
 		public String toString() {
 			return "const";
+		}
+	}
+	
+	public static class Catch extends Atomic {
+		@Override
+		public String toString() {
+			return "catch";
 		}
 	}
 	
