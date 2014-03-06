@@ -25,6 +25,8 @@ public class NamedValueDao extends ModelDaoBase {
 	public static final ViewR<VarHistoryQuery> VARIABLE_HISTORY_VIEW = Views.build().r(VarHistoryQuery.class);
 	public static final ViewR<ObjHistoryQuery> OBJECT_HISTORY_VIEW = Views.build().r(ObjHistoryQuery.class);
 	public static final ViewR<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = Views.build().r(ArrayHistoryQuery.class);
+	public static final ViewR<SetItemQuery> ARRAY_SET_ITEM_VIEW = Views.build().r(SetItemQuery.class);
+	public static final ViewR<ArrayGetHistoryQuery> ARRAY_GET_HISTORY_VIEW = Views.build().r(ArrayGetHistoryQuery.class);
 	
 	private static class NameValueQueryTemplate<E> extends MappedDataQueryTemplateProvider<E> {
 		public NameValueQueryTemplate(Mapping<E> mapping) {
@@ -217,6 +219,8 @@ public class NamedValueDao extends ModelDaoBase {
 		         "GROUP BY `index`) " +				
 			 ") t");
 		
+		where("index_EQ", "`index` = ?");
+		
 		always()
 			.groupBy("`index`")
 			.orderBy("`index`");
@@ -240,6 +244,45 @@ public class NamedValueDao extends ModelDaoBase {
 					testId, thisId, step,
 					testId, thisId, step);
 			configureStep(testId, step);
+			return this;
+		}
+		
+		public ItemQuery atIndex(int i) {
+			put("index_EQ", i);
+			return this;
+		}
+		
+	};
+	
+	private static final MappedTemplateProvider<ItemValue> ARRAY_SET_ITEM_TEMPLATE = new NameValueQueryTemplate<ItemValue>(ARRAY_ITEM_MAPPING) {{
+		attributes("t.`testId`, t.`thisId`, t.`step`, t.`callStep`, t.`index` AS `id`, t.`line`");
+		table("`ArrayPutTrace` t");
+		
+		where("index_EQ", "`index` = ?");
+		
+		always().configure("cfgCnn", SET_CONNECTION);
+	}};
+	
+	public static class SetItemQuery extends NamedValueQuery<ItemValue, SetItemQuery> {
+
+		public SetItemQuery(String[] select) {
+			super(ARRAY_SET_ITEM_TEMPLATE, select);
+		}
+		
+		public SetItemQuery where() {
+			return this;
+		}
+		
+		public SetItemQuery beforeStep(int testId, long thisId, long step) {
+			put("testId =", testId);
+			put("thisId =", thisId);
+			put("step <", step);
+			put("orderBy-step DESC");
+			return this;
+		}
+		
+		public SetItemQuery atIndex(int i) {
+			put("id =", i);
 			return this;
 		}
 		
@@ -352,18 +395,6 @@ public class NamedValueDao extends ModelDaoBase {
 		using("nextGet")
 			.select("COALESCE(MIN(nextGet.`step`), -1) AS `nextGetStep`");
 		
-		/*JOIN 
-		(SELECT `step`, `fieldId`, 1 AS `valueIsPut` FROM `PutTrace` WHERE `testId` = 0 AND `thisId` = 34 
-		 UNION
-		 SELECT `step`, `fieldId`, 0 AS `valueIsPut` FROM `GetTrace` WHERE `testId` = 0 AND `thisId` = 34 ) val
-			ON val.`fieldId` = m.`id`
-		LEFT OUTER JOIN `PutTrace` nextPut 
-			ON nextPut.`fieldId` = m.`id` AND nextPut.`step` > val.`step` AND nextPut.`testId` = 0 AND nextPut.`thisId` = 34 
-
-		LEFT OUTER JOIN `GetTrace` nextGet ON nextGet.`fieldId` = m.`id` AND nextGet.`step` >= val.`step` AND nextGet.`testId` = 0 AND nextGet.`thisId` = 34 
-		 
-		ORDER BY val.`step`*/
-		
 		table("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
 			  "UNION " +
 			  "SELECT `testId`, `step`, `index`, 0 AS `valueIsPut` FROM `ArrayGetTrace` WHERE `testId` = ? AND `thisId` = ?) " + 
@@ -375,6 +406,7 @@ public class NamedValueDao extends ModelDaoBase {
 			 "ON nextGet.`index` = val.`index` AND nextGet.`step` >= val.`step` " +
 			 "AND nextGet.`testId` = ? AND nextGet.`thisId` = ?");
 		
+		where("call_EQ", "val.`index` = ?");
 		where("id_EQ", "val.`index` = ?");
 		
 		always()
@@ -403,6 +435,44 @@ public class NamedValueDao extends ModelDaoBase {
 		
 		public ArrayHistoryQuery byId(int id) {
 			where("id_EQ", id);
+			return this;
+		}
+	};
+	
+	private static final MappedTemplateProvider<ItemValue> ARRAY_GET_HISTORY_TEMPLATE = new NameValueQueryTemplate<ItemValue>(ARRAY_ITEM_MAPPING) {{
+		attributes("val.`index` AS `id`, val.`thisId` AS `thisId`");
+		attributes("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`");
+		using("nextPut")
+			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
+		
+		table("`ArrayGetTrace` val");
+		join("LEFT OUTER JOIN `ArrayPutTrace` nextPut " +
+			 "ON nextPut.`index` = val.`index` AND nextPut.`step` > val.`step` " +
+			 "AND nextPut.`testId` = ? AND nextPut.`thisId` = val.`thisId`");
+		
+		where("call_EQ", "val.`testId` = ? AND val.`callStep` = ?");
+		
+		always()
+			.groupBy("val.`index`")
+			.groupBy("val.`step`")
+			.orderBy("val.`step`");
+		always().configure("cfgCnn", SET_CONNECTION)
+			.configure("cfgIsPut", CfgSetField.newInstance("valueIsPut", false));
+	}};
+	
+	public static class ArrayGetHistoryQuery extends NamedValueQuery<ItemValue, ArrayHistoryQuery> {
+
+		public ArrayGetHistoryQuery(String[] fields) {
+			super(ARRAY_GET_HISTORY_TEMPLATE, fields);
+		}
+		
+		public ArrayGetHistoryQuery where() {
+			return this;
+		}
+		
+		public ArrayGetHistoryQuery inCall(int testId, long callStep) {
+			put("nextPut", testId);
+			put("call_EQ", testId, callStep);
 			return this;
 		}
 	};

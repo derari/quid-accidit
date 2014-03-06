@@ -3,15 +3,39 @@ package de.hpi.accidit.eclipse.slice;
 public class Token implements Comparable<Token> {
 	
 	public static Token variable(String var, int line) {
-		return new Token(line + ":" + var);
+		return new Token(line + ":" + var, var);
+	}
+	
+	public static Token array(int line) {
+		return new Token(line + ":" + "<array>");
 	}
 	
 	public static Token result(int line) {
 		return new Token(line + ":" + "<return>");
 	}
 	
+	public static Token thrown(int line) {
+		return new Token(line + ":" + "<throw>");
+	}
+	
+	public static Token invoke(String methodKey, int line) {
+		return new Token(line + ":" + "<invoke>" + methodKey);
+	}
+	
 	public static Token invoke(String clazz, String method, String sig, int line) {
-		return new Token(line + ":" + "?invoke?" + clazz + "#" + method + sig);
+		return invoke( methodKey(clazz, method, sig), line);
+	}
+	
+	public static Token invokeArg(String methodKey, int argIndex, int line) {
+		return new Token(line + ":" + "<invoke>" + methodKey + "[" + argIndex + "]");
+	}
+	
+	public static Token invokeArg(String clazz, String method, String sig, int argIndex, int line) {
+		return invokeArg( methodKey(clazz, method, sig), argIndex, line);
+	}
+	
+	public static String methodKey(String clazz, String method, String sig) {
+		return clazz + "#" + method + sig;
 	}
 	
 //	public static Token element(int index, int line) {
@@ -23,9 +47,21 @@ public class Token implements Comparable<Token> {
 //	}
 	
 	private final String key;
+	private final String var;
 	
 	private Token(String key) {
 		this.key = key;
+		this.var = null;
+	}
+	
+	public Token(String key, String var) {
+		super();
+		this.key = key;
+		this.var = var;
+	}
+	
+	public String getVar() {
+		return var;
 	}
 	
 	@Override

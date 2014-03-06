@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.slice;
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -19,23 +18,33 @@ import org.cthul.miro.DSL;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
-import de.hpi.accidit.eclipse.slice.ValueKey.MethodResultKey;
+import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 
 public class DynamicSlice {
 	
-	public static void main(String[] args) {
-		int testId = 65;
-		long exitStep = 3626;
-		
-//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
-		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
+	public static void main(String[] args) {		
+		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
 		DatabaseConnector.overrideSchema("accidit");
 		
-		MethodResultKey mrKey = new MethodResultKey(testId, exitStep);
-		DynamicSlice slice = new DynamicSlice(mrKey);
-		slice.processAll();
+		ValueKey key;
 		
+		int testId = 65;
+//		long exitStep = 3626;
+//		key = new MethodResultKey(testId, exitStep);
+		
+		long callStep = 3688;
+		key = new InvocationKey(testId, callStep);
+		
+		DynamicSlice slice = new DynamicSlice(key);
+		slice.processAll();
+//		System.out.println("\n-----------------------------\n\n\n\n\n\n\n\n\n\n\n\n");
+//		for (ValueKey vk: slice.slice.keySet()) {
+//			System.out.println(vk);
+//		}
+//		System.out.println("\n\n\n");
 	}
 	
 	private final SortedSet<ValueKey> queue = new TreeSet<>(new Comparator<ValueKey>() {
@@ -45,11 +54,14 @@ public class DynamicSlice {
 		}
 	});
 	
+	private final ValueKey initialKey;
 	private final SortedMap<ValueKey, Node> slice = new TreeMap<>();
 	private final Map<Invocation, Map<String, List<VariableValue>>> variableHistories = new HashMap<>();
+	private final Map<Invocation, List<ItemValue>> aryElementHistories = new HashMap<>();
 
 	public DynamicSlice(ValueKey key) {
 		queue.add(key);
+		initialKey = key;
 	}
 	
 	public void processAll() {
@@ -99,12 +111,40 @@ public class DynamicSlice {
 		}
 		if (dd instanceof DataDependency.Argument) {
 			DataDependency.Argument arg = (DataDependency.Argument) dd;
-			key = key.getInvocationKey();
-			DataDependency.Invoke ivDd = (DataDependency.Invoke) key.getDataDependency();
-			dd = ivDd.getArg(arg.getIndex());
-			return collectDependencies(bag, key, dd);
+			key = key.getInvocationArgumentKey(arg.getIndex());
+			bag.addValue(key);
+			return true;
+			
 		}
-		System.out.print(" " + dd + "\n    ");
+		if (dd instanceof DataDependency.Invoke) {
+			DataDependency.Invoke iv = (DataDependency.Invoke) dd;
+			if (key instanceof InvocationKey && iv.getMethodKey().equals(((InvocationKey) key).getMethodKey())) {
+				DataDependency self = iv.getSelf();
+				boolean success = true;
+				if (self != null) success &= collectDependencies(bag, key, self);
+				for (DataDependency arg: iv.getArgs()) {
+					success &= collectDependencies(bag, key, arg);
+				}
+				return success;								
+			}
+			key = key.newResultKey(iv.getType(), iv.getMethod(), iv.getSignature(), key.getStep());
+			bag.addValue(key);
+			return true;
+			
+		}
+		if (dd instanceof DataDependency.Element) {
+			DataDependency.Element el = (DataDependency.Element) dd;
+			boolean success = true;
+			success &= collectDependencies(bag, key, el.getInstance());
+			success &= collectDependencies(bag, key, el.getIndex());
+			success &= collectArrayItem(bag, key, el.getLine());
+			return success;
+			
+		}
+		if (dd instanceof DataDependency.Constant) {
+			return true;
+		}
+		System.out.print(" /" + dd + "\n    ");
 		return false;
 	}
 	
@@ -132,6 +172,7 @@ public class DynamicSlice {
 		}
 		ValueKey varKey = key.newVariableKey(var, line, match.getStep());
 		bag.addValue(varKey);
+		varKey.setValue(match.getValue());
 		return true;
 	}
 	
@@ -153,6 +194,42 @@ public class DynamicSlice {
 			}
 		}
 		return variables.get(var);
+	}
+	
+	private boolean collectArrayItem(DependencySet bag, ValueKey key, int line) {
+		List<ItemValue> history = getAryElementHistory(key.getInvocation());
+		if (history == null) {
+			return false;
+		}
+		ItemValue match = null;
+		for (ItemValue vv: history) {
+			if (match == null) {
+				match = vv;
+			} else if (vv.getStep() <= key.getStep() && vv.getStep() > match.getStep()) {
+				if (Math.abs(vv.getLine() - line) <= Math.abs(match.getLine() - line)) {
+					match = vv;
+				}
+			}
+		}
+		if (match == null) {
+			return false;
+		}
+		ValueKey varKey = key.newArrayKey(match.getThisId(), match.getId(), match.getStep());
+		bag.addValue(varKey);
+		varKey.setValue(match.getValue());
+		return true;
+	}
+	
+	private List<ItemValue> getAryElementHistory(Invocation inv) {
+		List<ItemValue> items = aryElementHistories.get(inv);
+		if (items == null) {
+			items = DSL
+						.select().from(NamedValue.ARRAY_GET_HISTORY_VIEW)
+						.inCall(inv.getTestId(), inv.getStep())
+					._execute(cnn())._asList();
+			aryElementHistories.put(inv, items);
+		}
+		return items;
 	}
 	
 	protected static class DependencySet {

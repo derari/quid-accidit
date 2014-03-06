@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import org.cthul.miro.at.Impl;
+import org.cthul.miro.at.OrderBy;
 import org.cthul.miro.at.Put;
 import org.cthul.miro.at.Require;
 import org.cthul.miro.at.Where;
@@ -36,6 +37,7 @@ public class InvocationDao extends TraceElementDaoBase {
 				"x.`line` AS `exitLine`", 
 				"m.`name` AS `method`, t.`name` AS `type`");
 		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
+		internalSelect("e.`line` AS `callLine`");
 		using("x")
 			.select("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`");
 		internalSelect("e.`parentStep`");
@@ -72,6 +74,13 @@ public class InvocationDao extends TraceElementDaoBase {
 		
 		@Put("exitStep =")
 		Query atExitStep(long step);
+		
+		@Where("e.`exitStep` < ?")
+		@OrderBy("e.`exitStep` DESC")
+		Query beforeExit(long exitStep);
+		
+		@Put("callLine =")
+		Query callInLine(int line);
 	}
 	
 	static class QueryImpl {

@@ -12,6 +12,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
+import soot.jimple.ArrayRef;
 import soot.jimple.CaughtExceptionRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
@@ -25,10 +26,10 @@ import soot.jimple.LookupSwitchStmt;
 import soot.jimple.NewExpr;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
+import soot.jimple.ReturnVoidStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.ThisRef;
 import soot.jimple.ThrowStmt;
-import soot.jimple.VirtualInvokeExpr;
 import soot.jimple.internal.JimpleLocal;
 import soot.options.Options;
 import soot.tagkit.LineNumberTag;
@@ -43,14 +44,14 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-//		String mvn = "C:/Users/derari/.m2";
-//		String sep = ";";
-//		String extra = "";
-		String drools = "/Users/at/projects/drools";
-		String mvn = "/Users/at/.m2";
-		String sep = ":";
-		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
+		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+		String mvn = "C:/Users/derari/.m2";
+		String sep = ";";
+		String extra = "";
+//		String drools = "/Users/at/projects/drools";
+//		String mvn = "/Users/at/.m2";
+//		String sep = ":";
+//		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -60,6 +61,37 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
 					extra +
 					"");
+	}
+	
+	public static void main(String[] args) {
+//		{
+//			String clazz = "org.drools.base.evaluators.TimeIntervalParser";
+//			String method = "parse";
+//			String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
+//			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+//			System.out.println(printMap(map));
+//		}
+//		{
+//			String clazz = "java.lang.Long";
+//			String method = "valueOf";
+//			String signature = "(J)Ljava/lang/Long;";
+//			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+//			System.out.println(printMap(map));
+//		}
+//		{
+//			String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
+//			String method = "sootTest";
+//			String signature = "(I)I";
+//			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+//			System.out.println(printMap(map));
+//		}
+		{
+			String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
+			String method = "testParse3";
+			String signature = "()V";
+			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+			System.out.println(printMap(map));
+		}
 	}
 	
 	public static synchronized Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
@@ -72,9 +104,29 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 	
 	public static synchronized Map<Token, DataDependency> analyseMethod(String clazz, String method, String signature) {
-		SootClass sClass = Scene.v().loadClassAndSupport(clazz);
-		sClass.setApplicationClass();
-		Scene.v().loadNecessaryClasses();
+		SootClass sClass = null;
+		try {
+			sClass = Scene.v().getSootClass(clazz);
+			if (sClass.resolvingLevel() < SootClass.BODIES) sClass = null;
+		} catch (RuntimeException e) {
+			// expected if class is not loaded
+		}
+		if (sClass == null) {
+			for (java.lang.reflect.Field f: Scene.class.getDeclaredFields()) {
+				if (f.getName().equals("doneResolving")) {
+					try {
+						f.setAccessible(true);
+						f.set(Scene.v(), false);
+					} catch (Exception e1) {
+						throw new RuntimeException(e1);
+					}
+					break;
+				}
+			}
+			sClass = Scene.v().loadClass(clazz, SootClass.BODIES); //loadClassAndSupport(clazz);
+			sClass.setApplicationClass();
+			Scene.v().loadNecessaryClasses();
+		}
 		
 		SootMethod sMethod = null;
 		for (SootMethod m0: sClass.getMethods()) {
@@ -92,21 +144,6 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	
 	private static boolean matchSignature(SootMethod m, String signature) {
 		return m.getBytecodeSignature().endsWith(signature + ">");
-	}
-	
-	public static void main(String[] args) {
-		
-		String clazz = "org.drools.base.evaluators.TimeIntervalParser";
-		String method = "parse";
-		String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
-//		String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
-//		String method = "sootTest";
-//		String signature = "(I)I";
-
-		
-		Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
-		System.out.println(printMap(map));
-		
 	}
 	
 	Map<Token, DataDependency> dependencies = new TreeMap<>();
@@ -150,6 +187,12 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			DataDependency inst = getDataDependency(f.getBase(), out, line);
 			return DataDependency.field(inst, name, line);
 			
+		} else if (rv instanceof ArrayRef) {
+			ArrayRef a = (ArrayRef) rv;
+			DataDependency inst = getDataDependency(a.getBase(), out, line);
+			DataDependency index = getDataDependency(a.getIndex(), out, line);
+			return DataDependency.element(inst, index, line);
+			
 		} else if (rv instanceof StaticFieldRef) {
 			StaticFieldRef f = (StaticFieldRef) rv;
 			String name = f.getField().getName();
@@ -177,10 +220,12 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			for (int i = 0; i < inv.getArgCount(); i++) {
 				args.add(getDataDependency(inv.getArg(i), out, line));
 			}
-			DataDependency d = DataDependency.invoke(inv.getMethod(), self, args);
+			DataDependency.Invoke d = DataDependency.invoke(inv.getMethod(), self, args);
+			out.setInvoke(d.getMethodKey(), line, d);
 			return d;
 			
-		} else if (!rv.getUseBoxes().isEmpty()) {
+		} 
+		else if (!rv.getUseBoxes().isEmpty()) {
 			return getDataDependenciesOfBoxes(rv.getUseBoxes(), out, line);
 		}
 		
@@ -225,8 +270,6 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		} else if (d instanceof InvokeStmt) {
 			InvokeStmt ivStmt = (InvokeStmt) d;
 			value = getDataDependency(ivStmt.getInvokeExpr(), out, line);
-			DataDependency.Invoke ivValue = (DataDependency.Invoke) value;
-			out.setInvoke(ivValue.getMethodKey(), line, ivValue);
 			
 		} else if (d instanceof IfStmt) {
 			IfStmt ifStmt = (IfStmt) d;
@@ -247,33 +290,17 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		} else if (d instanceof ReturnStmt) {
 			value = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
 			isReturn = true;
-
+			
+		} else if (d instanceof ReturnVoidStmt) {
+			value = DataDependency.constant();
+			isReturn = true;
+			
 		} else {
 			logUnit = true;
 		}
-		JimpleLocal local = null;
-		if (leftValue instanceof JimpleLocal) local = (JimpleLocal) leftValue;
-		if (local != null) {
-			if (value != null) {
-				out.setVariable(line, local.getName(), value);
-			} else {
-				logUnit = true;
-			}
-		} else if (isReturn) {
-			if (value != null) {
-				out.setReturn(line, value);
-			} else {
-				logUnit = true;
-			}
-		} else if (isThrow) {
-			if (value != null) {
-				out.setThrow(line, value);
-			} else {
-				logUnit = true;
-			}
-		}  else if (value != null) {
-			Token t = Token.variable("?assign?", line);
-			out.setOther(t, value);
+		
+		if (!setValue(leftValue, value, out, line, isReturn, isThrow)) {
+			if (logObject == null) logObject = leftValue;
 		} 
 			
 		if (logUnit || logObject != null) 
@@ -283,6 +310,35 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		{
 			logThrough(d, logObject, out);
 		}
+	}
+	
+	private boolean setValue(Value leftValue, DataDependency value, DataDependencyFlow out, int line, boolean isReturn, boolean isThrow) {
+		if (isReturn) {
+			if (value != null) {
+				out.setReturn(line, value);
+				return true;
+			}
+		} else if (isThrow) {
+			if (value != null) {
+				out.setThrow(line, value);
+				return true;
+			}
+		} else if (leftValue != null) {
+			if (leftValue instanceof JimpleLocal) {
+				JimpleLocal local = (JimpleLocal) leftValue;
+				if (value != null) {
+					out.setVariable(line, local.getName(), value);
+					return true;
+				}
+			} else if (leftValue instanceof ArrayRef) {
+//				ArrayRef aRef = (ArrayRef) leftValue;
+				if (value != null) {
+					out.setArray(line, value);
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	@Override

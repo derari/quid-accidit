@@ -56,11 +56,11 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		return new Field(instance, name, line);
 	}
 	
-	public static DataDependency element(DataDependency instance, int index, int line) {
+	public static DataDependency element(DataDependency instance, DataDependency index, int line) {
 		return new Element(instance, index, line);
 	}
 	
-	public static DataDependency invoke(SootMethod method, DataDependency self, List<DataDependency> args) {
+	public static Invoke invoke(SootMethod method, DataDependency self, List<DataDependency> args) {
 		String type = method.getDeclaringClass().getName();
 		String mName = method.getName();
 		String sig = method.getBytecodeSignature();
@@ -238,9 +238,9 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	public static class Element extends Atomic {
 		
 		DataDependency instance;
-		int index;
+		DataDependency index;
 		int line;
-		public Element(DataDependency instance, int index, int line) {
+		public Element(DataDependency instance, DataDependency index, int line) {
 			super();
 			this.instance = instance;
 			this.index = index;
@@ -250,6 +250,18 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		@Override
 		public String toString() {
 			return instance + "[" + index + "]:" + line;
+		}
+		
+		public DataDependency getInstance() {
+			return instance;
+		}
+		
+		public DataDependency getIndex() {
+			return index;
+		}
+		
+		public int getLine() {
+			return line;
 		}
 	}
 	
@@ -306,15 +318,41 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			this.method = method;
 			this.signature = signature;
 			this.self = self;
-			this.args = args;
+			this.args = new ArrayList<>(args);
+//			if (self != null) this.args.add(self);
+//			this.args.addAll(args);
+		}
+		
+		public DataDependency getSelf() {
+			return self;
+		}
+		
+		public List<DataDependency> getArgs() {
+			return args;
 		}
 		
 		public DataDependency getArg(int i) {
 			return args.get(i);
 		}
 		
+		public int getArgC() {
+			return args.size();
+		}
+		
 		public String getMethodKey() {
 			return clazz + "#" + method + signature;
+		}
+		
+		public String getType() {
+			return clazz;
+		}
+		
+		public String getMethod() {
+			return method;
+		}
+		
+		public String getSignature() {
+			return signature;
 		}
 		
 		@Override

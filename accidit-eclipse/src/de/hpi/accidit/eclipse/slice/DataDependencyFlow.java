@@ -21,20 +21,6 @@ public class DataDependencyFlow {
 		this.dependencies = dependencies;
 	}
 
-	public void setVariable(int line, String name, DataDependency value) {
-		if (!controlDependencies.isEmpty()) {
-//			List<DataDependency> deps = new ArrayList<>(controlDependencies);
-//			deps.add(value);
-//			value = DataDependency.all(deps);
-			value = DataDependency.complex(DataDependency.all(controlDependencies), value);
-		}
-		
-		Token t = Token.variable(name, line);
-		variableValues.put(name, value);
-		dependencies.put(t, value);
-		currentDependencies.put(name, DataDependency.variable(name, line));
-	}
-	
 	public DataDependency getVariableDependency(String name) {
 		return currentDependencies.get(name);
 	}
@@ -43,33 +29,40 @@ public class DataDependencyFlow {
 		controlDependencies.add(cond);
 	}
 	
+	public void setVariable(int line, String name, DataDependency value) {
+		setValue(Token.variable(name, line), line, value);
+	}
+	
+	public void setArray(int line, DataDependency value) {
+		setValue(Token.array(line), line, value);
+	}
+	
 	public void setReturn(int line, DataDependency value) {
-		setExit(line, "<return>", value);
+		setValue(Token.result(line), line, value);
 	}
 	
 	public void setThrow(int line, DataDependency value) {
-		setExit(line, "<throw>", value);
+		setValue(Token.thrown(line), line, value);
 	}
 	
 	public void setInvoke(String methodKey, int line, DataDependency.Invoke value) {
-		setVariable(line, "?invoke?" + methodKey, value);
+		setValue(Token.invoke(methodKey, line), line, value);
 		int i = 0;
 		for (DataDependency ddA: value.args) {
-			setVariable(line, "?invoke?" + methodKey + (i++), value);
+			setValue(Token.invokeArg(methodKey, i++, line), line, ddA);
 		}
 	}
 	
-	protected void setExit(int line, String name, DataDependency value) {
-//		if (!controlDependencies.isEmpty()) {
-//			List<DataDependency> deps = new ArrayList<>(controlDependencies);
-//			deps.add(value);
-//			value = DataDependency.all(deps);
-//		}
-		setVariable(line, name, value);
-	}
-	
-	public void setOther(Token t, DataDependency value) {
+	public void setValue(Token t, int line, DataDependency value) {
+		if (!controlDependencies.isEmpty()) {
+//			value = DataDependency.complex(DataDependency.all(controlDependencies), value);
+		}
 		dependencies.put(t, value);
+		String name = t.getVar();
+		if (name != null) {
+			variableValues.put(name, value);
+			currentDependencies.put(name, DataDependency.variable(name, line));
+		}
 	}
 	
 	public void copyTo(DataDependencyFlow dest) {

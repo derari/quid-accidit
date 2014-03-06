@@ -3,26 +3,26 @@ package de.hpi.accidit.eclipse.slice;
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
 import java.lang.ref.SoftReference;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 import org.cthul.miro.DSL;
 
 import de.hpi.accidit.eclipse.model.Invocation;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.Value;
 
 public class ValueKey implements Comparable<ValueKey> {
 	
-	protected final Invocation inv;
-	protected final int testId;
+	protected final InvocationData invD;
 	protected final long step;
 	protected Value value;
 	
-	public ValueKey(Invocation inv, long step) {
-		super();
-		this.inv = inv;
-		this.testId = inv.getTestId();
+	public ValueKey(InvocationData invD, long step) {
+		this.invD = invD;
 		this.step = step;
 	}
 
@@ -32,11 +32,11 @@ public class ValueKey implements Comparable<ValueKey> {
 	}
 	
 	public Map<Token, DataDependency> getDependencyGraph() {
-		return getDependencyGraph(inv);
+		return invD.getDependencyGraph();
 	}
 	
 	public Invocation getInvocation() {
-		return inv;
+		return invD.getInvocation();
 	}
 	
 	public long getStep() {
@@ -70,11 +70,23 @@ public class ValueKey implements Comparable<ValueKey> {
 	}
 	
 	public VariableValueKey newVariableKey(String variable, int line, long step) {
-		return new VariableValueKey(inv, step, variable, line);
+		return new VariableValueKey(invD, step, variable, line);
+	}
+	
+	public ArrayItemValueKey newArrayKey(long thisId, int index, long getStep) {
+		return new ArrayItemValueKey(invD, getStep, thisId, index);
+	}
+	
+	public MethodResultKey newResultKey(String clazz, String method, String sig, long step) {
+		return new MethodResultKey(invD, clazz, method, sig, step);
 	}
 	
 	public InvocationKey getInvocationKey() {
-		return getInvocationKey(inv);
+		return invD.getInvocationKey();
+	}
+	
+	public InvocationArgKey getInvocationArgumentKey(int index) {
+		return getInvocationKey().getArg(index);
 	}
 	
 	@Override
@@ -92,32 +104,75 @@ public class ValueKey implements Comparable<ValueKey> {
 	}
 	
 	public static class InvocationKey extends ValueKey {
+		
+		private List<InvocationArgKey> args = new ArrayList<>(8);
+		private Invocation inv;
 
-		public InvocationKey(Invocation inv) {
-			super(inv, inv.getStep());
+		private InvocationKey(InvocationData invD) {
+			super(invD.getParent(), invD.getInvocation().getStep());
+			inv = invD.getInvocation();
 		}
 		
-		@Override
-		public Map<Token, DataDependency> getDependencyGraph() {
-			if (inv.parent == null) inv.parent = parentOf(inv);
-			return getDependencyGraph(inv.parent);
+		public InvocationKey(int testId, long step) {
+			this(new InvocationData(invocationAtStep(testId, step)));
+			invD.invKey = this;
 		}
 		
 		@Override
 		protected Token asToken() {
 			return Token.invoke(inv.type, inv.method, inv.signature, inv.line);
 		}
+		
+		public InvocationArgKey getArg(int index) {
+			while (args.size() <= index) {
+				args.add(new InvocationArgKey(invD, step, args.size(), inv));
+			}
+			return args.get(index);
+		}
+		
+		public String getMethodKey() {
+			return Token.methodKey(inv.type, inv.method, inv.signature);
+		}
 	}
 	
-	public static class MethodResultKey extends ValueKey {
+	public static class InvocationArgKey extends ValueKey {
 		
-		public MethodResultKey(int testId, long step/*, String clazz, String method, String sig*/) {
-			super(invocationAtExitStep(testId, step/*, clazz, method, sig*/), step);
+		private int index;
+		private Invocation inv;
+
+		public InvocationArgKey(InvocationData invD, long step, int index, Invocation inv) {
+			super(invD, step);
+			this.index = index;
+			this.inv = inv;
 		}
 		
 		@Override
 		protected Token asToken() {
-			return Token.result(inv.exitLine);
+			return Token.invokeArg(inv.type, inv.method, inv.signature, index, inv.line);
+		}
+	}
+	
+	public static class MethodResultKey extends ValueKey {
+		
+		public MethodResultKey(int testId, long step) {
+			super(new InvocationData(invocationAtExitStep(testId, step)), step);
+		}
+		
+//		private MethodResultKey(InvocationData parent, long exitStep, int callLine) {
+//			this(parent.getInvocationBefore(exitStep, callLine));
+//		}
+		
+		private MethodResultKey(InvocationData parent, String clazz, String method, String sig, long exitStep) {
+			this(parent.getInvocationBefore(clazz, method, sig, exitStep));
+		}
+		
+		private MethodResultKey(InvocationData invD) {
+			super(invD, invD.getInvocation().exitStep);
+		}
+		
+		@Override
+		protected Token asToken() {
+			return Token.result(getInvocation().exitLine);
 		}
 	}
 	
@@ -126,8 +181,8 @@ public class ValueKey implements Comparable<ValueKey> {
 		private String variable;
 		private int line;
 		
-		public VariableValueKey(Invocation inv, long step, String variable, int line) {
-			super(inv, step);
+		public VariableValueKey(InvocationData invD, long step, String variable, int line) {
+			super(invD, step);
 			this.variable = variable;
 			this.line = line;
 		}
@@ -137,12 +192,119 @@ public class ValueKey implements Comparable<ValueKey> {
 			return Token.variable(variable, line);
 		}
 	}
+	
+	public static class ArrayItemValueKey extends ValueKey {
+		
+//		private long thisId;
+//		private int index;
+		private int line;
+		
+		public ArrayItemValueKey(InvocationData invD, long getStep, long thisId, int index) {
+			this(invD, arraySetBefore(invD.getInvocation().getTestId(), thisId, index, getStep));
+		}
+		
+		private ArrayItemValueKey(InvocationData invD, ItemValue iv) {
+			super(invD.getInvocationAtCall(iv.getCallStep()), iv.getStep());
+			line = iv.getLine();
+		}
 
-	private static Invocation invocationAtExitStep(int testId, long step) {
-		return invocationAtExitStep(testId, step, null);
+		@Override
+		protected Token asToken() {
+			if (line < 0) return null;
+			return Token.array(line);
+		}
 	}
 	
-	private static Invocation invocationAtExitStep(int testId, long step, Invocation parent/*, String clazz, String method, String sig*/){
+	private static class InvocationData {
+		
+		private final Invocation inv;
+		private final Map<Long, InvocationData> others;
+		private InvocationKey invKey = null;
+		private SoftReference<Map<Token, DataDependency>> graphRef = null;
+		
+		public InvocationData(Invocation inv) {
+			this(inv, new HashMap<Long, InvocationData>());
+		}
+		
+		public InvocationData(Invocation inv, Map<Long, InvocationData> others) {
+			this.inv = inv;
+			this.others = others;
+			others.put(inv.getStep(), this);
+		}
+		
+		public InvocationData getInvocationAtCall(long callStep) {
+			InvocationData id = others.get(callStep);
+			if (id == null) {
+				Invocation i = invocationAtStep(inv.getTestId(), callStep);
+				id = new InvocationData(i, others);
+			}
+			return id;
+		}
+		
+		public InvocationData getInvocationBefore(String clazz, String method, String sig, long exitStep) {
+			Invocation i = invocationBefore(inv.getTestId(), clazz, method, sig, exitStep);
+			return getInvocationAtCall(i.getStep());
+		}
+		
+		public InvocationData getParent() {
+			return getInvocationAtCall(inv.getCallStep());
+		}
+		
+		public Invocation getInvocation() {
+			return inv;
+		}
+		
+		public InvocationKey getInvocationKey() {
+			if (invKey == null) {
+				invKey = new InvocationKey(this);
+			}
+			return invKey;
+		}
+		
+		public Map<Token, DataDependency> getDependencyGraph() {
+			Map<Token, DataDependency> graph = graphRef != null ? graphRef.get() : null;
+			if (graph == null) {
+				graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
+				graphRef = new SoftReference<Map<Token,DataDependency>>(graph);
+			}
+			return graph;
+		}
+	}
+
+//	private static Invocation invocationBefore(int testId, long exitStep, int callLine) {
+//		Invocation inv = DSL
+//					.select().from(Invocation.VIEW)
+//					//.ofMethod(clazz, method, sig)
+//					.inTest(testId)
+//					.beforeExit(exitStep)
+//					.callInLine(callLine)
+//				._execute(cnn())
+//				._getFirst();
+//		if (inv == null) {
+//			throw new IllegalArgumentException(
+//					//clazz + "#" + method + sig + " @ " + 
+//					testId + ":" + exitStep + " " + callLine);
+//		}
+//		return inv;
+//	}
+	
+	private static Invocation invocationBefore(int testId, String clazz, String method, String sig, long exitStep) {
+		Invocation inv = DSL
+					.select().from(Invocation.VIEW)
+					//.ofMethod(clazz, method, sig)
+					.inTest(testId)
+					.beforeExit(exitStep)
+					.ofMethod(clazz, method, sig)
+				._execute(cnn())
+				._getFirst();
+		if (inv == null) {
+			throw new IllegalArgumentException(
+					testId + ":" + exitStep + " " + Token.methodKey(clazz, method, sig));
+		}
+		return inv;
+	}
+	
+	private static Invocation invocationAtExitStep(int testId, long step) {
 		Invocation inv = DSL
 					.select("*","signature","methodId").from(Invocation.VIEW)
 					//.ofMethod(clazz, method, sig)
@@ -155,44 +317,38 @@ public class ValueKey implements Comparable<ValueKey> {
 					//clazz + "#" + method + sig + " @ " + 
 					testId + ":" + step);
 		}
-		inv.parent = parent;
 		return inv;
 	}
 	
-	private static Invocation parentOf(Invocation inv) {
-		Invocation parent = DSL
-					.select().from(Invocation.VIEW)
-					.inTest(inv.getTestId())
-					.atStep(inv.getCallStep())
-				._execute(cnn())
-				._getSingle();
-		return parent;
+	private static Invocation invocationAtStep(int testId, long step) {
+		Invocation inv = DSL
+				.select("*","signature","methodId").from(Invocation.VIEW)
+				.inTest(testId)
+				.atStep(step)
+			._execute(cnn())
+			._getSingle();
+		return inv;
 	}
 	
-	private static final Map<Invocation, InvocationKey> INVOCATION_KEY_CACHE =
-			Collections.synchronizedMap(new WeakHashMap<Invocation, InvocationKey>());
-	
-	private static InvocationKey getInvocationKey(Invocation inv) {
-		InvocationKey key = INVOCATION_KEY_CACHE.get(inv);
-		if (key != null) {
-			key = new InvocationKey(inv);
-			INVOCATION_KEY_CACHE.put(inv, key);
-		}
-		return key;
+	private static ItemValue arraySetBefore(int testId, long thisId, int index, long getStep) {
+		ItemValue iv = DSL
+				.select().from(NamedValue.ARRAY_SET_ITEM_VIEW)
+				.beforeStep(testId, thisId, getStep)
+				.atIndex(index)
+			._execute(cnn())._getFirst();
+		return iv;
 	}
-
-	private static final Map<Invocation, SoftReference<Map<Token, DataDependency>>> GRAPH_CACHE =
-			Collections.synchronizedMap(new WeakHashMap<Invocation, SoftReference<Map<Token, DataDependency>>>());
 	
-	private static Map<Token, DataDependency> getDependencyGraph(Invocation inv) {
-		SoftReference<Map<Token, DataDependency>> ref = GRAPH_CACHE.get(inv);
-		Map<Token, DataDependency> graph = ref != null ? ref.get() : null;
-		if (graph == null) {
-			graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
-			ref = new SoftReference<Map<Token,DataDependency>>(graph);
-			GRAPH_CACHE.put(inv, ref);
-		}
-		return graph;
-	}
+//	private static Invocation parentOf(Invocation inv) {
+//		if (inv.parent != null) return inv.parent;
+//		Invocation parent = DSL
+//					.select("*","signature","methodId").from(Invocation.VIEW)
+//					.inTest(inv.getTestId())
+//					.atStep(inv.getCallStep())
+//				._execute(cnn())
+//				._getSingle();
+//		inv.parent = parent;
+//		return parent;
+//	}
 	
 }
