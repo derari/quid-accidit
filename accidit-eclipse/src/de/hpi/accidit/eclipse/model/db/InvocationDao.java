@@ -32,7 +32,7 @@ public class InvocationDao extends TraceElementDaoBase {
 	};
 	
 	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
-		attributes("e.`testId`, e.`depth`", "e.`exitStep`",
+		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`",
 				"x.`line` AS `exitLine`", 
 				"m.`name` AS `method`, t.`name` AS `type`");
 		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
@@ -56,6 +56,12 @@ public class InvocationDao extends TraceElementDaoBase {
 		Query inInvocation(Invocation inv);
 		
 		Query rootOfTest(int i);
+		
+		@Put("testId =")
+		Query inTest(int i);
+		
+		@Put("step =")
+		Query atStep(long step);
 		
 		@Put("methodId =")
 		Query ofMethod(int id);

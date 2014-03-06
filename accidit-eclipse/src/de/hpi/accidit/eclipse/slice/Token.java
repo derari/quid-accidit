@@ -10,6 +10,10 @@ public class Token implements Comparable<Token> {
 		return new Token(line + ":" + "<return>");
 	}
 	
+	public static Token invoke(String clazz, String method, String sig, int line) {
+		return new Token(line + ":" + "?invoke?" + clazz + "#" + method + sig);
+	}
+	
 //	public static Token element(int index, int line) {
 //		return new Token("[" + index + "]:" + line);
 //	}

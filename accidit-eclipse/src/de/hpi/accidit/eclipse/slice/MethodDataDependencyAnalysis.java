@@ -18,6 +18,8 @@ import soot.jimple.DefinitionStmt;
 import soot.jimple.GotoStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.LookupSwitchStmt;
 import soot.jimple.NewExpr;
@@ -26,6 +28,7 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.ThisRef;
 import soot.jimple.ThrowStmt;
+import soot.jimple.VirtualInvokeExpr;
 import soot.jimple.internal.JimpleLocal;
 import soot.options.Options;
 import soot.tagkit.LineNumberTag;
@@ -40,12 +43,14 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-		String mvn = "C:/Users/derari/.m2";
-		String sep = ";";
-//		String drools = "/Users/at/projects/drools";
-//		String mvn = "/Users/at/.m2";
-//		String sep = ":";
+//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+//		String mvn = "C:/Users/derari/.m2";
+//		String sep = ";";
+//		String extra = "";
+		String drools = "/Users/at/projects/drools";
+		String mvn = "/Users/at/.m2";
+		String sep = ":";
+		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -53,7 +58,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 					mvn + "/repository/junit/junit/4.11/junit-4.11.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
-//					"/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep +
+					extra +
 					"");
 	}
 	
@@ -161,6 +166,20 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		} else if (rv instanceof NewExpr) {
 			return getDataDependenciesOfBoxes(rv.getUseBoxes(), out, line);
 			
+		} else if (rv instanceof InvokeExpr) {
+			InvokeExpr inv = (InvokeExpr) rv;
+			DataDependency self = null;
+			if (rv instanceof InstanceInvokeExpr) {
+				Value vSelf = ((InstanceInvokeExpr) rv).getBase();
+				self = getDataDependency(vSelf, out, line);
+			}
+			List<DataDependency> args = new ArrayList<>();
+			for (int i = 0; i < inv.getArgCount(); i++) {
+				args.add(getDataDependency(inv.getArg(i), out, line));
+			}
+			DataDependency d = DataDependency.invoke(inv.getMethod(), self, args);
+			return d;
+			
 		} else if (!rv.getUseBoxes().isEmpty()) {
 			return getDataDependenciesOfBoxes(rv.getUseBoxes(), out, line);
 		}
@@ -204,7 +223,10 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			}
 			
 		} else if (d instanceof InvokeStmt) {
-			value = getDataDependenciesOfBoxes(d.getUseBoxes(), out, line);
+			InvokeStmt ivStmt = (InvokeStmt) d;
+			value = getDataDependency(ivStmt.getInvokeExpr(), out, line);
+			DataDependency.Invoke ivValue = (DataDependency.Invoke) value;
+			out.setInvoke(ivValue.getMethodKey(), line, ivValue);
 			
 		} else if (d instanceof IfStmt) {
 			IfStmt ifStmt = (IfStmt) d;

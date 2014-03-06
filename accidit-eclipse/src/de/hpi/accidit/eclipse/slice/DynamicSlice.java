@@ -1,5 +1,7 @@
 package de.hpi.accidit.eclipse.slice;
 
+import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -11,10 +13,8 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
 
 import org.cthul.miro.DSL;
-import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Invocation;
@@ -25,18 +25,16 @@ import de.hpi.accidit.eclipse.slice.ValueKey.MethodResultKey;
 public class DynamicSlice {
 	
 	public static void main(String[] args) {
-		String clazz = "org.drools.base.evaluators.TimeIntervalParser";
-		String method = "parse";
-		String signature = "(Ljava/lang/String;)[Ljava/lang/Long;";
 		int testId = 65;
-		long step = 3626;
+		long exitStep = 3626;
 		
-		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
 		DatabaseConnector.overrideSchema("accidit");
 		
-		MethodResultKey mrKey = new MethodResultKey(testId, step, clazz, method, signature);
+		MethodResultKey mrKey = new MethodResultKey(testId, exitStep);
 		DynamicSlice slice = new DynamicSlice(mrKey);
-		slice.processNextValue();
+		slice.processAll();
 		
 	}
 	
@@ -54,22 +52,38 @@ public class DynamicSlice {
 		queue.add(key);
 	}
 	
+	public void processAll() {
+		while (!queue.isEmpty()) {
+			processNextValue();
+		}
+	}
+	
 	protected void processNextValue() {
 		ValueKey key = queue.first();
 		queue.remove(key);
 		DataDependency dd = key.getDataDependency();
-		System.out.println(dd);
-		Node node = new Node();
-		collectDependencies(node.dependencies, key, dd);
-		
-		System.out.println(Arrays.toString(node.dependencies.toArray()));
+		System.out.print(key);// + ": " + dd);
+		Node n = new Node();
+		collectDependencies(n.dependencies, key, dd);
+		System.out.println(": " + n.dependencies);
+		slice.put(key, n);
+		queueKeys(n.dependencies.values);
+		queueKeys(n.dependencies.control);
 	}
 	
-	protected boolean collectDependencies(Set<ValueKey> bag, ValueKey key, DataDependency dd) {
+	protected void queueKeys(Iterable<ValueKey> keys) {
+		for (ValueKey key: keys) {
+			if (!slice.containsKey(key)) {
+				queue.add(key);
+			}
+		}
+	}
+	
+	protected boolean collectDependencies(DependencySet bag, ValueKey key, DataDependency dd) {
 		if (dd instanceof DataDependency.Complex) {
 			DataDependency.Complex cplx = (DataDependency.Complex) dd;
 			return collectDependencies(bag, key, cplx.getValue())
-				 & collectDependencies(bag, key, cplx.getControl());
+				 & collectDependencies(bag.controlOnly(), key, cplx.getControl());
 		}
 		if (dd instanceof DataDependency.All) {
 			DataDependency.All all = (DataDependency.All) dd;
@@ -83,13 +97,22 @@ public class DynamicSlice {
 			DataDependency.Variable var = (DataDependency.Variable) dd;
 			return collectVariable(bag, key, var.getVar(), var.getLine());
 		}
+		if (dd instanceof DataDependency.Argument) {
+			DataDependency.Argument arg = (DataDependency.Argument) dd;
+			key = key.getInvocationKey();
+			DataDependency.Invoke ivDd = (DataDependency.Invoke) key.getDataDependency();
+			dd = ivDd.getArg(arg.getIndex());
+			return collectDependencies(bag, key, dd);
+		}
+		System.out.print(" " + dd + "\n    ");
 		return false;
 	}
 	
-	private boolean collectVariable(Set<ValueKey> bag, ValueKey key, String var, int line) {
+	private boolean collectVariable(DependencySet bag, ValueKey key, String var, int line) {
 		List<VariableValue> history = getVariableHistory(key.getInvocation(), var);
 		if (history == null) {
 			Token t = Token.variable(var, line);
+			if (!bag.guardToken(t)) return true;
 			DataDependency dd = key.getDependencyGraph().get(t);
 			if (dd == null) return false;
 			return collectDependencies(bag, key, dd);
@@ -107,8 +130,8 @@ public class DynamicSlice {
 		if (match == null) {
 			return false;
 		}
-		ValueKey varKey = key.newVariableKey(var, line, Math.min(match.getStep(), key.getStep()-1));
-		bag.add(varKey);
+		ValueKey varKey = key.newVariableKey(var, line, match.getStep());
+		bag.addValue(varKey);
 		return true;
 	}
 	
@@ -131,9 +154,58 @@ public class DynamicSlice {
 		}
 		return variables.get(var);
 	}
+	
+	protected static class DependencySet {
+		private final Set<ValueKey> values;
+		private final Set<ValueKey> control;
+		private final Set<Token> tokens;
+		
+		public DependencySet() {
+			values = new TreeSet<>();
+			control = new TreeSet<>();
+			tokens = new TreeSet<>();
+		}
+		
+		private DependencySet(Set<ValueKey> values, Set<ValueKey> control, Set<Token> tokens) {
+			this.values = values;
+			this.control = control;
+			this.tokens = tokens;
+		}
+		
+		public DependencySet controlOnly() {
+			if (values == control) return this;
+			return new DependencySet(control, control, tokens);
+		}
+
+		public void addValue(ValueKey key) {
+			if (values.add(key)) {
+				if (values != control) control.remove(key);
+				tokens.add(key.asToken());
+			}
+		}
+		
+		public void addControl(ValueKey key) {
+			if (!values.contains(key)) {
+				control.add(key);
+				tokens.add(key.asToken());
+			}
+		}
+		
+		public boolean guardToken(Token t) {
+			return tokens.add(t);
+		}
+		
+		@Override
+		public String toString() {
+			if (control != values) {
+				return values + " " + control;
+			}
+			return values.toString();
+		}
+	}
 
 	public static class Node {
-		private final Set<ValueKey> dependencies = new TreeSet<>();
+		private final DependencySet dependencies = new DependencySet();
 	}
 
 }

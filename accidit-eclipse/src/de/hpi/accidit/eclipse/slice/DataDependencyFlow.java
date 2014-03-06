@@ -51,6 +51,14 @@ public class DataDependencyFlow {
 		setExit(line, "<throw>", value);
 	}
 	
+	public void setInvoke(String methodKey, int line, DataDependency.Invoke value) {
+		setVariable(line, "?invoke?" + methodKey, value);
+		int i = 0;
+		for (DataDependency ddA: value.args) {
+			setVariable(line, "?invoke?" + methodKey + (i++), value);
+		}
+	}
+	
 	protected void setExit(int line, String name, DataDependency value) {
 //		if (!controlDependencies.isEmpty()) {
 //			List<DataDependency> deps = new ArrayList<>(controlDependencies);

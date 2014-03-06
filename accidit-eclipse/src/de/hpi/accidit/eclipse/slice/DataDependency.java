@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import soot.SootMethod;
+
 public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	private List<DataDependency> lessThanMe;
@@ -56,6 +58,16 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static DataDependency element(DataDependency instance, int index, int line) {
 		return new Element(instance, index, line);
+	}
+	
+	public static DataDependency invoke(SootMethod method, DataDependency self, List<DataDependency> args) {
+		String type = method.getDeclaringClass().getName();
+		String mName = method.getName();
+		String sig = method.getBytecodeSignature();
+		int i = sig.indexOf('(');
+		sig = sig.substring(i, sig.length()-1); // fix signature format
+		
+		return new Invoke(type, mName, sig, self, args);
 	}
 	
 	public static DataDependency all(DataDependency... all) {
@@ -243,23 +255,26 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static class Argument extends Atomic {
 		
-		int var;
+		int index;
 
 		public Argument(int var) {
-			
-			this.var = var;
+			this.index = var;
+		}
+		
+		public int getIndex() {
+			return index;
 		}
 		
 		@Override
 		public String toString() {
-			return "<-[" + var + "]";
+			return "<-[" + index + "]";
 		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + var;
+			result = prime * result + index;
 			return result;
 		}
 
@@ -272,9 +287,46 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			if (getClass() != obj.getClass())
 				return false;
 			Argument other = (Argument) obj;
-			if (var != other.var)
+			if (index != other.index)
 				return false;
 			return true;
+		}
+	}
+	
+	public static class Invoke extends Atomic {
+		String clazz;
+		String method;
+		String signature;
+		DataDependency self;
+		List<DataDependency> args;
+		
+		public Invoke(String clazz, String method, String signature, DataDependency self,
+				List<DataDependency> args) {
+			this.clazz = clazz;
+			this.method = method;
+			this.signature = signature;
+			this.self = self;
+			this.args = args;
+		}
+		
+		public DataDependency getArg(int i) {
+			return args.get(i);
+		}
+		
+		public String getMethodKey() {
+			return clazz + "#" + method + signature;
+		}
+		
+		@Override
+		public String toString() {
+			String s = getMethodKey();
+			if (self != null) s += "<" + self + ">";
+			s += "(";
+			if (args.isEmpty()) return s + ")";
+			for (DataDependency a: args) {
+				s += a + ", ";
+			}
+			return s.substring(0, s.length()-2) + ")";
 		}
 	}
 	
