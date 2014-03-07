@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.slice;
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -26,8 +27,8 @@ import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 public class DynamicSlice {
 	
 	public static void main(String[] args) {		
-//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
-		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
+		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
 		DatabaseConnector.overrideSchema("accidit");
 		
 		ValueKey key;
@@ -41,11 +42,11 @@ public class DynamicSlice {
 		
 		DynamicSlice slice = new DynamicSlice(key);
 		slice.processAll();
-//		System.out.println("\n-----------------------------\n\n\n\n\n\n\n\n\n\n\n\n");
-//		for (ValueKey vk: slice.slice.keySet()) {
-//			System.out.println(vk);
-//		}
-//		System.out.println("\n\n\n");
+		System.out.println("\n-----------------------------\n\n\n\n\n\n\n\n\n\n\n\n");
+		for (ValueKey vk: slice.slice.keySet()) {
+			System.out.println(vk);
+		}
+		System.out.println("\n\n\n");
 	}
 	
 	private final SortedSet<ValueKey> queue = new TreeSet<>(new Comparator<ValueKey>() {
@@ -56,6 +57,7 @@ public class DynamicSlice {
 	});
 	
 	private final SortedMap<ValueKey, Node> slice = new TreeMap<>();
+	private final SortedMap<Token, DependencySet> internalSlice = new TreeMap<>();
 	private final Map<Invocation, Map<String, List<VariableValue>>> variableHistories = new HashMap<>();
 	private final Map<Invocation, List<ItemValue>> aryElementGetHistories = new HashMap<>();
 	private final Map<Invocation, List<FieldValue>> fieldGetHistories = new HashMap<>();
@@ -70,14 +72,29 @@ public class DynamicSlice {
 		}
 	}
 	
+	public SortedMap<ValueKey, Node> getSlice() {
+		return slice;
+	}
+	
 	protected void processNextValue() {
 		ValueKey key = queue.first();
 		queue.remove(key);
 		DataDependency dd = key.getDataDependency();
 		System.out.print(key);// + ": " + dd);
 		Node n = new Node();
-		collectDependencies(n.dependencies, key, dd);
-		System.out.println(": " + n.dependencies);
+		
+		if (dd != null) {
+			collectDependencies(n.dependencies, key, dd);
+			System.out.println(": " + n.dependencies);
+		} else {
+			if (key instanceof InvocationKey) {
+				System.out.println("!! NO DATA FOR INVOCATION");
+			} else {
+				n.dependencies.addValue(key.getInvocationKey());
+				System.out.println(":?? " + n.dependencies);
+			}
+		}
+		
 		slice.put(key, n);
 		queueKeys(n.dependencies.values);
 		queueKeys(n.dependencies.control);
@@ -105,14 +122,37 @@ public class DynamicSlice {
 			}
 			return success;
 		}
+		if (dd instanceof DataDependency.Choice) {
+			DataDependency.Choice choice = (DataDependency.Choice) dd;
+			List<DataDependency> options = new ArrayList<>(choice.getChoice());
+			Collections.reverse(options);
+//			System.out.println("\n OPTIONS:  " + options);
+			for (DataDependency d: options) {
+				DependencySet bag2 = new DependencySet();
+				bag2.tokens.addAll(bag.tokens);
+				if (collectDependencies(bag2, key, d)) {
+					bag.addValue(bag2);
+					return true;
+				}
+			}
+			return false;
+		}
 		if (dd instanceof DataDependency.Variable) {
 			DataDependency.Variable var = (DataDependency.Variable) dd;
 			return collectVariable(bag, key, var.getVar(), var.getLine());
 		}
+		if (dd instanceof DataDependency.ThisValue) {
+			ValueKey thisKey = key.getInvocationThisKey();
+//			thisKey.setValue(key.getValue());
+			bag.addValue(thisKey);
+			return true;
+			
+		}
 		if (dd instanceof DataDependency.Argument) {
 			DataDependency.Argument arg = (DataDependency.Argument) dd;
-			key = key.getInvocationArgumentKey(arg.getIndex());
-			bag.addValue(key);
+			ValueKey argKey = key.getInvocationArgumentKey(arg.getIndex());
+			argKey.setValue(key.getValue());
+			bag.addValue(argKey);
 			return true;
 			
 		}
@@ -154,14 +194,25 @@ public class DynamicSlice {
 		return false;
 	}
 	
+	protected boolean collectInternalDependencies(DependencySet bag, ValueKey key, Token t) {
+		DependencySet depSet = internalSlice.get(t);
+		if (depSet == null) {
+			depSet = new DependencySet();
+			internalSlice.put(t, depSet);
+			DataDependency dd = key.getDependencyGraph().get(t);
+			if (dd == null) return false;
+			collectDependencies(depSet, key, dd);
+		}
+		if (depSet.isEmpty()) return false;
+		bag.addValue(depSet);
+		return true;
+	}
+	
 	private boolean collectVariable(DependencySet bag, ValueKey key, String var, int line) {
 		List<VariableValue> history = getVariableHistory(key.getInvocation(), var);
 		if (history == null) {
 			Token t = Token.variable(var, line);
-			if (!bag.guardToken(t)) return true;
-			DataDependency dd = key.getDependencyGraph().get(t);
-			if (dd == null) return false;
-			return collectDependencies(bag, key, dd);
+			return collectInternalDependencies(bag, key, t);
 		}
 		VariableValue match = null;
 		for (VariableValue vv: history) {
@@ -179,7 +230,7 @@ public class DynamicSlice {
 		ValueKey varKey = key.newVariableKey(var, line, match.getStep());
 		bag.addValue(varKey);
 		varKey.setValue(match.getValue());
-		return true;
+		return line == match.getLine();
 	}
 	
 	private List<VariableValue> getVariableHistory(Invocation inv, String var) {
@@ -305,6 +356,10 @@ public class DynamicSlice {
 			if (values == control) return this;
 			return new DependencySet(control, control, tokens);
 		}
+		
+		public boolean isEmpty() {
+			return values.isEmpty() && control.isEmpty();
+		}
 
 		public void addValue(ValueKey key) {
 			if (values.add(key)) {
@@ -319,6 +374,15 @@ public class DynamicSlice {
 				control.add(key);
 				Token t = key.asToken();
 				if (t != null) tokens.add(t);
+			}
+		}
+		
+		public void addValue(DependencySet other) {
+			for (ValueKey k: other.values) {
+				addValue(k);
+			}
+			for (ValueKey k: other.control) {
+				addControl(k);
 			}
 		}
 		

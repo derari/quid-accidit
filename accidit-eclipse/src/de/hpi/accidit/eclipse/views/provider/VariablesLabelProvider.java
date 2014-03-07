@@ -43,7 +43,7 @@ public class VariablesLabelProvider extends LabelProvider implements
 		NamedValue nv = (NamedValue) element;
 		switch (columnIndex) {
 		case 0: 
-			System.out.println("." + nv.getName());
+//			System.out.println("." + nv.getName());
 			return nv.getName();
 		case 1: 
 			if (nv.isInitialized()) {

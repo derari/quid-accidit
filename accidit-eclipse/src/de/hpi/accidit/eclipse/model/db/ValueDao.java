@@ -30,6 +30,20 @@ public class ValueDao extends ModelDaoBase {
 			.configure(new SetStepAdapter(step));
 	}
 	
+	public static MappedQueryStringView<Value> result_ofInvocation(int testId, long callStep) {
+		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class), 
+					"SELECT t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
+					"FROM `CallTrace` t " +
+					"JOIN `ExitTrace` e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep` " +
+					"LEFT OUTER JOIN `ObjectTrace` o " +
+					  "ON t.`testId` = o.`testId` AND e.`valueId` = o.`id` AND e.`primType` = 'L'" +
+					"LEFT OUTER JOIN `Type` y " +
+					  "ON y.`id` = o.`typeId` " +
+					"WHERE t.`testId` = ? AND t.`step` = ?", 
+					testId, callStep)
+			.configure(SET_CONNECTION);
+	}
+	
 	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
 		return new ValueQuery("VariableTrace", "variableId", varId, testId, valueStep)
 					.configure(new SetStepAdapter(step));

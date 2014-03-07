@@ -30,6 +30,14 @@ public class Token implements Comparable<Token> {
 		return invoke( methodKey(clazz, method, sig), line);
 	}
 	
+	public static Token invokeThis(String methodKey, int line) {
+		return new Token(line + ":" + "<invoke>" + methodKey + "[this]");
+	}
+	
+	public static Token invokeThis(String clazz, String method, String sig, int line) {
+		return invokeThis(methodKey(clazz, method, sig), line);
+	}
+	
 	public static Token invokeArg(String methodKey, int argIndex, int line) {
 		return new Token(line + ":" + "<invoke>" + methodKey + "[" + argIndex + "]");
 	}

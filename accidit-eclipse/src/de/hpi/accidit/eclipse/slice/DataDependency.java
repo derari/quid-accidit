@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import soot.SootMethod;
@@ -39,6 +40,8 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	protected abstract DataDependency flattenAll();
 	
 	protected abstract void flattenAll(Set<DataDependency> bag);
+	
+	protected abstract void removeFrom(Collection<DataDependency> controlDependencies);
 	
 	protected String nestedString() {
 		return toString();
@@ -112,18 +115,22 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static DataDependency complex(DataDependency control, DataDependency value) {
 		control = control.flattenAll();
+		if (value instanceof Complex) {
+			Complex v = (Complex) value;
+			control = all(control, v.control.flattenAll());
+			value = v.value;
+		}
+		
 		Set<DataDependency> controlSet = new TreeSet<>();
 		if (control instanceof All) {
 			controlSet.addAll(((All) control).all);
 		} else {
 			controlSet.add(control);
 		}
-		if (value instanceof Complex) {
-			Complex v = (Complex) value;
-			control = all(control, v.control.flattenAll());
-			value = v.value;
-		}
+		value.removeFrom(controlSet);
 		control = all(controlSet);
+
+		if (control instanceof Constant) return value;
 		boolean implicitControl = false;
 		return new Complex(control, value, implicitControl);
 	}
@@ -157,6 +164,11 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		
 		protected void flattenAll(Set<DataDependency> bag) {
 			bag.add(this);
+		}
+		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			while (controlDependencies.remove(this));
 		}
 	}
 	
@@ -281,6 +293,13 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		
 		public int getLine() {
 			return line;
+		}
+		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			super.removeFrom(controlDependencies);
+			instance.removeFrom(controlDependencies);
+			index.removeFrom(controlDependencies);
 		}
 	}
 	
@@ -424,6 +443,13 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			}
 		}
 		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			for (DataDependency d: all) {
+				d.removeFrom(controlDependencies);
+			}
+		}
+		
 		public Set<DataDependency> getAll() {
 			return all;
 		}
@@ -461,7 +487,7 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static class Choice extends Composite {
 		
-		Set<DataDependency> choice;
+		SortedSet<DataDependency> choice;
 
 		public Choice(Collection<? extends DataDependency> choice) {
 			super();
@@ -470,22 +496,45 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		
 		@Override
 		protected void flattenAll(Set<DataDependency> bag) {
-			Set<DataDependency> flat = new TreeSet<>();
 			for (DataDependency d: choice) {
-				d = d.flattenAll();
-				if (bag.contains(d)) {
-					continue;
-				}
-				if (d instanceof All && bag.containsAll(((All) d).all)) {
-					continue;
-				}
-				flat.add(d);
+				d.flattenAll(bag);
 			}
-			if (flat.size() == 1) {
-				bag.addAll(flat);
-			} else if (!flat.isEmpty()) {
-				bag.add(new Choice(flat));
+//			Set<DataDependency> flat = new TreeSet<>();
+//			for (DataDependency d: choice) {
+//				Set<DataDependency> subBag = new TreeSet<>();
+//				d.flattenAll(subBag);
+//				for (DataDependency d2: bag) {
+//					d2.removeFrom(subBag);
+//				}
+//				if (!subBag.isEmpty()) {
+//					flat.add(all(subBag));
+//				}
+////				if (bag.contains(d)) {
+////					continue;
+////				}
+////				if (d instanceof All && bag.containsAll(((All) d).all)) {
+////					continue;
+////				}
+////				flat.add(d);
+//			}
+////			if (flat.size() == 1) {
+////				bag.addAll(flat);
+////			} else 
+//			if (!flat.isEmpty()) {
+//				bag.add(new ZChoice(flat));
+//			}
+		}
+		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			for (DataDependency d: choice) {
+				d.removeFrom(controlDependencies);
 			}
+			while (controlDependencies.remove(this));
+		}
+		
+		public SortedSet<DataDependency> getChoice() {
+			return choice;
 		}
 		
 		@Override
@@ -544,6 +593,13 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		protected void flattenAll(Set<DataDependency> bag) {
 			control.flattenAll(bag);
 			value.flattenAll(bag);
+		}
+		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			control.removeFrom(controlDependencies);
+			value.removeFrom(controlDependencies);
+			while (controlDependencies.remove(this));
 		}
 		
 		public DataDependency getControl() {

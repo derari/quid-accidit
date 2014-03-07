@@ -24,6 +24,7 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.LookupSwitchStmt;
+import soot.jimple.MonitorStmt;
 import soot.jimple.NewExpr;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
@@ -41,18 +42,20 @@ import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, DataDependencyFlow> {
 	
+	static boolean LOG_ALL = false;
+	
 	static {
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-//		String mvn = "C:/Users/derari/.m2";
-//		String sep = ";";
-//		String extra = "";
-		String drools = "/Users/at/projects/drools";
-		String mvn = "/Users/at/.m2";
-		String sep = ":";
-		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
+		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+		String mvn = "C:/Users/derari/.m2";
+		String sep = ";";
+		String extra = "";
+//		String drools = "/Users/at/projects/drools";
+//		String mvn = "/Users/at/.m2";
+//		String sep = ":";
+//		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -65,6 +68,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 	
 	public static void main(String[] args) {
+		LOG_ALL = true;
 //		{
 //			String clazz = "org.drools.base.evaluators.TimeIntervalParser";
 //			String method = "parse";
@@ -100,6 +104,13 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 //			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
 //			System.out.println(printMap(map));
 //		}
+//		{
+//			String clazz = "org.drools.time.TimeUtils";
+//			String method = "parseTimeString";
+//			String signature = "(Ljava/lang/String;)J";
+//			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+//			System.out.println(printMap(map));
+//		}	
 	}
 	
 	public static synchronized Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
@@ -140,7 +151,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		for (SootMethod m0: sClass.getMethods()) {
 			if (m0.getName().equals(method) && matchSignature(m0, signature)) {
 				sMethod = m0;
-				System.out.println(m0);
+				System.out.println("    <<<" + m0 + ">>>");
 				break;
 			}
 		}
@@ -303,6 +314,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			value = DataDependency.constant();
 			isReturn = true;
 			
+		} else if (d instanceof MonitorStmt) {
+			// no-op
+			
 		} else {
 			logUnit = true;
 		}
@@ -311,11 +325,8 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			if (logObject == null) logObject = leftValue;
 		} 
 			
-		if (logUnit || logObject != null) 
-		{
-			System.out.println("!!!!!");
-		}
-		{
+		if (logUnit || logObject != null || LOG_ALL) { 
+			if (LOG_ALL && (logUnit || logObject != null)) System.out.println("!!!!!");
 			logThrough(d, logObject, out);
 		}
 	}
@@ -367,9 +378,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 
 	@Override
 	protected void merge(DataDependencyFlow in1, DataDependencyFlow in2, DataDependencyFlow out) {
-		System.out.println("merge\n    " + in1 + "\n  + " + in2);
+		if (LOG_ALL) System.out.println("merge\n    " + in1 + "\n  + " + in2);
 		in1.merge(in2, out);
-		System.out.println("  = " + out);
+		if (LOG_ALL) System.out.println("  = " + out);
 	}
 
 	@Override

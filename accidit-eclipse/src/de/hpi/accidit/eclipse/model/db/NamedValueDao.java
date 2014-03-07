@@ -413,7 +413,7 @@ public class NamedValueDao extends ModelDaoBase {
 	private static final MappedTemplateProvider<FieldValue> OBJ_GET_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
 		attributes("m.`name`, m.`id`");
 		using("val")
-			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`thisId`");
+			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, COALESCE(val.`thisId`, 0) AS `thisId`");
 		
 		table("`Field` m");
 		
@@ -499,8 +499,8 @@ public class NamedValueDao extends ModelDaoBase {
 	private static final MappedTemplateProvider<ItemValue> ARRAY_GET_HISTORY_TEMPLATE = new NameValueQueryTemplate<ItemValue>(ARRAY_ITEM_MAPPING) {{
 		attributes("val.`index` AS `id`, val.`thisId` AS `thisId`");
 		attributes("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`");
-		using("nextPut")
-			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
+//		using("nextPut")
+//			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
 		
 		table("`ArrayGetTrace` val");
 		

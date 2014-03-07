@@ -51,6 +51,10 @@ public class DataDependencyFlow {
 	
 	public void setInvoke(String methodKey, int line, DataDependency.Invoke value) {
 		setValue(Token.invoke(methodKey, line), line, value);
+		DataDependency self = value.getSelf();
+		if (self != null) {
+			setValue(Token.invokeThis(methodKey, line), line, self);
+		}
 		int i = 0;
 		for (DataDependency ddA: value.args) {
 			setValue(Token.invokeArg(methodKey, i++, line), line, ddA);
@@ -122,12 +126,11 @@ public class DataDependencyFlow {
 		dest.variableValues.putAll(inMap);
 	}
 	
-	@SuppressWarnings("unused")
 	@Override
 	public String toString() {
 		String s = "";
 		for (DataDependency dd: controlDependencies) {
-			s += dd + 
+			s += (MethodDataDependencyAnalysis.LOG_ALL ? dd : "") + 
 					"/";
 		}
 		for (Map.Entry<String, DataDependency> e: variableValues.entrySet()) {
