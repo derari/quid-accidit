@@ -18,6 +18,7 @@ import org.cthul.miro.DSL;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
@@ -25,8 +26,8 @@ import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 public class DynamicSlice {
 	
 	public static void main(String[] args) {		
-		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
-//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
+//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
 		DatabaseConnector.overrideSchema("accidit");
 		
 		ValueKey key;
@@ -54,14 +55,13 @@ public class DynamicSlice {
 		}
 	});
 	
-	private final ValueKey initialKey;
 	private final SortedMap<ValueKey, Node> slice = new TreeMap<>();
 	private final Map<Invocation, Map<String, List<VariableValue>>> variableHistories = new HashMap<>();
-	private final Map<Invocation, List<ItemValue>> aryElementHistories = new HashMap<>();
+	private final Map<Invocation, List<ItemValue>> aryElementGetHistories = new HashMap<>();
+	private final Map<Invocation, List<FieldValue>> fieldGetHistories = new HashMap<>();
 
 	public DynamicSlice(ValueKey key) {
 		queue.add(key);
-		initialKey = key;
 	}
 	
 	public void processAll() {
@@ -119,17 +119,23 @@ public class DynamicSlice {
 		if (dd instanceof DataDependency.Invoke) {
 			DataDependency.Invoke iv = (DataDependency.Invoke) dd;
 			if (key instanceof InvocationKey && iv.getMethodKey().equals(((InvocationKey) key).getMethodKey())) {
-				DataDependency self = iv.getSelf();
-				boolean success = true;
-				if (self != null) success &= collectDependencies(bag, key, self);
-				for (DataDependency arg: iv.getArgs()) {
-					success &= collectDependencies(bag, key, arg);
-				}
-				return success;								
+				return collectInvocation(bag, key, iv);						
 			}
-			key = key.newResultKey(iv.getType(), iv.getMethod(), iv.getSignature(), key.getStep());
-			bag.addValue(key);
+			ValueKey resultKey = key.newResultKey(iv.getType(), iv.getMethod(), iv.getSignature(), key.getStep());
+			if (resultKey == null) {
+				System.out.println("!! no result found: " + key + " " + iv);
+				return collectInvocation(bag, key, iv);
+			}
+			bag.addValue(resultKey);
 			return true;
+			
+		}
+		if (dd instanceof DataDependency.Field) {
+			DataDependency.Field f = (DataDependency.Field) dd;
+			boolean success = true;
+			success &= collectDependencies(bag, key, f.getInstance());
+			success &= collectFields(bag, key, f.getLine());
+			return success;
 			
 		}
 		if (dd instanceof DataDependency.Element) {
@@ -221,15 +227,61 @@ public class DynamicSlice {
 	}
 	
 	private List<ItemValue> getAryElementHistory(Invocation inv) {
-		List<ItemValue> items = aryElementHistories.get(inv);
+		List<ItemValue> items = aryElementGetHistories.get(inv);
 		if (items == null) {
 			items = DSL
 						.select().from(NamedValue.ARRAY_GET_HISTORY_VIEW)
 						.inCall(inv.getTestId(), inv.getStep())
 					._execute(cnn())._asList();
-			aryElementHistories.put(inv, items);
+			aryElementGetHistories.put(inv, items);
 		}
 		return items;
+	}
+	
+	private boolean collectFields(DependencySet bag, ValueKey key, int line) {
+		List<FieldValue> history = getFieldHistory(key.getInvocation());
+		if (history == null) {
+			return false;
+		}
+		FieldValue match = null;
+		for (FieldValue vv: history) {
+			if (match == null) {
+				match = vv;
+			} else if (vv.getStep() <= key.getStep() && vv.getStep() > match.getStep()) {
+				if (Math.abs(vv.getLine() - line) <= Math.abs(match.getLine() - line)) {
+					match = vv;
+				}
+			}
+		}
+		if (match == null) {
+			return false;
+		}
+		ValueKey varKey = key.newFieldKey(match.getThisId(), match.getName(), match.getStep());
+		bag.addValue(varKey);
+		varKey.setValue(match.getValue());
+		return true;
+	}
+	
+	private List<FieldValue> getFieldHistory(Invocation inv) {
+		List<FieldValue> items = fieldGetHistories.get(inv);
+		if (items == null) {
+			items = DSL
+						.select().from(NamedValue.OBJECT_GET_HISTORY_VIEW)
+						.inCall(inv.getTestId(), inv.getStep())
+					._execute(cnn())._asList();
+			fieldGetHistories.put(inv, items);
+		}
+		return items;
+	}
+	
+	private boolean collectInvocation(DependencySet bag, ValueKey key, DataDependency.Invoke iv) {
+		DataDependency self = iv.getSelf();
+		boolean success = true;
+		if (self != null) success &= collectDependencies(bag, key, self);
+		for (DataDependency arg: iv.getArgs()) {
+			success &= collectDependencies(bag, key, arg);
+		}
+		return success;
 	}
 	
 	protected static class DependencySet {
@@ -257,14 +309,16 @@ public class DynamicSlice {
 		public void addValue(ValueKey key) {
 			if (values.add(key)) {
 				if (values != control) control.remove(key);
-				tokens.add(key.asToken());
+				Token t = key.asToken();
+				if (t != null) tokens.add(t);
 			}
 		}
 		
 		public void addControl(ValueKey key) {
 			if (!values.contains(key)) {
 				control.add(key);
-				tokens.add(key.asToken());
+				Token t = key.asToken();
+				if (t != null) tokens.add(t);
 			}
 		}
 		

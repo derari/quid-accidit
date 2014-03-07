@@ -12,6 +12,7 @@ import org.cthul.miro.DSL;
 
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.Value;
 
@@ -28,6 +29,7 @@ public class ValueKey implements Comparable<ValueKey> {
 
 	public DataDependency getDataDependency() {
 		Token t = asToken();
+		if (t == null) return DataDependency.constant();
 		return getDependencyGraph().get(t);
 	}
 	
@@ -77,8 +79,12 @@ public class ValueKey implements Comparable<ValueKey> {
 		return new ArrayItemValueKey(invD, getStep, thisId, index);
 	}
 	
+	public FieldValueKey newFieldKey(long thisId, String field, long getStep) {
+		return new FieldValueKey(invD, getStep, thisId, field);
+	}
+	
 	public MethodResultKey newResultKey(String clazz, String method, String sig, long step) {
-		return new MethodResultKey(invD, clazz, method, sig, step);
+		return MethodResultKey.invocationBefore(invD, clazz, method, sig, step);
 	}
 	
 	public InvocationKey getInvocationKey() {
@@ -162,8 +168,10 @@ public class ValueKey implements Comparable<ValueKey> {
 //			this(parent.getInvocationBefore(exitStep, callLine));
 //		}
 		
-		private MethodResultKey(InvocationData parent, String clazz, String method, String sig, long exitStep) {
-			this(parent.getInvocationBefore(clazz, method, sig, exitStep));
+		public static MethodResultKey invocationBefore(InvocationData parent, String clazz, String method, String sig, long exitStep) {
+			InvocationData invD = parent.getInvocationBefore(clazz, method, sig, exitStep);
+			if (invD == null) return null;
+			return new MethodResultKey(invD);
 		}
 		
 		private MethodResultKey(InvocationData invD) {
@@ -190,6 +198,35 @@ public class ValueKey implements Comparable<ValueKey> {
 		@Override
 		protected Token asToken() {
 			return Token.variable(variable, line);
+		}
+	}
+	
+	public static class FieldValueKey extends ValueKey {
+		
+//		private long thisId;
+//		private int index;
+		private String field;
+		private int line;
+		
+		public FieldValueKey(InvocationData invD, long getStep, long thisId, String field) {
+			this(invD, fieldSetBefore(invD.getInvocation().getTestId(), thisId, field, getStep));
+		}
+		
+		private FieldValueKey(InvocationData invD, FieldValue fv) {
+			super(invD.getInvocationAtCall(fv != null ? fv.getCallStep() : 0), 
+					fv != null ? fv.getStep() : 0);
+			if (fv != null) {
+				line = fv.getLine();
+				field = fv.getName();
+			} else {
+				line = -1;
+			}
+		}
+
+		@Override
+		protected Token asToken() {
+			if (line < 0) return null;
+			return Token.field(field, line);
 		}
 	}
 	
@@ -242,12 +279,13 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		public InvocationData getInvocationBefore(String clazz, String method, String sig, long exitStep) {
-			Invocation i = invocationBefore(inv.getTestId(), clazz, method, sig, exitStep);
+			Invocation i = invocationBefore(inv.getTestId(), inv.getStep(), clazz, method, sig, exitStep);
+			if (i == null) return null;
 			return getInvocationAtCall(i.getStep());
 		}
 		
 		public InvocationData getParent() {
-			return getInvocationAtCall(inv.getCallStep());
+			return getInvocationAtCall(callStepOf(inv));
 		}
 		
 		public Invocation getInvocation() {
@@ -288,19 +326,20 @@ public class ValueKey implements Comparable<ValueKey> {
 //		return inv;
 //	}
 	
-	private static Invocation invocationBefore(int testId, String clazz, String method, String sig, long exitStep) {
+	private static Invocation invocationBefore(int testId, long parentCall, String clazz, String method, String sig, long exitStep) {
 		Invocation inv = DSL
 					.select().from(Invocation.VIEW)
-					//.ofMethod(clazz, method, sig)
-					.inTest(testId)
 					.beforeExit(exitStep)
+					//.ofMethod(clazz, method, sig)
+					.inTest(testId).inCall(parentCall)
+					
 					.ofMethod(clazz, method, sig)
 				._execute(cnn())
 				._getFirst();
-		if (inv == null) {
-			throw new IllegalArgumentException(
-					testId + ":" + exitStep + " " + Token.methodKey(clazz, method, sig));
-		}
+//		if (inv == null) {
+//			throw new IllegalArgumentException(
+//					testId + ":" + exitStep + " " + Token.methodKey(clazz, method, sig));
+//		}
 		return inv;
 	}
 	
@@ -339,16 +378,31 @@ public class ValueKey implements Comparable<ValueKey> {
 		return iv;
 	}
 	
-//	private static Invocation parentOf(Invocation inv) {
-//		if (inv.parent != null) return inv.parent;
-//		Invocation parent = DSL
-//					.select("*","signature","methodId").from(Invocation.VIEW)
-//					.inTest(inv.getTestId())
-//					.atStep(inv.getCallStep())
-//				._execute(cnn())
-//				._getSingle();
-//		inv.parent = parent;
-//		return parent;
-//	}
+	private static FieldValue fieldSetBefore(int testId, long thisId, String field, long getStep) {
+		FieldValue iv = DSL
+				.select().from(NamedValue.OBJECT_SET_FIELD_VIEW)
+				.beforeStep(testId, thisId, getStep)
+				.ofField(field)
+			._execute(cnn())._getFirst();
+		return iv;
+	}
+	
+	private static long callStepOf(Invocation inv) {
+		if (inv.depth == 1) return 0;
+		parentOf(inv);
+		return inv.getCallStep();
+	}
+	
+	private static Invocation parentOf(Invocation inv) {
+		if (inv.parent != null) return inv.parent;
+		List<Invocation> parents = DSL
+					.select("*","signature","methodId").from(Invocation.VIEW)
+					.parentOf(inv)
+				._execute(cnn())
+				._asList();
+		Invocation parent = parents.get(0);
+		inv.parent = parent;
+		return parent;
+	}
 	
 }

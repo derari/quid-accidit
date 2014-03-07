@@ -33,6 +33,10 @@ public class DataDependencyFlow {
 		setValue(Token.variable(name, line), line, value);
 	}
 	
+	public void setField(int line, String name, DataDependency value) {
+		setValue(Token.field(name, line), line, value);
+	}
+	
 	public void setArray(int line, DataDependency value) {
 		setValue(Token.array(line), line, value);
 	}
@@ -80,15 +84,22 @@ public class DataDependencyFlow {
 		copyTo(dest);
 		dest.dependencies.putAll(in.dependencies);
 		
-		int maxStackSize = Math.min(dest.controlDependencies.size(), in.controlDependencies.size());
-		int stackSize = Math.max(0, maxStackSize-1); // pop at least one element
-		for (int i = 0; i < maxStackSize; i++) {
-			if (!dest.controlDependencies.get(i).equals(in.controlDependencies.get(i))) {
-				stackSize = i;
+		int maxStackSize, stackSize;
+		if (in.controlDependencies.isEmpty()) {
+			maxStackSize = stackSize = dest.controlDependencies.size();
+		} else {
+			maxStackSize = Math.min(dest.controlDependencies.size(), in.controlDependencies.size());
+			stackSize = dest.controlDependencies.size() != in.controlDependencies.size()
+					? maxStackSize // pop only delta
+					: Math.max(0, maxStackSize-1); // pop at least one element
+			for (int i = 0; i < maxStackSize; i++) {
+				if (!dest.controlDependencies.get(i).equals(in.controlDependencies.get(i))) {
+					stackSize = i;
+				}
 			}
 		}
-		
 		List<DataDependency> dp1 = dest.controlDependencies.subList(stackSize, dest.controlDependencies.size());
+		stackSize = Math.min(stackSize, in.controlDependencies.size()); 
 		List<DataDependency> dp2 = in.controlDependencies.subList(stackSize, in.controlDependencies.size());
 		Set<DataDependency> mergeDependencies = new TreeSet<>();
 		mergeDependencies.addAll(dp1);
@@ -116,7 +127,7 @@ public class DataDependencyFlow {
 	public String toString() {
 		String s = "";
 		for (DataDependency dd: controlDependencies) {
-			s += //dd + 
+			s += dd + 
 					"/";
 		}
 		for (Map.Entry<String, DataDependency> e: variableValues.entrySet()) {

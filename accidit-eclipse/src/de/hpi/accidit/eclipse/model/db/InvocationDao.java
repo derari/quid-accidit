@@ -48,6 +48,7 @@ public class InvocationDao extends TraceElementDaoBase {
 			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
 		
 		where("step_BETWEEN", "e.`step` > ? AND e.`step` < ?");
+		where("exit_GT", "e.`exitStep` > ?");
 	}};
 	
 	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
@@ -57,10 +58,15 @@ public class InvocationDao extends TraceElementDaoBase {
 		
 		Query inInvocation(Invocation inv);
 		
+		Query parentOf(Invocation inv);
+		
 		Query rootOfTest(int i);
 		
 		@Put("testId =")
 		Query inTest(int i);
+		
+		@Put("parentStep =")
+		Query inCall(long parentStep);
 		
 		@Put("step =")
 		Query atStep(long step);
@@ -76,7 +82,7 @@ public class InvocationDao extends TraceElementDaoBase {
 		Query atExitStep(long step);
 		
 		@Where("e.`exitStep` < ?")
-		@OrderBy("e.`exitStep` DESC")
+		@Put(value="orderBy-exitStep DESC", mapArgs={})
 		Query beforeExit(long exitStep);
 		
 		@Put("callLine =")
@@ -92,6 +98,15 @@ public class InvocationDao extends TraceElementDaoBase {
 			query.put("parentStep =", inv.getStep());
 			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 			query.put("orderBy-step");
+		}
+		
+		public static void parentOf(MappedInternalQueryBuilder query, Invocation inv) {
+			query.put("testId =", inv.getTestId());
+			query.put("depth =", inv.depth-1);
+			query.put("step <", inv.getStep());
+			query.put("exit_GT", inv.getStep());
+			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
+//			query.put("orderBy-step");
 		}
 		
 		public static void rootOfTest(MappedInternalQueryBuilder query, int testId) {

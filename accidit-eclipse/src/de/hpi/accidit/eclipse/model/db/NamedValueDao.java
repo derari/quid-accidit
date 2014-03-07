@@ -24,6 +24,8 @@ public class NamedValueDao extends ModelDaoBase {
 	public static final ViewR<ItemQuery> ARRAY_ITEM_VIEW = Views.build().r(ItemQuery.class);
 	public static final ViewR<VarHistoryQuery> VARIABLE_HISTORY_VIEW = Views.build().r(VarHistoryQuery.class);
 	public static final ViewR<ObjHistoryQuery> OBJECT_HISTORY_VIEW = Views.build().r(ObjHistoryQuery.class);
+	public static final ViewR<SetFieldQuery> OBJECT_SET_FIELD_VIEW = Views.build().r(SetFieldQuery.class);
+	public static final ViewR<ObjGetHistoryQuery> OBJECT_GET_HISTORY_VIEW = Views.build().r(ObjGetHistoryQuery.class);
 	public static final ViewR<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = Views.build().r(ArrayHistoryQuery.class);
 	public static final ViewR<SetItemQuery> ARRAY_SET_ITEM_VIEW = Views.build().r(SetItemQuery.class);
 	public static final ViewR<ArrayGetHistoryQuery> ARRAY_GET_HISTORY_VIEW = Views.build().r(ArrayGetHistoryQuery.class);
@@ -170,6 +172,39 @@ public class NamedValueDao extends ModelDaoBase {
 			put("nextPut", testId, thisId, step);
 			put("nextGet", testId, thisId, step);
 			configureStep(testId, step);
+			return this;
+		}
+	};
+	
+	private static final MappedTemplateProvider<FieldValue> SET_FIELD_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
+		attributes("m.`name`, t.`testId`, t.`thisId`, t.`step`, t.`callStep`, t.`line`");
+		
+		table("`Field` m");
+		join("`PutTrace` t ON t.`fieldId` = m.`id`");
+		
+		always().configure("cfgCnn", SET_CONNECTION);
+	}};
+	
+	public static class SetFieldQuery extends NamedValueQuery<FieldValue, SetFieldQuery> {
+
+		public SetFieldQuery(String[] select) {
+			super(SET_FIELD_TEMPLATE, select);
+		}
+		
+		public SetFieldQuery where() {
+			return this;
+		}
+		
+		public SetFieldQuery beforeStep(int testId, long thisId, long step) {
+			put("testId =", testId);
+			put("thisId =", thisId);
+			put("step <", step);
+			put("orderBy-step DESC");
+			return this;
+		}
+		
+		public SetFieldQuery ofField(String field) {
+			put("name =", field);
 			return this;
 		}
 	};
@@ -330,18 +365,6 @@ public class NamedValueDao extends ModelDaoBase {
 		using("nextGet")
 			.select("COALESCE(MIN(nextGet.`step`), -1) AS `nextGetStep`");
 		
-		/*JOIN 
-		(SELECT `step`, `fieldId`, 1 AS `valueIsPut` FROM `PutTrace` WHERE `testId` = 0 AND `thisId` = 34 
-		 UNION
-		 SELECT `step`, `fieldId`, 0 AS `valueIsPut` FROM `GetTrace` WHERE `testId` = 0 AND `thisId` = 34 ) val
-			ON val.`fieldId` = m.`id`
-		LEFT OUTER JOIN `PutTrace` nextPut 
-			ON nextPut.`fieldId` = m.`id` AND nextPut.`step` > val.`step` AND nextPut.`testId` = 0 AND nextPut.`thisId` = 34 
-
-		LEFT OUTER JOIN `GetTrace` nextGet ON nextGet.`fieldId` = m.`id` AND nextGet.`step` >= val.`step` AND nextGet.`testId` = 0 AND nextGet.`thisId` = 34 
-		 
-		ORDER BY val.`step`*/
-		
 		table("`Field` m");
 		
 		join("val", 
@@ -383,6 +406,40 @@ public class NamedValueDao extends ModelDaoBase {
 		
 		public ObjHistoryQuery byId(int id) {
 			where("id_EQ", id);
+			return this;
+		}
+	};
+	
+	private static final MappedTemplateProvider<FieldValue> OBJ_GET_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
+		attributes("m.`name`, m.`id`");
+		using("val")
+			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`thisId`");
+		
+		table("`Field` m");
+		
+		join("`GetTrace` val ON val.`fieldId` = m.`id`");
+		
+		where("call_EQ", "val.`testId` = ? AND val.`callStep` = ?");
+		
+		always()
+//			.groupBy("m.`id`, val.`step`")
+			.orderBy("val.`step`");
+		always().configure("cfgCnn", SET_CONNECTION)
+				.configure("cfgIsPut", CfgSetField.newInstance("valueIsPut", false));
+	}};
+	
+	public static class ObjGetHistoryQuery extends NamedValueQuery<FieldValue, ObjHistoryQuery> {
+
+		public ObjGetHistoryQuery(String[] fields) {
+			super(OBJ_GET_HISTORY_TEMPLATE, fields);
+		}
+		
+		public ObjGetHistoryQuery where() {
+			return this;
+		}
+		
+		public ObjGetHistoryQuery inCall(int testId, long step) {
+			put("call_EQ", testId, step);
 			return this;
 		}
 	};
@@ -446,15 +503,12 @@ public class NamedValueDao extends ModelDaoBase {
 			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
 		
 		table("`ArrayGetTrace` val");
-		join("LEFT OUTER JOIN `ArrayPutTrace` nextPut " +
-			 "ON nextPut.`index` = val.`index` AND nextPut.`step` > val.`step` " +
-			 "AND nextPut.`testId` = ? AND nextPut.`thisId` = val.`thisId`");
 		
 		where("call_EQ", "val.`testId` = ? AND val.`callStep` = ?");
 		
 		always()
-			.groupBy("val.`index`")
-			.groupBy("val.`step`")
+//			.groupBy("val.`index`")
+//			.groupBy("val.`step`")
 			.orderBy("val.`step`");
 		always().configure("cfgCnn", SET_CONNECTION)
 			.configure("cfgIsPut", CfgSetField.newInstance("valueIsPut", false));
@@ -471,7 +525,6 @@ public class NamedValueDao extends ModelDaoBase {
 		}
 		
 		public ArrayGetHistoryQuery inCall(int testId, long callStep) {
-			put("nextPut", testId);
 			put("call_EQ", testId, callStep);
 			return this;
 		}

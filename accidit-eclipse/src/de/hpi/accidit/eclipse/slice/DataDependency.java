@@ -112,11 +112,18 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 	
 	public static DataDependency complex(DataDependency control, DataDependency value) {
 		control = control.flattenAll();
+		Set<DataDependency> controlSet = new TreeSet<>();
+		if (control instanceof All) {
+			controlSet.addAll(((All) control).all);
+		} else {
+			controlSet.add(control);
+		}
 		if (value instanceof Complex) {
 			Complex v = (Complex) value;
 			control = all(control, v.control.flattenAll());
 			value = v.value;
 		}
+		control = all(controlSet);
 		boolean implicitControl = false;
 		return new Complex(control, value, implicitControl);
 	}
@@ -227,6 +234,18 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			this.instance = instance;
 			this.field = field;
 			this.line = line;
+		}
+		
+		public DataDependency getInstance() {
+			return instance;
+		}
+		
+		public String getField() {
+			return field;
+		}
+		
+		public int getLine() {
+			return line;
 		}
 		
 		@Override
@@ -451,7 +470,22 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		
 		@Override
 		protected void flattenAll(Set<DataDependency> bag) {
-			bag.add(this);
+			Set<DataDependency> flat = new TreeSet<>();
+			for (DataDependency d: choice) {
+				d = d.flattenAll();
+				if (bag.contains(d)) {
+					continue;
+				}
+				if (d instanceof All && bag.containsAll(((All) d).all)) {
+					continue;
+				}
+				flat.add(d);
+			}
+			if (flat.size() == 1) {
+				bag.addAll(flat);
+			} else if (!flat.isEmpty()) {
+				bag.add(new Choice(flat));
+			}
 		}
 		
 		@Override
@@ -476,11 +510,11 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			All other = (All) obj;
+			Choice other = (Choice) obj;
 			if (choice == null) {
-				if (other.all != null)
+				if (other.choice != null)
 					return false;
-			} else if (!choice.equals(other.all))
+			} else if (!choice.equals(other.choice))
 				return false;
 			return true;
 		}

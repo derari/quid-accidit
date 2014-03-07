@@ -10,6 +10,10 @@ public class Token implements Comparable<Token> {
 		return new Token(line + ":" + "<array>");
 	}
 	
+	public static Token field(String field, int line) {
+		return new Token(line + ":" + "<set>" + field);
+	}
+	
 	public static Token result(int line) {
 		return new Token(line + ":" + "<return>");
 	}

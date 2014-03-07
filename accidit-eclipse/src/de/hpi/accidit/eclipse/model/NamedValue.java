@@ -11,7 +11,9 @@ import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayGetHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.FieldQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ItemQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjGetHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
+import de.hpi.accidit.eclipse.model.db.NamedValueDao.SetFieldQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.SetItemQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarHistoryQuery;
 import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarQuery;
@@ -23,6 +25,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	public static final ViewR<ItemQuery> ARRAY_ITEM_VIEW = NamedValueDao.ARRAY_ITEM_VIEW;
 	public static final ViewR<VarHistoryQuery> VARIABLE_HISTORY_VIEW = NamedValueDao.VARIABLE_HISTORY_VIEW;
 	public static final ViewR<ObjHistoryQuery> OBJECT_HISTORY_VIEW = NamedValueDao.OBJECT_HISTORY_VIEW;
+	public static final ViewR<SetFieldQuery> OBJECT_SET_FIELD_VIEW = NamedValueDao.OBJECT_SET_FIELD_VIEW;
+	public static final ViewR<ObjGetHistoryQuery> OBJECT_GET_HISTORY_VIEW = NamedValueDao.OBJECT_GET_HISTORY_VIEW;
 	public static final ViewR<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = NamedValueDao.ARRAY_HISTORY_VIEW;
 	public static final ViewR<SetItemQuery> ARRAY_SET_ITEM_VIEW = NamedValueDao.ARRAY_SET_ITEM_VIEW;
 	public static final ViewR<ArrayGetHistoryQuery> ARRAY_GET_HISTORY_VIEW = NamedValueDao.ARRAY_GET_HISTORY_VIEW;

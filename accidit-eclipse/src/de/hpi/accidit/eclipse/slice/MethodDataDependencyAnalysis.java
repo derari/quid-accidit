@@ -16,6 +16,7 @@ import soot.jimple.ArrayRef;
 import soot.jimple.CaughtExceptionRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
+import soot.jimple.FieldRef;
 import soot.jimple.GotoStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
@@ -44,14 +45,14 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		Options.v().parse(new String[]{"-keep-line-number", "-p", "jb", "use-original-names:true"});
 		String cp = Scene.v().defaultClassPath();
 		
-		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
-		String mvn = "C:/Users/derari/.m2";
-		String sep = ";";
-		String extra = "";
-//		String drools = "/Users/at/projects/drools";
-//		String mvn = "/Users/at/.m2";
-//		String sep = ":";
-//		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
+//		String drools = "C:/Users/derari/hpi/phd/testprojects/drools B";
+//		String mvn = "C:/Users/derari/.m2";
+//		String sep = ";";
+//		String extra = "";
+		String drools = "/Users/at/projects/drools";
+		String mvn = "/Users/at/.m2";
+		String sep = ":";
+		String extra = "/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home/jre/lib/rt.jar" + sep;
 		
 		Scene.v().setSootClassPath(cp + sep + 
 					drools + "/drools-core/target/classes" + sep +
@@ -78,6 +79,13 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 //			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
 //			System.out.println(printMap(map));
 //		}
+		{
+			String clazz = "java.lang.String";
+			String method = "trim";
+			String signature = "()Ljava/lang/String;";
+			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+			System.out.println(printMap(map));
+		}
 //		{
 //			String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
 //			String method = "sootTest";
@@ -85,13 +93,13 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 //			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
 //			System.out.println(printMap(map));
 //		}
-		{
-			String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
-			String method = "testParse3";
-			String signature = "()V";
-			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
-			System.out.println(printMap(map));
-		}
+//		{
+//			String clazz = "org.drools.base.evaluators.TimeIntervalParserTest";
+//			String method = "testParse3";
+//			String signature = "()V";
+//			Map<Token, DataDependency> map = analyseMethod(clazz, method, signature);
+//			System.out.println(printMap(map));
+//		}
 	}
 	
 	public static synchronized Map<Token, DataDependency> analyseMethod(SootMethod sMethod) {
@@ -161,7 +169,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 	
 	private void logThrough(Unit d, Object o, DataDependencyFlow out) {
-		System.out.println("~~~~ " + d.getClass().getSimpleName() + " " + d);
+		System.out.println("~~~~ " + getLineNumber(d) + ":" + d.getClass().getSimpleName() + " " + d);
 		if (o != null) {
 			System.out.println("    " + o.getClass() + " " + o);
 		}
@@ -304,9 +312,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		} 
 			
 		if (logUnit || logObject != null) 
-//		{
-//			System.out.println("!!!!!");
-//		}
+		{
+			System.out.println("!!!!!");
+		}
 		{
 			logThrough(d, logObject, out);
 		}
@@ -328,6 +336,12 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 				JimpleLocal local = (JimpleLocal) leftValue;
 				if (value != null) {
 					out.setVariable(line, local.getName(), value);
+					return true;
+				}
+			} else if (leftValue instanceof FieldRef) {
+				FieldRef field = (FieldRef) leftValue;
+				if (value != null) {
+					out.setField(line, field.getField().getName(), value);
 					return true;
 				}
 			} else if (leftValue instanceof ArrayRef) {
@@ -353,9 +367,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 
 	@Override
 	protected void merge(DataDependencyFlow in1, DataDependencyFlow in2, DataDependencyFlow out) {
-//		System.out.println("merge\n    " + in1 + "\n  + " + in2);
+		System.out.println("merge\n    " + in1 + "\n  + " + in2);
 		in1.merge(in2, out);
-//		System.out.println("  = " + out);
+		System.out.println("  = " + out);
 	}
 
 	@Override
