@@ -7,10 +7,12 @@ import java.util.Set;
 import org.cthul.miro.MiConnection;
 import org.eclipse.ui.IWorkbenchPage;
 
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
+import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.BreakpointsView;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
@@ -25,21 +27,18 @@ public class TraceNavigatorUI {
 		return GLOBAL;
 	}
 	
-	// UI
 	private IWorkbenchPage mainPage = null;
-//	private TraceExplorerView traceExplorer = null;
-//	private LocalsExplorerView localsExplorer = null;
-//	private BreakpointsView breakpointsView = null;
 	
 	private final Set<AcciditView> views = Collections.synchronizedSet(new HashSet<AcciditView>());
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
+	private final BreakpointsManager breakpointsManager = new BreakpointsManager();
 	
 	// Trace
 	private int testId;
 	private TraceElement current;
 	
-	public TraceNavigatorUI() { }
+	public TraceNavigatorUI() {	}
 
 	public void setTraceExplorer(TraceExplorerView traceExplorer) {
 		this.mainPage = traceExplorer.getViewSite().getPage();
@@ -74,8 +73,12 @@ public class TraceNavigatorUI {
 		return findView(BreakpointsView.class);
 	}
 	
-	public LocalsExplorerView getLocalsExplorer() {
-		return findView(LocalsExplorerView.class);
+	public VariablesView getVariablesView() {
+		return findView(VariablesView.class);
+	}
+	
+	public HistoryView getHistoryView() {
+		return findView(HistoryView.class);
 	}
 	
 	public MiConnection cnn() {
@@ -111,7 +114,7 @@ public class TraceNavigatorUI {
 	}
 	
 	public void setStep(final long newStep) {
-		setStep(new TraceElement(){{
+		setStep(new TraceElement() {{
 			this.testId = TraceNavigatorUI.this.testId;
 			this.step = newStep;
 		}});
@@ -126,5 +129,9 @@ public class TraceNavigatorUI {
 			String filePath = le.parent.type;
 			srcFilesLocator.open(filePath, le.line, mainPage, getTraceExplorer());
 		}
+	}
+	
+	public BreakpointsManager getBreakpointsManager() {
+		return breakpointsManager;
 	}
 }

@@ -4,12 +4,13 @@ import de.hpi.accidit.model.*;
 import de.hpi.accidit.trace.Tracer;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
+import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 
-
+@SuppressWarnings("CallToThreadDumpStack")
 public class TracerTransformer implements ClassFileTransformer {
     
     private static class DoNotInstrumentException extends RuntimeException { }
@@ -39,6 +40,7 @@ public class TracerTransformer implements ClassFileTransformer {
 //        "com/sun",
         "org/eclipse",
         "org/drools/rule/GroupElement",
+        "org/apache/maven/surefire/util"
     };
     
     private static String[] no_details = {
@@ -62,6 +64,59 @@ public class TracerTransformer implements ClassFileTransformer {
     };
     
     private static int classCounter = 0;
+    private static final Map<Object, Map<String, Class>> knownClasses = new WeakHashMap<>();
+    private static final Object NO_CL = new Object();
+    
+    private static synchronized Class getKnownClass(ClassLoader cl, String clazz) {
+        Class c = null;
+        while (c == null) {
+            Object key = cl != null ? cl : NO_CL;
+            Map<String, Class> map = knownClasses.get(key);
+            if (map != null) {
+                c = map.get(clazz);
+            }
+            if (cl == null) break;
+            cl = cl.getParent();
+        }
+        if (c == null) {
+            try {
+                //System.out.println("forname> " + clazz + " " + cl);
+                try {
+                    c = Class.forName(clazz, false, cl);
+                } catch (ClassNotFoundException e) {
+                    //System.out.println("unknown class: " + clazz);
+                    return null;
+                }
+                putKnownClass(clazz, c);
+            } catch (ClassCircularityError e) {
+                return null;
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                throw e;
+            } catch (Throwable t) {
+                t.printStackTrace();
+                throw new RuntimeException(t);
+            }
+        }
+        return c;
+    }
+    
+    private static synchronized void putKnownClass(String clazzName, Class clazz) {
+        if (clazz == null) return;
+        ClassLoader cl = clazz.getClassLoader();
+        Object key = cl != null ? cl : NO_CL;
+        Map<String, Class> map = knownClasses.get(key);
+        if (map == null) {
+            map = new HashMap<>();
+            knownClasses.put(key, map);
+        }
+        map.put(clazzName, clazz);
+    }
+    
+    private List<Class> circulars = new ArrayList<>();
+
+    public TracerTransformer() {
+    }
 
     @Override
     public byte[] transform(ClassLoader loader, String className, 
@@ -72,7 +127,26 @@ public class TracerTransformer implements ClassFileTransformer {
         synchronized (Tracer.class) {
             boolean t = Tracer.pauseTrace();
             try {
+                putKnownClass(className.replace('.', '/'), classBeingRedefined);
+                if (!circulars.isEmpty()) {
+                    try {
+                        Class[] moreClasses = circulars.toArray(new Class[0]);
+                        circulars.clear();
+                        PreMain.inst.retransformClasses(moreClasses);
+                    } catch (UnmodifiableClassException ex) {
+                        ex.printStackTrace();
+                    }
+                }
                 return transformUntraced(className, classfileBuffer, loader);
+            } catch (ClassCircularityError e) {
+                circulars.add(classBeingRedefined);
+                return classfileBuffer;
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                throw e;
+            } catch (Throwable e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             } finally {
                 Tracer.resumeTrace(t);
             }
@@ -83,6 +157,11 @@ public class TracerTransformer implements ClassFileTransformer {
         for (String e: excludes) {
             if (className.startsWith(e))
                 return classfileBuffer;
+        }
+        if (className.equals("org/netbeans/mdr/storagemodel/StorableObject") || 
+                className.equals("org/argouml/configuration/ConfigurationFactory")) {
+            System.out.println(">> " + className + "     " + loader);
+            return classfileBuffer;
         }
 //        System.out.println(">> " + className + "     " + loader);
         if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
@@ -148,7 +227,7 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
             super.visit(version, access, name, signature, superName, interfaces);
-            isTestClass = name.endsWith("Test");
+            isTestClass = name.endsWith("Test") || (superName != null && superName.contains("TestCase"));
             type = model.getType(name.replace('/', '.'), cl);
             this.superName = superName;
             this.interfaces = interfaces;
@@ -762,29 +841,37 @@ public class TracerTransformer implements ClassFileTransformer {
             }
         }
         
-        protected String superGetCommonSuperClass(final String type1, final String type2)
-        {
-            Class<?> c, d;
-            ClassLoader classLoader = cl;
+        protected String superGetCommonSuperClass(final String type1, final String type2) {
             try {
-                c = Class.forName(type1.replace('/', '.'), false, classLoader);
-                d = Class.forName(type2.replace('/', '.'), false, classLoader);
-            } catch (Exception e) {
+                Class<?> c, d;
+                ClassLoader classLoader = cl;
+                String type1d = type1.replace('/', '.');
+                String type2d = type2.replace('/', '.');
+                c = getKnownClass(classLoader, type1d);
+                d = getKnownClass(classLoader, type2d);
+                if (d == null) {
+                    return type1;
+                }
+                if (c == null) {
+                    return type2;
+                }
+                if (c.isAssignableFrom(d)) {
+                    return type1;
+                }
+                if (d.isAssignableFrom(c)) {
+                    return type2;
+                }
+                if (c.isInterface() || d.isInterface()) {
+                    return "java/lang/Object";
+                } else {
+                    do {
+                        c = c.getSuperclass();
+                    } while (!c.isAssignableFrom(d));
+                    return c.getName().replace('.', '/');
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
                 throw new RuntimeException(e.toString());
-            }
-            if (c.isAssignableFrom(d)) {
-                return type1;
-            }
-            if (d.isAssignableFrom(c)) {
-                return type2;
-            }
-            if (c.isInterface() || d.isInterface()) {
-                return "java/lang/Object";
-            } else {
-                do {
-                    c = c.getSuperclass();
-                } while (!c.isAssignableFrom(d));
-                return c.getName().replace('.', '/');
             }
         }
         

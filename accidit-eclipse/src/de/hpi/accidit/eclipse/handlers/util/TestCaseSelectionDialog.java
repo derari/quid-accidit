@@ -109,7 +109,7 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 				Statement statement = dbConnection.createStatement();
 				result = statement.executeQuery(preProcessedQuery);
 			} catch (SQLException e) {
-				System.err.println("Locals not retrievable.");
+				System.err.println("Variables not retrievable.");
 				e.printStackTrace();
 			}
 			return result;

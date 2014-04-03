@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.resources.IProject;
@@ -13,6 +15,7 @@ import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.ITableColorProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -25,6 +28,7 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -47,12 +51,17 @@ import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.slice.DynamicSlice;
+import de.hpi.accidit.eclipse.slice.ValueKey;
+import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class TraceExplorerView extends ViewPart implements ISelectionChangedListener, AcciditView {
 
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
+	
+	public static final SortedSet<Long> SLICE = new TreeSet<>();
 
 	private TraceNavigatorUI ui;
 	private TreeViewerSelectionAdapter treeViewerSelectionAdapter;
@@ -86,7 +95,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		treeViewer.setContentProvider(new TraceContentProvider(treeViewer));
 		treeViewer.setLabelProvider(new TraceLabelProvider());
-		
 		getSite().setSelectionProvider(treeViewer);
 		treeViewer.addSelectionChangedListener(this);
 		
@@ -98,16 +106,20 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		// restore project name
 		if (memento != null) {
-			String projectName = memento.getString(STORE_PROJECT_NAME);
-			if (projectName != null && DatabaseConnector.getSelectedProject() == null) {
-				IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-				if (project != null) {
-					DatabaseConnector.setSelectedProject(project);
+			try {
+				String projectName = memento.getString(STORE_PROJECT_NAME);
+				if (projectName != null && DatabaseConnector.getSelectedProject() == null) {
+					IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+					if (project != null) {
+						DatabaseConnector.setSelectedProject(project);
+					}
 				}
+				Integer testId = memento.getInteger(STORE_TEST_ID);
+				if (testId == null) testId = 0;
+				TraceNavigatorUI.getGlobal().setTestId(testId);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			Integer testId = memento.getInteger(STORE_TEST_ID);
-			if (testId == null) testId = 0;
-			TraceNavigatorUI.getGlobal().setTestId(testId);
 		}
 	}
 	
@@ -117,9 +129,9 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	public void saveState(IMemento memento) {
 		super.saveState(memento);
 		IProject prj = DatabaseConnector.getSelectedProject();
-		String projectName = prj != null ? prj.getName() : null;		
+		String projectName = (prj != null) ? prj.getName() : null;		
 		memento.putString(STORE_PROJECT_NAME, projectName);
-		memento.putInteger(STORE_TEST_ID, current.getTestId());
+		if (current != null) memento.putInteger(STORE_TEST_ID, current.getTestId());
 	}
 
 	@Override
@@ -149,6 +161,19 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			return;
 		}
 		if (current == null || current.getTestId() != te.getTestId()) {
+			if (te.getTestId() == 65) {
+				System.out.println("!slicing!");
+				long callStep = 3688;
+				ValueKey key = new InvocationKey(65, callStep);
+				DynamicSlice slice = new DynamicSlice(key);
+				slice.processAll();
+				SLICE.clear();
+				for (ValueKey k: slice.getSlice().keySet()) {
+					SLICE.add(k.getStep());
+				}
+				System.out.println("!done!");
+			}
+			
 			treeViewer.setInput(new Trace(te.getTestId(), ui));
 		} else {
 			getSelectionAdapter().selectAtStep(te.getStep());
@@ -443,7 +468,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		}
 	}
 	
-	public static class TraceLabelProvider extends LabelProvider implements	ITableLabelProvider {
+	public static class TraceLabelProvider extends LabelProvider implements	ITableLabelProvider, ITableColorProvider {
 
 		private static final Map<String, Image> images = new HashMap<>();
 
@@ -470,7 +495,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			}
 			return null;
 		}
-
+		
 		@Override
 		public String getColumnText(Object element, int columnIndex) {
 			if (element instanceof Pending) {
@@ -521,5 +546,26 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			//String typeName = method.type.substring(method.type.lastIndexOf(".") + 1);
 			return String.format("%s.java:%d", method.parent.type, method.line);
 		}
+
+		@Override
+		public Color getForeground(Object element, int columnIndex) {
+			if (SLICE.isEmpty()) return null;
+			if (!(element instanceof TraceElement)) return null;
+			TraceElement te = (TraceElement) element;
+			if (SLICE.contains(te.getStep())) return null;
+			if (element instanceof Invocation) {
+				Invocation inv = (Invocation) element;
+				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
+					return null; // black
+					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+				}
+			}
+			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+		}
+
+		@Override
+		public Color getBackground(Object element, int columnIndex) {
+			return null;
+		}		
 	}
 }

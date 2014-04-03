@@ -88,7 +88,13 @@ public class VarDescriptor {
     public VarDescriptor get(int offset) {
         if (offset < 1) return this;
         VarDescriptor v = this;
-        while (v != null && v.offset < offset) v = v.next;
+//        while (v != null && v.offset < offset) v = v.next;
+//        return v;
+        VarDescriptor v2 = v.next;
+        while (v2 != null && v2.offset <= offset) {
+            v = v2;
+            v2 = v2.next;
+        }
         return v;
     }
     
@@ -97,4 +103,17 @@ public class VarDescriptor {
         return String.format("%03d (%s %s %03d %03d", id, type, name, index, offset);
     }    
     
+    public static void printList(Iterable<VarDescriptor> it) {
+        int i = 0;
+        for (VarDescriptor v: it) {
+            if (v == null) {
+                System.out.printf("%3d > null%n", i);
+            }
+            while (v != null) {
+                System.out.printf("%3d > %s%n", i, v);
+                v = v.next;
+            }
+            i++;
+        }
+    }
 }

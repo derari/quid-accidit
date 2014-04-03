@@ -66,6 +66,7 @@ public class AgentTest {
     protected Object runATest(String method, boolean exceptionExpected) throws Exception {
         Class c = aClass();
         Object a = c.newInstance();
+        Tracer.failFastMode();
         Tracer.begin();
         try {
             return runMethod(a, method, exceptionExpected);
@@ -150,6 +151,18 @@ public class AgentTest {
     public void test_traced_flag() throws Exception {
         test_traced_flag(ACLASS);
         test_traced_flag(ACLASS+"$Access");
+    }
+    
+    @Test
+    public void test_variableScope() throws Exception {
+        Object result = runATest("variableScope");
+        System.out.println(result);
+    }
+    
+    @Test
+    public void test_variableComplex() throws Exception {
+        Object result = runATest("variableComplex");
+        System.out.println(result);
     }
     
     public void test_traced_flag(String clazz) throws Exception {

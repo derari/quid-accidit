@@ -25,6 +25,7 @@ public class CallTrace {
     private final long step;
     private final int line;
     private final int depth;
+    private long exitStep;
     
     private int lastLine = -1;
     private int nextCall = -1;
@@ -51,8 +52,17 @@ public class CallTrace {
         return trace;
     }
 
+    public long getCallStep() {
+        if (caller == null) return -1;
+        return caller.getStep();
+    }
+
     public long getStep() {
         return step;
+    }
+
+    public long getExitStep() {
+        return exitStep;
     }
 
     public int getLine() {
@@ -85,7 +95,6 @@ public class CallTrace {
         if (caller != null) caller.ensurePersisted();
         method.ensurePersisted();
         if (instance != null) instance.ensurePersisted();
-        out.traceCall(this);
     }
     
     public boolean isTraced() {
@@ -148,7 +157,7 @@ public class CallTrace {
             PrimitiveType pt = method.getResultType();
             long valueId = trace.getValueId(pt, result);
             exit = new ExitTrace(step, true, line, stepCounter.next(), pt, valueId);
-            out.traceExit(this, exit);
+            exit(exit);
         } catch (RuntimeException re) {
             throw new RuntimeException(toString(), re);
         }
@@ -160,6 +169,12 @@ public class CallTrace {
         throwable.ensurePersisted();
         PrimitiveType pt = PrimitiveType.OBJECT;
         exit = new ExitTrace(step, false, lastLine, stepCounter.next(), pt, throwable.getId());
+        exit(exit);
+    }
+    
+    private void exit(ExitTrace et) {
+        exitStep = et.getStep();
+        out.traceCall(this);
         out.traceExit(this, exit);
     }
     

@@ -2,9 +2,11 @@
 .classpath
 .settings
 .DS_Store
+.metadata
 /accidit/jdi-tracer/target/
 /accidit/testapp/target/
 /accidit/bcel-tracer/target/
 /accidit/asm-tracer/target/
 /accidit/tracer-model/target/
 /mysql/csvimport.sql
+/accidit/dbimport/target/
