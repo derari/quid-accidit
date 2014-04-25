@@ -10,3 +10,6 @@
 /accidit/tracer-model/target/
 /mysql/csvimport.sql
 /accidit/dbimport/target/
+/accidit-launcher/LauncherTestProject/bin/
+/accidit-launcher/LauncherTestProject/target/
+/accidit-launcher/bin/
