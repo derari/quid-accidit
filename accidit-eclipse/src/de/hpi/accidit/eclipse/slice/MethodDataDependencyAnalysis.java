@@ -42,6 +42,8 @@ import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, DataDependencyFlow> {
 	
+	public static long total_time = 0;
+	
 	static boolean LOG_ALL = false;
 	
 	static {
@@ -63,6 +65,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 					mvn + "/repository/junit/junit/4.11/junit-4.11.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" + sep +
 					mvn + "/repository/org/hamcrest/hamcrest-library/1.3/hamcrest-library-1.3.jar" + sep +
+					mvn + "/repository/org/drools/knowledge-api/5.5.0.Final/knowledge-api-5.5.0.Final.jar" + sep +
+					mvn + "/repository/org/drools/knowledge-internal-api/5.5.0.Final/knowledge-internal-api-5.5.0.Final.jar" + sep +
+					mvn + "/repository/org/slf4j/slf4j-api/1.7.2/slf4j-api-1.7.2.jar" + sep +
 					extra +
 					"");
 	}
@@ -123,42 +128,47 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	}
 	
 	public static synchronized Map<Token, DataDependency> analyseMethod(String clazz, String method, String signature) {
-		SootClass sClass = null;
+		total_time -= System.currentTimeMillis();
 		try {
-			sClass = Scene.v().getSootClass(clazz);
-			if (sClass.resolvingLevel() < SootClass.BODIES) sClass = null;
-		} catch (RuntimeException e) {
-			// expected if class is not loaded
-		}
-		if (sClass == null) {
-			for (java.lang.reflect.Field f: Scene.class.getDeclaredFields()) {
-				if (f.getName().equals("doneResolving")) {
-					try {
-						f.setAccessible(true);
-						f.set(Scene.v(), false);
-					} catch (Exception e1) {
-						throw new RuntimeException(e1);
+			SootClass sClass = null;
+			try {
+				sClass = Scene.v().getSootClass(clazz);
+				if (sClass.resolvingLevel() < SootClass.BODIES) sClass = null;
+			} catch (RuntimeException e) {
+				// expected if class is not loaded
+			}
+			if (sClass == null) {
+				for (java.lang.reflect.Field f: Scene.class.getDeclaredFields()) {
+					if (f.getName().equals("doneResolving")) {
+						try {
+							f.setAccessible(true);
+							f.set(Scene.v(), false);
+						} catch (Exception e1) {
+							throw new RuntimeException(e1);
+						}
+						break;
 					}
+				}
+				sClass = Scene.v().loadClass(clazz, SootClass.BODIES); //loadClassAndSupport(clazz);
+				sClass.setApplicationClass();
+				Scene.v().loadNecessaryClasses();
+			}
+			
+			SootMethod sMethod = null;
+			for (SootMethod m0: sClass.getMethods()) {
+				if (m0.getName().equals(method) && matchSignature(m0, signature)) {
+					sMethod = m0;
+					System.out.println("    <<<" + m0 + ">>>");
 					break;
 				}
 			}
-			sClass = Scene.v().loadClass(clazz, SootClass.BODIES); //loadClassAndSupport(clazz);
-			sClass.setApplicationClass();
-			Scene.v().loadNecessaryClasses();
-		}
-		
-		SootMethod sMethod = null;
-		for (SootMethod m0: sClass.getMethods()) {
-			if (m0.getName().equals(method) && matchSignature(m0, signature)) {
-				sMethod = m0;
-				System.out.println("    <<<" + m0 + ">>>");
-				break;
+			if (sMethod == null) {
+				throw new RuntimeException("Method not found: " + clazz + "#" + method + signature);
 			}
+			return analyseMethod(sMethod);
+		} finally {
+			total_time += System.currentTimeMillis();
 		}
-		if (sMethod == null) {
-			throw new RuntimeException("Method not found: " + clazz + "#" + method + signature);
-		}
-		return analyseMethod(sMethod);
 	}
 	
 	private static boolean matchSignature(SootMethod m, String signature) {

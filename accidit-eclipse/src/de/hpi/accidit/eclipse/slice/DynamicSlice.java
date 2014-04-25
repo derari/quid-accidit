@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.cthul.miro.DSL;
+import org.eclipse.debug.core.model.ILaunchConfigurationDelegate;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Invocation;
@@ -23,6 +24,7 @@ import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
+import de.hpi.accidit.eclipse.slice.ValueKey.MethodResultKey;
 
 public class DynamicSlice {
 	
@@ -31,14 +33,24 @@ public class DynamicSlice {
 //		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
 		DatabaseConnector.overrideSchema("accidit");
 		
+		long time = -System.currentTimeMillis();
+		
 		ValueKey key;
 		
-		int testId = 65;
-//		long exitStep = 3626;
+//		int testId = 65;
+//		long callStep = 3688;
+//		key = new InvocationKey(testId, callStep);
+		
+		//		long exitStep = 537662;
 //		key = new MethodResultKey(testId, exitStep);
 		
-		long callStep = 3688;
-		key = new InvocationKey(testId, callStep);
+		// 461 + 210649
+		
+		int testId = 240;
+//		long callStep = 320510;
+//		key = new InvocationKey(testId, callStep);
+		long exitStep = 380553;
+		key = new MethodResultKey(testId, exitStep);
 		
 		DynamicSlice slice = new DynamicSlice(key);
 		slice.processAll();
@@ -47,6 +59,13 @@ public class DynamicSlice {
 			System.out.println(vk);
 		}
 		System.out.println("\n\n\n");
+		
+		time += System.currentTimeMillis();
+		
+		System.out.println(" total time: " + time);
+		System.out.println("depend time:" + MethodDataDependencyAnalysis.total_time);
+		System.out.println("slicin time:" + (time-MethodDataDependencyAnalysis.total_time));
+		System.out.println(MethodDataDependencyAnalysis.total_time / (1.0 * time));
 	}
 	
 	private final SortedSet<ValueKey> queue = new TreeSet<>(new Comparator<ValueKey>() {
