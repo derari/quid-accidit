@@ -7,7 +7,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
 
@@ -145,9 +147,10 @@ public class Import {
 //    private final String dbType;
 //    private final String dbString;
 //    private final String dbSchema;
-    private final String csvDir;
+    private String csvDir;
     private final boolean newSchema;
     private final Database db;
+    private final List<Integer> newTraceIds = new ArrayList<>();
     
     public Import(String dbString, String csvDir, boolean newSchema) throws SQLException {
         this(dbString, detectSchema(dbString), csvDir, newSchema);
@@ -170,93 +173,123 @@ public class Import {
         db = new Database(cnn, dbType, dbSchema);
     }
     
-    public void run() throws Exception {
+    public List<Integer> run() throws Exception {
         long time = System.currentTimeMillis();
+        if (csvDir.endsWith("*")) {
+            multiRun();
+        } else if (csvDir.endsWith("!")) {
+            File f = new File(csvDir.substring(0, csvDir.length()-1));
+            File[] dirs = f.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    return pathname.isDirectory();
+                }
+            });
+            
+        } else {
+            singleRun();
+        }
+        time = System.currentTimeMillis() - time;
+        System.out.printf("%nDONE. %ds%n", time/1000);
+        return newTraceIds;
+    }
+    
+    private void multiRun() throws Exception {
+        if (newSchema) {
+            db.createSchema();
+        }
+        
+        manualImport();
+    }
+    
+    private void singleRun() throws Exception {
         if (newSchema) {
             db.createSchema();
             db.importData(csvDir);
         } else {
-            try (Model m = new Model(db);
-                 RowIterator rType = reader("mType");
-                 RowIterator rMethod = reader("mMethod");
-                 RowIterator rVariable = reader("mVariable");
-                 RowIterator rField = reader("mField");
-                 RowIterator rTrace = reader("tTrace");
-                 RowIterator rObject = reader("tObject");
-                 RowIterator rCall = reader("tCall");
-                 RowIterator rExit = reader("tExit");
-                 RowIterator rThrow = reader("tThrow");
-                 RowIterator rCatch = reader("tCatch");
-                 RowIterator rVarSet = reader("tVariable");
-                 RowIterator rPut = reader("tPut");
-                 RowIterator rGet = reader("tGet");
-                 RowIterator rAPut = reader("tArrayPut");
-                 RowIterator rAGet = reader("tArrayGet");
-                ) {
-                m.beginTypes();
-                for (String[] row: rType) {
-                    m.addType(row);
-                }
-                m.beginMethods();
-                for (String[] row: rMethod) {
-                    m.addMethod(row);
-                }
-                m.beginVariables();
-                for (String[] row: rVariable) {
-                    m.addVariable(row);
-                }
-                m.beginFields();
-                for (String[] row: rField) {
-                    m.addField(row);
-                }
-                m.beginTraces();
-                for (String[] row: rTrace) {
-                    m.addTrace(row);
-                }
-                m.beginObjects();
-                for (String[] row: rObject) {
-                    m.addObject(row);
-                }
-                m.beginCalls();
-                for (String[] row: rCall) {
-                    m.addCall(row);
-                }
-                m.beginExits();
-                for (String[] row: rExit) {
-                    m.addExit(row);
-                }
-                m.beginThrows();
-                for (String[] row: rThrow) {
-                    m.addException(row);
-                }
-                m.beginCatchs();
-                for (String[] row: rCatch) {
-                    m.addException(row);
-                }
-                m.beginVariableSets();
-                for (String[] row: rVarSet) {
-                    m.addVariableSet(row);
-                }
-                m.beginFieldPuts();
-                for (String[] row: rPut) {
-                    m.addFieldAccess(row);
-                }
-                m.beginFieldGets();
-                for (String[] row: rGet) {
-                    m.addFieldAccess(row);
-                }
-                m.beginArrayPuts();
-                for (String[] row: rAPut) {
-                    m.addArrayAccess(row);
-                }
-                m.beginArrayGets();
-                for (String[] row: rAGet) {
-                    m.addArrayAccess(row);
-                }
-            }
+            manualImport();
         }
-        time = System.currentTimeMillis() - time;
-        System.out.printf("%nDONE. %ds%n", time/1000);
+    }
+    
+    private void manualImport() throws Exception {
+        try (Model m = new Model(db, newTraceIds);
+            RowIterator rType = reader("mType");
+            RowIterator rMethod = reader("mMethod");
+            RowIterator rVariable = reader("mVariable");
+            RowIterator rField = reader("mField");
+            RowIterator rTrace = reader("tTrace");
+            RowIterator rObject = reader("tObject");
+            RowIterator rCall = reader("tCall");
+            RowIterator rExit = reader("tExit");
+            RowIterator rThrow = reader("tThrow");
+            RowIterator rCatch = reader("tCatch");
+            RowIterator rVarSet = reader("tVariable");
+            RowIterator rPut = reader("tPut");
+            RowIterator rGet = reader("tGet");
+            RowIterator rAPut = reader("tArrayPut");
+            RowIterator rAGet = reader("tArrayGet");
+           ) {
+           m.beginTypes();
+           for (String[] row: rType) {
+               m.addType(row);
+           }
+           m.beginMethods();
+           for (String[] row: rMethod) {
+               m.addMethod(row);
+           }
+           m.beginVariables();
+           for (String[] row: rVariable) {
+               m.addVariable(row);
+           }
+           m.beginFields();
+           for (String[] row: rField) {
+               m.addField(row);
+           }
+           m.beginTraces();
+           for (String[] row: rTrace) {
+               m.addTrace(row);
+           }
+           m.beginObjects();
+           for (String[] row: rObject) {
+               m.addObject(row);
+           }
+           m.beginCalls();
+           for (String[] row: rCall) {
+               m.addCall(row);
+           }
+           m.beginExits();
+           for (String[] row: rExit) {
+               m.addExit(row);
+           }
+           m.beginThrows();
+           for (String[] row: rThrow) {
+               m.addException(row);
+           }
+           m.beginCatchs();
+           for (String[] row: rCatch) {
+               m.addException(row);
+           }
+           m.beginVariableSets();
+           for (String[] row: rVarSet) {
+               m.addVariableSet(row);
+           }
+           m.beginFieldPuts();
+           for (String[] row: rPut) {
+               m.addFieldAccess(row);
+           }
+           m.beginFieldGets();
+           for (String[] row: rGet) {
+               m.addFieldAccess(row);
+           }
+           m.beginArrayPuts();
+           for (String[] row: rAPut) {
+               m.addArrayAccess(row);
+           }
+           m.beginArrayGets();
+           for (String[] row: rAGet) {
+               m.addArrayAccess(row);
+           }
+       }
     }
 
     protected RowIterator reader(String file) throws UnsupportedEncodingException, FileNotFoundException {

@@ -14,6 +14,7 @@ import java.util.Set;
 public class Model implements AutoCloseable {
     
     private final Database db;
+    private final List<Integer> newTraceIds;
     private final Database.BulkImport bulkImport;
     private final PreparedStatement psFindType;
     private final PreparedStatement psMethodsForType;
@@ -28,8 +29,9 @@ public class Model implements AutoCloseable {
     private int nextFieldId;
     private int traceIdOffset;
 
-    public Model(Database db) throws SQLException {
+    public Model(Database db, List<Integer> newTraceIds) throws SQLException {
         this.db = db;
+        this.newTraceIds = newTraceIds;
         bulkImport = db.bulkImport();
         psFindType = db.prepare("SELECT `id` FROM `Type` WHERE `name` = ?");
         psMethodsForType = db.prepare("SELECT `id`, `name`, `signature`, `hashcode` FROM `Method` WHERE `declaringTypeId` = ?");
@@ -125,6 +127,7 @@ public class Model implements AutoCloseable {
     
     public void addTrace(String[] row) {
         fixTraceId(row, TRACE_ID);
+        newTraceIds.add(Integer.parseInt(row[TRACE_ID]));
         bulkImport.addRow(row);
     }
     

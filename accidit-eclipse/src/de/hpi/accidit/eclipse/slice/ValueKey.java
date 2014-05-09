@@ -358,8 +358,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		public Map<Token, DataDependency> getDependencyGraph() {
 			Map<Token, DataDependency> graph = graphRef != null ? graphRef.get() : null;
 			if (graph == null) {
+				DynamicSlice.processing_time += System.currentTimeMillis();
 				graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
 				graphRef = new SoftReference<Map<Token,DataDependency>>(graph);
+				DynamicSlice.processing_time -= System.currentTimeMillis();
 			}
 			return graph;
 		}
@@ -450,12 +452,16 @@ public class ValueKey implements Comparable<ValueKey> {
 	}
 	
 	private static Invocation parentOf(Invocation inv) {
+		if (inv.depth < 1) return null;
 		if (inv.parent != null) return inv.parent;
 		List<Invocation> parents = DSL
 					.select("*","signature","methodId").from(Invocation.VIEW)
 					.parentOf(inv)
 				._execute(cnn())
 				._asList();
+//		if (parents.size()  == 0) {
+//			return null;
+//		}
 		Invocation parent = parents.get(0);
 		inv.parent = parent;
 		return parent;

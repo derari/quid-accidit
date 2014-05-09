@@ -41,7 +41,7 @@ public class AgentTest {
         ClassReader cr = new ClassReader(name);
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-        cr.accept(new TracerTransformer.MyClassVisitor(cca, Tracer.model, cl), 0);
+        cr.accept(new TracerTransformer.MyClassVisitor(TracerTransformer.TRACE_FILTER, cca, Tracer.model, cl), 0);
         cl.setData(name, cw.toByteArray());
     }
     
@@ -85,6 +85,7 @@ public class AgentTest {
     
     @Before
     public void setUp() {
+        TracerTransformer.TRACE_FILTER = new TracerTransformer.TestTraceFilter();
         System.out.println();
     }
     
@@ -179,7 +180,7 @@ public class AgentTest {
     private byte[] transform(ClassReader cr, Model model) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
         CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-        cr.accept(new TracerTransformer.MyClassVisitor(cca, model, getClass().getClassLoader()), 0);
+        cr.accept(new TracerTransformer.MyClassVisitor(TracerTransformer.TRACE_FILTER, cca, model, getClass().getClassLoader()), 0);
         return cw.toByteArray();
     }
 
