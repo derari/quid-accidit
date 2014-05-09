@@ -13,7 +13,7 @@
    <extension
          point="org.eclipse.core.runtime.preferences">
       <initializer
-            class="de.hpi.accidit.eclipse.properties.Configuration">
+            class="de.hpi.accidit.eclipse.properties.DatabaseConfiguration">
       </initializer>
    </extension>
    <extension

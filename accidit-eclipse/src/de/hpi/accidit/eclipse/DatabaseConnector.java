@@ -20,13 +20,10 @@ import org.cthul.miro.query.sql.DataQuery;
 import org.cthul.miro.query.sql.DataQueryPart;
 import org.cthul.miro.query.sql.StringQueryBuilder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.jface.preference.IPreferenceStore;
 
-import de.hpi.accidit.eclipse.properties.Configuration;
-import de.hpi.accidit.eclipse.properties.FieldEditorOverlayPage;
+import de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage;
+import de.hpi.accidit.eclipse.properties.DatabaseSettingsRetriever;
 
 public class DatabaseConnector {
 	
@@ -75,16 +72,14 @@ public class DatabaseConnector {
 	private static String getDBString() {
 		if (overrideDBString != null) return overrideDBString;
 		
-		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-		
 		String dbAddress = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_ADDRESS);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_ADDRESS);
 		String dbSchema	= DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_SCHEMA);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
 		String dbUser = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_USER);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_USER);
 		String dbPassword = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_PASSWORD);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_PASSWORD);
 		
 		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
@@ -110,7 +105,7 @@ public class DatabaseConnector {
 				String dbSchema;
 				if (overrideSchema == null) {
 					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-					dbSchema = store.getString(Configuration.CONNECTION_SCHEMA);
+					dbSchema = store.getString(DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
 				} else {
 					dbSchema = overrideSchema;
 				}
@@ -159,41 +154,6 @@ public class DatabaseConnector {
 			e.printStackTrace();
 		}
 		initialized = true;
-	}
-	
-	/* private class for property retrieving. */
-	
-	private static class DatabaseSettingsRetriever {
-		
-		private static final String DATABASE_SETTINGS_PREFEENCE_PAGE_ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
-		
-		public static String getPreferenceValue(IPreferenceStore store, IResource resource, String key) {
-			if (resource == null) {
-				return store.getString(key);
-			}
-			
-			IProject project = resource.getProject();
-			String value = null;
-			if (useProjectSettings(project, DATABASE_SETTINGS_PREFEENCE_PAGE_ID)) {
-				value = getProperty(resource, DATABASE_SETTINGS_PREFEENCE_PAGE_ID, key);
-			}
-			if (value != null)
-				return value;
-			return store.getString(key);
-		}
-		
-		private static boolean useProjectSettings(IResource resource, String pageId) {
-			String use = getProperty(resource, pageId, FieldEditorOverlayPage.USEPROJECTSETTINGS);
-			return "true".equals(use);
-		}
-		
-		private static String getProperty(IResource resource, String pageId, String key) {
-			try {
-				return resource.getPersistentProperty(new QualifiedName(pageId, key));
-			} catch (CoreException e) { }
-			return null;
-		}
-		
 	}
 
 	/* private classes for query preprocessing. */

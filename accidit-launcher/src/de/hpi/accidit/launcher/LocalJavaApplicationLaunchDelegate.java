@@ -2,7 +2,11 @@ package de.hpi.accidit.launcher;
 
 import java.io.File;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -10,6 +14,8 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.model.ILaunchConfigurationDelegate;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.JavaLaunchDelegate;
+
+import de.hpi.accidit.eclipse.properties.DatabaseSettingsRetriever;
 
 public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 		implements ILaunchConfigurationDelegate {
@@ -37,6 +43,62 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 		
 		super.launch(workingCopy, mode, launch, monitor);
 		
+		//track termination of the program execution
+		while (!launch.isTerminated()) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) { }
+		}
+		
+		if (!launch.isTerminated()) {
+			return;
+		}
+		
+		// get database settings
+		IProject project = getProject(workingCopy);
+		
+		String dbAddress = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_ADDRESS);
+		String dbUser = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_USER);
+		String dbPassword = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_PASSWORD);
+		String dbType = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_TYPE);
+		String dbSchema = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_SCHEMA);
+
+		String dbString = String.format("jdbc:%s://%s/%s?user=%s&password=%s&currentschema=%s", dbType, dbAddress, dbSchema, dbUser, dbPassword, dbSchema);		
+		
+		System.out.println("dbString: " + dbString);
+		
+		boolean newSchema = true;		
+		
+//		IPath path = project.get
+		String csvDir = project.getLocation().append("target").append("trace").toOSString();
+		
+		//start db_import
+//		try {
+//			new Import(dbType, dbString, dbSchema, csvDir, newSchema).run();
+//		} catch (SQLException e) {
+//			e.printStackTrace();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 	}
+	
+	/**
+     * Returns the IProject object matching the name found in the configuration
+     * object under the name
+     * <code>IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME</code>
+     * @param configuration
+     * @return The IProject object or null
+     */
+    private IProject getProject(ILaunchConfiguration configuration){
+        String projectName;
+        try {
+            projectName = configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, "");
+        } catch (CoreException e) {
+            return null;
+        }
+
+        IWorkspace workspace = ResourcesPlugin.getWorkspace();
+        return workspace.getRoot().getProject(projectName);
+    }
 
 }

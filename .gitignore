@@ -10,3 +10,5 @@
 /accidit/dbimport/target/
 /accidit-launcher/LauncherTestProject/target/
 **/bin/
+.project
+.classpath
