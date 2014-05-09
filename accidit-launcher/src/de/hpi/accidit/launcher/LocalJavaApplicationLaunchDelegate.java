@@ -1,12 +1,12 @@
 package de.hpi.accidit.launcher;
 
 import java.io.File;
+import java.sql.SQLException;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -15,6 +15,7 @@ import org.eclipse.debug.core.model.ILaunchConfigurationDelegate;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.JavaLaunchDelegate;
 
+import de.hpi.accidit.db.Import;
 import de.hpi.accidit.eclipse.properties.DatabaseSettingsRetriever;
 
 public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
@@ -64,22 +65,21 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 		String dbSchema = DatabaseSettingsRetriever.getPreferenceValue(project, DatabaseSettingsRetriever.CONNECTION_SCHEMA);
 
 		String dbString = String.format("jdbc:%s://%s/%s?user=%s&password=%s&currentschema=%s", dbType, dbAddress, dbSchema, dbUser, dbPassword, dbSchema);		
+				
+		boolean newSchema = false;		
 		
-		System.out.println("dbString: " + dbString);
-		
-		boolean newSchema = true;		
-		
-//		IPath path = project.get
 		String csvDir = project.getLocation().append("target").append("trace").toOSString();
+		// TODO: 
+//		String csvDir = project.getLocation().append("target").append("trace").append("*").toOSString();
 		
 		//start db_import
-//		try {
-//			new Import(dbType, dbString, dbSchema, csvDir, newSchema).run();
-//		} catch (SQLException e) {
-//			e.printStackTrace();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
+		try {
+			new Import(dbType, dbString, dbSchema, csvDir, newSchema).run();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
