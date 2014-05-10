@@ -23,19 +23,19 @@ public class Model implements AutoCloseable {
     private final List<Integer> methodMap = new ArrayList<>(1024);
     private final List<Integer> fieldMap = new ArrayList<>(1024);
     private final Set<Integer> newMethods = new HashSet<>();
-    private List<TypeData> typeDataMap = new ArrayList<>(1024);
+    private final List<TypeData> typeDataMap = new ArrayList<>(1024);
     private int nextTypeId;
     private int nextMethodId;
     private int nextFieldId;
-    private int traceIdOffset;
+    private final int traceIdOffset;
 
-    public Model(Database db, List<Integer> newTraceIds) throws SQLException {
+    public Model(Database db, List<Integer> newTraceIds) throws Exception {
         this.db = db;
         this.newTraceIds = newTraceIds;
         bulkImport = db.bulkImport();
-        psFindType = db.prepare("SELECT `id` FROM `Type` WHERE `name` = ?");
-        psMethodsForType = db.prepare("SELECT `id`, `name`, `signature`, `hashcode` FROM `Method` WHERE `declaringTypeId` = ?");
-        psFieldsForType = db.prepare("SELECT `id`, `name` FROM `Field` WHERE `declaringTypeId` = ?");
+        psFindType = db.prepare("SELECT `id` FROM `$SCHEMA$`.`Type` WHERE `name` = ?");
+        psMethodsForType = db.prepare("SELECT `id`, `name`, `signature`, `hashcode` FROM `$SCHEMA$`.`Method` WHERE `declaringTypeId` = ?");
+        psFieldsForType = db.prepare("SELECT `id`, `name` FROM `$SCHEMA$`.`Field` WHERE `declaringTypeId` = ?");
         nextTypeId = db.getMaxId("Type") + 1;
         nextMethodId = db.getMaxId("Method") + 1;
         nextFieldId = db.getMaxId("Field") + 1;

@@ -53,6 +53,16 @@ public class Database {
         }
     }
     
+    public void ensureSchemaExists() throws Exception {
+        try {
+            getMaxId("TestTrace");
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            System.out.println("Creating Schema.");
+            createSchema();
+        }
+    }
+    
     public void createSchema() throws Exception {
         runSql(cnn, dbType + "/schema.sql", replace);
     }
@@ -69,12 +79,25 @@ public class Database {
         return new BulkImport(insertIntoString(), fieldString());
     }
     
+    private String toSql(String s) {
+        switch (dbType) {
+            case "mysql":
+                break;
+            default: 
+                s = s.replace('`', '"');
+        }
+        for (Map.Entry<String, String> e: replace.entrySet()) {
+            s = s.replace(e.getKey(), e.getValue());
+        }
+        return s;
+    }
+    
     public PreparedStatement prepare(String s) throws SQLException {
-        return cnn.prepareStatement(s);
+        return cnn.prepareStatement(toSql(s));
     }
     
     public int getMaxId(String table) throws SQLException {
-        String sql = "SELECT MAX(id) FROM " + table;
+        String sql = toSql("SELECT MAX(id) FROM `$SCHEMA$`." + table + "`");
         try (Statement stmt = cnn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             rs.next();

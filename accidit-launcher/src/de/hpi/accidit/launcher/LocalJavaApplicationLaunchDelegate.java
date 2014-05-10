@@ -28,8 +28,11 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 		ILaunchConfigurationWorkingCopy workingCopy = configuration.getWorkingCopy();
 		
 		File workingDir = verifyWorkingDirectory(configuration);
+		File traceDir = null;
 		if (workingDir != null) {
 			String workingDirName = workingDir.getAbsolutePath();
+			traceDir = new File(workingDir, "tmp_trace" + (int)(1000*Math.random()));
+			traceDir.mkdirs();
 			
 			StringBuilder vmArgsBuilder = new StringBuilder();
 			vmArgsBuilder.append(getVMArguments(configuration));
@@ -37,6 +40,9 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 			vmArgsBuilder.append(" -noverify \"-javaagent:");
 			vmArgsBuilder.append(String.format("%s/../lib/accidit-asm-tracer-1.0-SNAPSHOT-jar-with-dependencies.jar", workingDirName));
 			vmArgsBuilder.append(String.format("=%s/../lib/accidit-tracer-model-1.0-SNAPSHOT.jar", workingDirName));
+			vmArgsBuilder.append("#main#");
+			vmArgsBuilder.append(traceDir.getAbsolutePath());
+			vmArgsBuilder.append("#0");
 			vmArgsBuilder.append("\"");
 			
 			workingCopy.setAttribute(IJavaLaunchConfigurationConstants.ATTR_VM_ARGUMENTS, vmArgsBuilder.toString());
@@ -48,7 +54,10 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 		while (!launch.isTerminated()) {
 			try {
 				Thread.sleep(1000);
-			} catch (InterruptedException e) { }
+			} catch (InterruptedException e) { 
+				Thread.currentThread().interrupt();
+				break;
+			}
 		}
 		
 		if (!launch.isTerminated()) {
@@ -68,9 +77,7 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 				
 		boolean newSchema = false;		
 		
-		String csvDir = project.getLocation().append("target").append("trace").toOSString();
-		// TODO: 
-//		String csvDir = project.getLocation().append("target").append("trace").append("*").toOSString();
+		String csvDir = traceDir.getAbsolutePath();
 		
 		//start db_import
 		try {
@@ -79,6 +86,11 @@ public class LocalJavaApplicationLaunchDelegate extends JavaLaunchDelegate
 			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			for (File f: traceDir.listFiles()) {
+				f.delete();
+			}
+			traceDir.delete();
 		}
 	}
 	

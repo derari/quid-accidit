@@ -358,10 +358,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		public Map<Token, DataDependency> getDependencyGraph() {
 			Map<Token, DataDependency> graph = graphRef != null ? graphRef.get() : null;
 			if (graph == null) {
-				DynamicSlice.processing_time += System.currentTimeMillis();
+//				DynamicSlice.processing_time += System.currentTimeMillis();
 				graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
 				graphRef = new SoftReference<Map<Token,DataDependency>>(graph);
-				DynamicSlice.processing_time -= System.currentTimeMillis();
+//				DynamicSlice.processing_time -= System.currentTimeMillis();
 			}
 			return graph;
 		}

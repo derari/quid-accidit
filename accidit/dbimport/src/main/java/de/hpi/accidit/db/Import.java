@@ -6,6 +6,7 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -152,6 +153,25 @@ public class Import {
     private final Database db;
     private final List<Integer> newTraceIds = new ArrayList<>();
     
+    private static Connection getConnection(String dbString, String dbSchema) throws SQLException {
+        try {
+            return DriverManager.getConnection(dbString);
+        } catch (SQLException e) {
+            try {
+                // maybe schema doesnt exist?
+                String dbString2 = dbString.replace("currentschema=" + dbSchema, "")
+                                    .replace("/" + dbSchema, "");
+                return DriverManager.getConnection(dbString2);
+//                Connection c = DriverManager.getConnection(dbString);
+//                Statement stmt = c.createStatement();
+//                stmt.execute("CREATE SCHEMA ");
+            } catch (SQLException e2) {
+                e2.addSuppressed(e);
+                throw e2;
+            }
+        }
+    }
+    
     public Import(String dbString, String csvDir, boolean newSchema) throws SQLException {
         this(dbString, detectSchema(dbString), csvDir, newSchema);
     }
@@ -161,7 +181,7 @@ public class Import {
     }
     
     public Import(String dbType, String dbString, String dbSchema, String csvDir, boolean newSchema) throws SQLException {
-        this(dbType, DriverManager.getConnection(dbString), dbSchema, csvDir, newSchema);
+        this(dbType, getConnection(dbString, dbSchema), dbSchema, csvDir, newSchema);
     }
     
     public Import(String dbType, Connection cnn, String dbSchema, String csvDir, boolean newSchema) throws SQLException {
@@ -212,6 +232,7 @@ public class Import {
     }
     
     private void manualImport() throws Exception {
+        db.ensureSchemaExists();
         try (Model m = new Model(db, newTraceIds);
             RowIterator rType = reader("mType");
             RowIterator rMethod = reader("mMethod");

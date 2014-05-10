@@ -27,6 +27,7 @@ public class PreMain {
                 inst.appendToBootstrapClassLoaderSearch(jarFile);
             }
             if (args.length > 1) {
+//                System.out.println("Mode: " + args[1]);
                 switch (args[1].toLowerCase()) {
                     case "":
                     case "main":
@@ -41,11 +42,13 @@ public class PreMain {
                 }
             }
             if (args.length > 2) {
+//                System.out.println("Output: " + args[2]);
                 traceRoot = args[2];
             }
             if (args.length > 3) {
                 String a = args[3].toLowerCase();
                 timestampDir = a.equals("1") || a.startsWith("t") || a.startsWith("y");
+//                System.out.println("Timestamp: " + args[3] + "(" + timestampDir + ")");
             }
 
             PreMain.inst = inst;
