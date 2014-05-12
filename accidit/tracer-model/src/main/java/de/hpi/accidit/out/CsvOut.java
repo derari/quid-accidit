@@ -227,7 +227,7 @@ public class CsvOut implements Out {
     @Override
     public void begin(ThreadTrace trace) {
         tTrace.p(trace.getId());
-        tTrace.p(trace.getName());
+        tTrace.px(trace.getName());
         tTrace.nl();
     }
 
