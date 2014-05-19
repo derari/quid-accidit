@@ -29,14 +29,6 @@ public class ValueToString {
 			return integerValue(v, children);
 		case "java.lang.String":
 			return stringValue(v, children);
-		case "java.util.Collections$EmptyCollection":
-			return "EmptyCollection #" + v.getThisId() + " (size = 0)";
-		case "java.util.Collections$EmptyList":
-			return "EmptyList #" + v.getThisId() + " (size = 0)";
-		case "java.util.Collections$EmptySet":
-			return "EmptyMap #" + v.getThisId() + " (size = 0)";
-		case "java.util.Collections$EmptyMap":
-			return "EmptySet #" + v.getThisId() + " (size = 0)";
 		}
 		if (typeName.startsWith("java.util")) {
 			return javaUtilName(v, children);
@@ -67,6 +59,11 @@ public class ValueToString {
 				vOffset = (Primitive) nv.getValue();
 				break;
 			case "value":
+				if (nv.getValue() instanceof Primitive) {
+					System.out.println(
+							"Error? Primitive 'value' in " + simpleLongName(v) +": " + nv.getValue().getLongString());
+					break;
+				}
 				vValue = (ObjectSnapshot) nv.getValue();
 				break;
 			}
@@ -99,7 +96,24 @@ public class ValueToString {
 	}
 	
 	private static String javaUtilName(ObjectSnapshot v, NamedValue[] children) {
-		Value collection = v;
+		String name = v.getTypeName() + " #" + v.getThisId();
+		String size = null;
+		if (name.startsWith("java.util.Collections$")) {
+			name = name.substring(22);
+			if (name.startsWith("Empty")) {
+				size = "0";
+			}
+		}
+		if (size == null) size = getSize(v);
+		if (size == null) {
+			return name;
+		}
+		int i = name.lastIndexOf('.');
+		if (i >= 0) name = name.substring(i); 
+		return name + " (size = " + size + ")";
+	}
+	
+	private static String getSize(Value collection) {
 		String size = null;
 		while (collection != null && size == null) {
 			NamedValue[] c = collection.getChildren();
@@ -109,10 +123,7 @@ public class ValueToString {
 				collection = getValue(c, "map", "c", "list");
 			}
 		}
-		if (size == null) {
-			return simpleLongName(v);
-		}
-		return simpleShortName(v) + " (size = " + size + ")";
+		return size;
 	}
 	
 	private static String getValueShortString(NamedValue[] children, String name) {

@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import org.cthul.miro.map.MappedQueryStringView;
 import org.cthul.miro.map.Mapping;
@@ -27,6 +28,20 @@ public class ValueDao extends ModelDaoBase {
 					testId, callStep)
 			.configure(SET_CONNECTION)
 			.configure(new SetStepAdapter(step));
+	}
+	
+	public static MappedQueryStringView<Value> result_ofInvocation(int testId, long callStep) {
+		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class), 
+					"SELECT t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
+					"FROM `CallTrace` t " +
+					"JOIN `ExitTrace` e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep` " +
+					"LEFT OUTER JOIN `ObjectTrace` o " +
+					  "ON t.`testId` = o.`testId` AND e.`valueId` = o.`id` AND e.`primType` = 'L'" +
+					"LEFT OUTER JOIN `Type` y " +
+					  "ON y.`id` = o.`typeId` " +
+					"WHERE t.`testId` = ? AND t.`step` = ?", 
+					testId, callStep)
+			.configure(SET_CONNECTION);
 	}
 	
 	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
@@ -94,7 +109,7 @@ public class ValueDao extends ModelDaoBase {
 			configure(SET_CONNECTION);
 		}
 	}
-		
+	
 	private static class SetStepAdapter implements EntityInitializer<Value> {
 		
 		private final long step;

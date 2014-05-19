@@ -1,0 +1,242 @@
+<#assign sig = {"boolean": "Z", "byte": "B", "char": "C", "float": "F", 
+                "double": "D", "int": "I", "long": "L", "short": "S", 
+                "void": "V", "Object": "A"}>
+<#assign returns = ["Object", "int", "long", "float", "double"]>
+<#assign params = ["Object", "int", "long", "float", "double"]>
+<#assign arrayElements = ["Object", "byte", "char", "short", "int", "long", "float"]>
+// generated code
+package de.hpi.accidit.trace;
+
+import de.hpi.accidit.model.Model;
+
+/**
+ *
+ */
+public class Tracer {
+
+    private static Runnable initializer = null;
+    private static boolean initialized = false;
+    
+    public static void setup(Runnable initializer) {
+        Tracer.initializer = initializer;
+    }
+    
+    private static synchronized void init() {
+        if (initialized) return;
+        initialized = true;
+        trace = false;
+        
+        try {
+            if (initializer != null) {
+                initializer.run();
+                initializer = null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static final TraceSet traceSet = TracerSetup.getTraceSet();
+    public static final Model model = traceSet.getModel();
+    
+    private static int traceCount = 0;    
+    private static boolean trace = false;
+    private static boolean failFastMode = false;
+    
+    public static void failFastMode() {
+        failFastMode = true;
+    }
+    
+    public static boolean isTracing() {
+        return trace;
+    }
+    
+    private static synchronized void incTraceCount() {
+        traceCount++;
+        trace = true;
+    }
+    
+    private static synchronized void decTraceCount() {
+        traceCount--;
+        trace = traceCount > 0;
+        if (traceCount < 0) traceCount = 0;
+    }
+    
+
+    public synchronized static void begin() {
+        init();
+        trace = false;
+        ThreadTrace tt = traceSet.begin();
+        if (failFastMode) {
+            tt.failFastMode();
+        }
+        incTraceCount();
+    }
+    
+    public synchronized static void end() {
+        if (!trace) return;
+        trace = false;
+        ThreadTrace t = threadTrace();
+        if (t == null) return;
+        decTraceCount();
+        t.end();
+    }
+
+    /**
+     * Synchronize on Tracer.class before calling this!
+     * @return Should be passed to resumeTrace
+     */
+    public static boolean pauseTrace() {
+        boolean old = trace;
+        trace = false;
+        return old;
+    }
+    
+    public static void resumeTrace(boolean t) {
+        trace = t;
+    }
+    
+    private static ThreadTrace threadTrace() {
+        assert !trace : "disable tracing before calling thread trace";
+        //trace = false;
+        ThreadTrace tt = traceSet.get();
+        //trace = true;
+        return tt;
+    }
+    
+    public static void dummyA(Object o) {
+        System.out.println(o);
+    }
+
+    public static void line(int line) {
+        <@traced>
+            t.line(line);
+        </@>
+    }
+
+    public static void call(int methodId) {
+        <@traced>
+            t.call(methodId);
+        </@>
+    }
+
+    public static void enter(int methodCode, Object inst) {
+        <@traced>
+            t.enter(methodCode, inst);
+        </@>
+    }
+    
+    public static void thrown(Object ex, int line) {
+        <@traced>
+            t.thrown(line, ex);
+        </@>
+    }
+    
+    public static void caught(Object ex, int line) {
+        <@traced>
+            t.caught(line, ex);
+        </@>
+    }
+    
+    public static void returnV(int methodCode, int line) {
+        <@traced>
+            t.returned(methodCode, line, null);
+        </@>
+    }
+
+<@each_type params>
+    public static void return${s}(${t} result, int methodCode, int line) {
+        <@traced>
+            t.returned(methodCode, line, result);
+        </@>
+    }
+
+</@>
+<@each_type params>
+    public static void store${s}(${t} value, int var, int line, int offset) {
+        <@traced>
+            t.variable(line, offset, var, value);
+        </@>
+    }
+
+</@>
+<@each_type params>
+    public static void arg${s}(${t} value, int var) {
+        <@traced>
+            t.argument(var, value);
+        </@>
+    }
+
+</@>
+<@each_type params>
+    public static void put${s}(${t} value, int field, int line) {
+        <@traced>
+            t.put(null, value, field, line);
+        </@>
+    }
+
+</@>
+<@each_type params>
+    public static void put${s}(Object instance, ${t} value, int field, int line) {
+        <@traced>
+            t.put(instance, value, field, line);
+        </@>
+    }
+
+</@>
+    
+<@each_type params>
+    public static void get${s}(${t} value, int field, int line) {
+        <@traced>
+            t.get(null, value, field, line);
+        </@>
+    }
+
+</@>
+<@each_type params>
+    public static void get${s}(Object instance, ${t} value, int field, int line) {
+        <@traced>
+            t.put(instance, value, field, line);
+        </@>
+    }
+
+</@>
+<@each_type arrayElements>
+    public static void aStore${s}(Object array, int index, ${t} value, int line) {
+        <@traced>
+            t.arrayStore(array, value, index, line);
+        </@>
+    }
+
+</@>
+<@each_type arrayElements>
+    public static void aLoad${s}(Object array, int index, ${t} value, int line) {
+        <@traced>
+            t.arrayLoad(array, value, index, line);
+        </@>
+    }
+
+</@>
+}
+<#macro each_type types>
+<#list types as _t>
+    <#global t = _t>
+    <#global s = sig[_t]>
+    <#nested/>
+</#list>
+</#macro>
+<#macro traced>
+        synchronized (Tracer.class) {
+            if (!trace) return;
+            trace = false;
+            try {
+                ThreadTrace t = threadTrace();
+                if (t == null) return;
+        //////////////////////////////
+                <#nested/>
+        //////////////////////////////
+            } finally {
+                trace = true;
+            }
+        }
+</#macro>

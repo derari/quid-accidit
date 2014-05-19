@@ -12,17 +12,29 @@ import java.io.*;
  */
 public class CsvOut implements Out {
     
-    public static class Csv {
+    public static final class Csv {
+        final AccBufferedOutputStream os;
         final AccPrintStream ps;
         boolean newLine = true;
 
-        public Csv(File dir, String name) throws FileNotFoundException {
-            
-            this.ps = new AccPrintStream(
-                    new AccBufferedOutputStream(
+        public Csv(File dir, String name) throws IOException {
+//            Path p = Paths.get(new File(dir, name+".csv").toURI());
+//            BufferedWriter bw = Files.newBufferedWriter(p, Charset.forName("utf-8"));
+//            PrintWriter pw = new PrintWriter(pw)
+            this.os = new AccBufferedOutputStream(
                     new FileOutputStream(new File(dir, name+".csv")),
-                    1024 * 1024 * 16));
+                    1024 * 1024 * 16);
+            this.ps = new AccPrintStream(os);
         }
+        
+        protected void write(String s) {
+            ps.print(s);
+        }
+        
+//        protected void write(char c) throws IOException {
+//            
+//            os.write(c);
+//        }
         
         private void sep() {
             if (newLine) newLine = false;
@@ -32,7 +44,7 @@ public class CsvOut implements Out {
         public void p(Object value) {
             sep();
             if (value == null) {
-                ps.print("NULL");
+                write("NULL");
             } else {
                 ps.print(value);
             }
@@ -41,7 +53,7 @@ public class CsvOut implements Out {
         public void px(Object value) {
             sep();
             if (value == null) {
-                ps.print("NULL");
+                write("NULL");
             } else {
                 ps.print('"');
                 ps.print(value);
@@ -56,7 +68,16 @@ public class CsvOut implements Out {
         public void pUnsigned(int value) {
             sep();
             if (value < 0) {
-                ps.print("NULL");
+                write("NULL");
+            } else {
+                ps.print(value);
+            }
+        }
+        
+        public void pUnsigned(long value) {
+            sep();
+            if (value < 0) {
+                write("NULL");
             } else {
                 ps.print(value);
             }
@@ -88,7 +109,6 @@ public class CsvOut implements Out {
         public void flush() {
             ps.flush();
         }
-        
     }
 
     private final Csv mType;
@@ -108,7 +128,7 @@ public class CsvOut implements Out {
     private final Csv tArrayPut;
     private final Csv tArrayGet;
 
-    public CsvOut(File dir) throws FileNotFoundException {
+    public CsvOut(File dir) throws IOException {
         dir.mkdirs();
         this.mType = new Csv(dir, "mType");
         this.mExtends = new Csv(dir, "mExtends");
@@ -181,6 +201,7 @@ public class CsvOut implements Out {
         mMethod.p(method.getName());
         mMethod.px(method.getDescriptor());
         mMethod.pUnsigned(method.getLine());
+        mMethod.p(method.getHashcode());
         mMethod.nl();
     }
 
@@ -206,7 +227,7 @@ public class CsvOut implements Out {
     @Override
     public void begin(ThreadTrace trace) {
         tTrace.p(trace.getId());
-        tTrace.p(trace.getName());
+        tTrace.px(trace.getName());
         tTrace.nl();
     }
 
@@ -224,7 +245,9 @@ public class CsvOut implements Out {
     @Override
     public void traceCall(CallTrace call) {
         tCall.p(call.getTrace().getId());
+        tCall.pUnsigned(call.getCallStep());
         tCall.p(call.getStep());
+        tCall.p(call.getExitStep());
         tCall.p(call.getMethod().getModelId());
         tCall.p(oId(call.getInstance()));
         tCall.p(call.getDepth());
@@ -235,7 +258,7 @@ public class CsvOut implements Out {
     @Override
     public void traceExit(CallTrace call, ExitTrace exit) {
         tExit.p(call.getTrace().getId());
-        tExit.p(call.getStep());
+//        tExit.p(call.getStep());
         tExit.p(exit.getStep());
         tExit.p(exit.isReturned());
         tExit.pValue(exit);

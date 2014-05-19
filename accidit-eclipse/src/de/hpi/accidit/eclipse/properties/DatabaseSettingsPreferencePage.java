@@ -11,10 +11,13 @@ import de.hpi.accidit.eclipse.Activator;
 public class DatabaseSettingsPreferencePage extends FieldEditorOverlayPage
 		implements IWorkbenchPreferencePage {
 	
-	private static final String ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
+	public static final String ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
 	
-	public static final String SOME_PREFERENCE_CONSTANT = "someNameOfAPref";
-	public static final String INT_PREFERENCE_CONSTANT = "someIntNameOfAPref";
+	public static final String CONNECTION_ADDRESS	= "NconnectionAddress";
+	public static final String CONNECTION_SCHEMA	= "NconnectionSchema";
+	public static final String CONNECTION_USER		= "NconnectionUser";
+	public static final String CONNECTION_PASSWORD	= "NconnectionPassword";
+	public static final String CONNECTION_TYPE		= "NconnectionType";
 
 	public DatabaseSettingsPreferencePage() {
 		super(GRID);
@@ -37,14 +40,14 @@ public class DatabaseSettingsPreferencePage extends FieldEditorOverlayPage
 
 	@Override
 	protected void createFieldEditors() {
-	    addField(new StringFieldEditor(Configuration.CONNECTION_ADDRESS, "Address:", getFieldEditorParent()));
-	    addField(new StringFieldEditor(Configuration.CONNECTION_SCHEMA, "Schema:", getFieldEditorParent()));
-	    addField(new StringFieldEditor(Configuration.CONNECTION_USER, "User:", getFieldEditorParent()));
-	    addField(new StringFieldEditor(Configuration.CONNECTION_PASSWORD, "Password:", getFieldEditorParent()));
+	    addField(new StringFieldEditor(CONNECTION_ADDRESS, "Address:", getFieldEditorParent()));
+	    addField(new StringFieldEditor(CONNECTION_SCHEMA, "Schema:", getFieldEditorParent()));
+	    addField(new StringFieldEditor(CONNECTION_USER, "User:", getFieldEditorParent()));
+	    addField(new StringFieldEditor(CONNECTION_PASSWORD, "Password:", getFieldEditorParent()));
 	    
 	    addField(
 	    	new RadioGroupFieldEditor(
-	    		Configuration.CONNECTION_TYPE, 
+	    		CONNECTION_TYPE, 
 	    		"Database Type:", 
 	    		1, 
 	    		new String [][] {

@@ -18,6 +18,10 @@ public abstract class Value extends ModelBase {
 		return ValueDao.this_inInvocation(testId, callStep, step);
 	}
 	
+	public static MappedQueryStringView<Value> result_ofInvocation(int testId, long callStep) {
+		return ValueDao.result_ofInvocation(testId, callStep);
+	}
+	
 	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
 		return ValueDao.ofVariable(varId, testId, valueStep, step);
 	}
@@ -195,11 +199,12 @@ public abstract class Value extends ModelBase {
 			this.thisId = id;
 		}
 		
-		public ObjectSnapshot(MiConnection cnn, int testId, long id, long step) {
+		public ObjectSnapshot(MiConnection cnn, int testId, long id, long step, String typeName) {
 			super(cnn);
 			this.testId = testId;
 			this.thisId = id;
 			this.step = step;
+			this.typeName = typeName;
 		}
 		
 		public Integer getArrayLength() {

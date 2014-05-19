@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -19,20 +20,19 @@ public class Invocation extends TraceElement {
 	
 	public static final ViewR<Query> VIEW = InvocationDao.VIEW;
 
-//	public int testId;
-//	public long callStep;
-	public long exitStep;
-	public int depth;
-//	public int callLine;
+	public long exitStep = -1;
+	public int depth = -1;
 	
 	public boolean returned;
-	public int exitLine;
+	public int exitLine = -1;
 	
+	public int methodId = -1;
 	public String type;
 	public String method;
+	public String signature;
 	
 	private TraceElement[] children = null;
-
+	
 	public Invocation() { };
 	
 	@Override

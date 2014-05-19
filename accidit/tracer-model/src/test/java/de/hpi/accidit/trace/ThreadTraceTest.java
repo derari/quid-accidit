@@ -70,7 +70,7 @@ public class ThreadTraceTest {
     @Test
     public void test_begin() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.returned(-1, -1, null);
         t.end();
@@ -81,7 +81,7 @@ public class ThreadTraceTest {
     @Test
     public void test_enter_exit() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.line(0); 
         t.call(m("super1", desc("V")));
@@ -102,7 +102,7 @@ public class ThreadTraceTest {
     @Test
     public void test_return_float() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         float result = 3.1415f;
         long resultBits = Float.floatToIntBits(result);
         
@@ -121,7 +121,7 @@ public class ThreadTraceTest {
         test1.addVariable(0, 0, "anInt", "int");
         test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.argument(0, 17);
         t.argument(1, new Object[]{1});
@@ -136,7 +136,7 @@ public class ThreadTraceTest {
         test1.addVariable(0, 0, "anInt", "int");
         test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.variable(6, 0, 0, 17);
         t.variable(7, 0, 1, new Object[]{1});
@@ -145,9 +145,25 @@ public class ThreadTraceTest {
     }
     
     @Test
+    public void test_variable_scope() {
+        AClass a = new AClass();
+        MethodDescriptor test1 = model.getMethod(mTest1);
+        test1.addVariable(0, 0, "anInt", "int");
+        test1.addVariable(1, 10, "anArray", "java.lang.Object[]");
+        
+        ThreadTrace t = tracerForTesting();
+        t.enter(m("test1", desc("V")), a);
+        t.variable(6,  0, 0, 17);
+        t.variable(7,  0, 1, new Object[]{1});
+        t.variable(6, 10, 0, 17);
+        t.returned(-1, 8, null);
+        t.end();
+    }
+    
+    @Test
     public void test_fields() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.put(a, 1.0d, fADouble, 6);
         t.get(a, 1.0d, fADouble, 7);
@@ -160,7 +176,7 @@ public class ThreadTraceTest {
     public void test_arrays() {
         AClass a = new AClass();
         char[] array = AClass.staticText;
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter(m("test1", desc("V")), a);
         t.arrayStore(array, 'x', 0, 6);
         t.arrayLoad(array, 'x', 0, 7);
@@ -171,7 +187,7 @@ public class ThreadTraceTest {
     @Test
     public void test_simple_ex() {
         AClass a = new AClass();
-        ThreadTrace t = ts.begin(); 
+        ThreadTrace t = tracerForTesting(); 
         Throwable ex = new RuntimeException();
         
         t.enter(m("test1", desc("V")), a);
@@ -185,7 +201,7 @@ public class ThreadTraceTest {
     public void test_fallthrough_ex() {
         AClass a = new AClass();
         Throwable ex = new RuntimeException();
-        ThreadTrace t = ts.begin();
+        ThreadTrace t = tracerForTesting();
         t.enter( m("test1", desc("V")), a);
         nested1(t, a, ex, true);
         t.caught(9, ex);
@@ -200,7 +216,7 @@ public class ThreadTraceTest {
     public void test_fall_out_ex() {
         AClass a = new AClass();
         Throwable ex = new RuntimeException();
-        ThreadTrace t = ts.begin();        
+        ThreadTrace t = tracerForTesting();        
         nested1(t, a, ex, false);
         t.caught(9, ex);
         
@@ -223,6 +239,12 @@ public class ThreadTraceTest {
         t.call(m("test1", desc("V")));
         t.enter(m("test1", desc("V")), a);
         t.thrown(8, ex);
+    }
+
+    protected ThreadTrace tracerForTesting() {
+        ThreadTrace t = ts.begin();
+        t.failFastMode();
+        return t;
     }
     
 }

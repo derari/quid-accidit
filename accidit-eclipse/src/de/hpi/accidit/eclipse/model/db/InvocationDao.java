@@ -1,6 +1,10 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import org.cthul.miro.at.Impl;
+import org.cthul.miro.at.OrderBy;
+import org.cthul.miro.at.Put;
+import org.cthul.miro.at.Require;
+import org.cthul.miro.at.Where;
 import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
 import org.cthul.miro.map.MappedInternalQueryBuilder;
 import org.cthul.miro.map.MappedTemplateProvider;
@@ -20,21 +24,31 @@ public class InvocationDao extends TraceElementDaoBase {
 				injectField(record, field, rs.getInt(i) == 1);
 				return;
 			}
+			if (field.equals("exitLine")) {
+				injectField(record, field, rs.getInt(i));
+				return;
+			}
 			super.injectField(record, field, rs, i);
 		};
 	};
 	
 	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
-		attributes("e.`testId`, e.`depth`", 
-			   "x.`step` AS `exitStep`, x.`returned`, x.`line` AS `exitLine`",
-			   "m.`name` AS `method`, t.`name` AS `type`");
+		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`",
+				"x.`line` AS `exitLine`", 
+				"m.`name` AS `method`, t.`name` AS `type`");
+		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
+		internalSelect("e.`line` AS `callLine`");
+		using("x")
+			.select("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`");
+		internalSelect("e.`parentStep`");
 		table("`CallTrace` e");
-		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`step` = x.`callStep`");
+		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`exitStep` = x.`step`");
 		join("`Method` m ON e.`methodId` = m.`id`");
 		using("m")
 			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
 		
 		where("step_BETWEEN", "e.`step` > ? AND e.`step` < ?");
+		where("exit_GT", "e.`exitStep` > ?");
 	}};
 	
 	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
@@ -44,7 +58,35 @@ public class InvocationDao extends TraceElementDaoBase {
 		
 		Query inInvocation(Invocation inv);
 		
+		Query parentOf(Invocation inv);
+		
 		Query rootOfTest(int i);
+		
+		@Put("testId =")
+		Query inTest(int i);
+		
+		@Put("parentStep =")
+		Query inCall(long parentStep);
+		
+		@Put("step =")
+		Query atStep(long step);
+		
+		@Put("methodId =")
+		Query ofMethod(int id);
+		
+		@Require({"m", "t"})
+		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
+		Query ofMethod(String clazz, String name, String signature);
+		
+		@Put("exitStep =")
+		Query atExitStep(long step);
+		
+		@Where("e.`exitStep` < ?")
+		@Put(value="orderBy-exitStep DESC", mapArgs={})
+		Query beforeExit(long exitStep);
+		
+		@Put("callLine =")
+		Query callInLine(int line);
 	}
 	
 	static class QueryImpl {
@@ -53,8 +95,18 @@ public class InvocationDao extends TraceElementDaoBase {
 			query.configure(CfgSetField.newInstance("parent", inv));
 			query.put("testId =", inv.getTestId());
 			query.put("depth =", inv.depth+1);
-			query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
+			query.put("parentStep =", inv.getStep());
+			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 			query.put("orderBy-step");
+		}
+		
+		public static void parentOf(MappedInternalQueryBuilder query, Invocation inv) {
+			query.put("testId =", inv.getTestId());
+			query.put("depth =", inv.depth-1);
+			query.put("step <", inv.getStep());
+			query.put("exit_GT", inv.getStep());
+			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
+//			query.put("orderBy-step");
 		}
 		
 		public static void rootOfTest(MappedInternalQueryBuilder query, int testId) {

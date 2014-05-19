@@ -1,6 +1,8 @@
 package de.hpi.accidit.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -22,6 +24,7 @@ public class MethodDescriptor {
     private int modelId = -1;
     private boolean varsInitialized = false;
     private boolean persisted = false;
+    private long hashcode = 0;
 
     public MethodDescriptor(Model model, TypeDescriptor owner, String name, String desc, int codeId) {
         this.model = model;
@@ -68,6 +71,14 @@ public class MethodDescriptor {
         return line;
     }
 
+    public void setHashcode(long hashcode) {
+        this.hashcode = hashcode;
+    }
+
+    public long getHashcode() {
+        return hashcode;
+    }
+
     public VarDescriptor addVariable(int index, int startOffset, String name, String type) {
         if (varsInitialized) throw new IllegalStateException("Variables already initialized");
         TypeDescriptor t = model.getType(type, owner.cl);
@@ -96,7 +107,23 @@ public class MethodDescriptor {
 //            }
             return null;
         }
-        return variables.get(id).get(offset);
+        VarDescriptor varD = variables.get(id);
+        if (varD == null) {
+//            System.out.printf("%s: no var descriptor id: %d (offset: %d)%n", this, id, offset);
+//            VarDescriptor.printList(variables);
+//            new NullPointerException(toString()).printStackTrace();
+            // this particular variable is not traced
+            return null;
+        }
+        VarDescriptor varAtOffset = varD.get(offset);
+        if (varAtOffset == null) {
+            System.out.printf("%s %s: no var descriptor for offset %d%n", this, varD, offset);
+            VarDescriptor.printList(variables);
+            new NullPointerException(toString()).printStackTrace();
+            throw new NullPointerException(toString());
+//            return null;
+        }
+        return varAtOffset;
     }
     
     public void variablesCompleted() {

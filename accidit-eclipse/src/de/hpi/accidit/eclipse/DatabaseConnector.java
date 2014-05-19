@@ -2,19 +2,28 @@ package de.hpi.accidit.eclipse;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.query.QueryType;
+import org.cthul.miro.query.adapter.AbstractQueryBuilder;
 import org.cthul.miro.query.adapter.JdbcAdapter;
+import org.cthul.miro.query.parts.QueryPart;
 import org.cthul.miro.query.sql.AnsiSql;
+import org.cthul.miro.query.sql.BasicQuery;
+import org.cthul.miro.query.sql.DataQuery;
+import org.cthul.miro.query.sql.DataQueryPart;
+import org.cthul.miro.query.sql.StringQueryBuilder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.jface.preference.IPreferenceStore;
 
-import de.hpi.accidit.eclipse.properties.Configuration;
-import de.hpi.accidit.eclipse.properties.FieldEditorOverlayPage;
+import de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage;
+import de.hpi.accidit.eclipse.properties.DatabaseSettingsRetriever;
 
 public class DatabaseConnector {
 	
@@ -22,6 +31,8 @@ public class DatabaseConnector {
 //	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
 	
 	private volatile static boolean initialized = false;
+	private static String overrideDBString = null;
+	private static String overrideSchema = null;
 	
 	/**
 	 * The function to create a database connection.
@@ -49,18 +60,26 @@ public class DatabaseConnector {
 	public static void setSelectedProject(IProject project) {
 		selectedProject = project;
 	}
+	
+	public static void overrideDBString(String string) {
+		overrideDBString = string;
+	}
+	
+	public static void overrideSchema(String string) {
+		overrideSchema = string;
+	}
 
 	private static String getDBString() {
-		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+		if (overrideDBString != null) return overrideDBString;
 		
 		String dbAddress = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_ADDRESS);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_ADDRESS);
 		String dbSchema	= DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_SCHEMA);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
 		String dbUser = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_USER);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_USER);
 		String dbPassword = DatabaseSettingsRetriever
-				.getPreferenceValue(store, selectedProject, Configuration.CONNECTION_PASSWORD);
+				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_PASSWORD);
 		
 		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
@@ -81,9 +100,15 @@ public class DatabaseConnector {
 					cnn.close();
 				}
 				
+				
 				JdbcAdapter adapter = null;
-				IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-				String dbSchema	= store.getString(Configuration.CONNECTION_SCHEMA);
+				String dbSchema;
+				if (overrideSchema == null) {
+					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
+					dbSchema = store.getString(DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
+				} else {
+					dbSchema = overrideSchema;
+				}
 				if (dbString.startsWith("jdbc:sap")) {
 					adapter = new HanaDialect(dbSchema);
 				} else if (dbString.startsWith("jdbc:mysql")) {
@@ -130,41 +155,6 @@ public class DatabaseConnector {
 		}
 		initialized = true;
 	}
-	
-	/* private class for property retrieving. */
-	
-	private static class DatabaseSettingsRetriever {
-		
-		private static final String DATABASE_SETTINGS_PREFEENCE_PAGE_ID = "de.hpi.accidit.eclipse.preferencePages.DatabaseSettings";
-		
-		public static String getPreferenceValue(IPreferenceStore store, IResource resource, String key) {
-			if (resource == null) {
-				return store.getString(key);
-			}
-			
-			IProject project = resource.getProject();
-			String value = null;
-			if (useProjectSettings(project, DATABASE_SETTINGS_PREFEENCE_PAGE_ID)) {
-				value = getProperty(resource, DATABASE_SETTINGS_PREFEENCE_PAGE_ID, key);
-			}
-			if (value != null)
-				return value;
-			return store.getString(key);
-		}
-		
-		private static boolean useProjectSettings(IResource resource, String pageId) {
-			String use = getProperty(resource, pageId, FieldEditorOverlayPage.USEPROJECTSETTINGS);
-			return "true".equals(use);
-		}
-		
-		private static String getProperty(IResource resource, String pageId, String key) {
-			try {
-				return resource.getPersistentProperty(new QualifiedName(pageId, key));
-			} catch (CoreException e) { }
-			return null;
-		}
-		
-	}
 
 	/* private classes for query preprocessing. */
 	
@@ -200,8 +190,137 @@ public class DatabaseConnector {
 		protected String postProcess(String sql) {
 			sql = sql.replace("`SCHEMA`", "`" + schema + "`")
 					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
-			//System.out.println(sql);
+//			System.out.println(sql);
 			return sql;
 		}
+		
+		protected <T> T newQueryBuilder(QueryType<?> queryType) {
+	        if (queryType instanceof DataQuery.Type) {
+	            switch ((DataQuery.Type) queryType) {
+	                case SELECT:
+	                    return (T) new MySelectQuery(this);
+                    default:
+	            }
+	        }
+	        if (queryType == BasicQuery.STRING) {
+	            return (T) new MyStringQuery();
+	        }
+	        return super.newQueryBuilder(queryType);
+	    }
+		
+		public static class MySelectQuery extends SelectQuery {
+
+			public MySelectQuery(AnsiSql dialect) {
+				super(dialect);
+			}
+			
+			@Override
+			public ResultSet execute(Connection connection) throws SQLException {
+				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
+				tt.start();
+				try {
+					return super.execute(connection);
+				} finally {
+					tt.done = true;
+				}
+			}
+		}
+		
+		public static class MyStringQuery extends AbstractQueryBuilder<StringQueryBuilder<?>> implements StringQueryBuilder<StringQueryBuilder<?>> {
+
+	        private final List<Object[]> batches = new ArrayList<>();
+	        private String query = null;
+	        
+	        public MyStringQuery() {
+	            super(0);
+	        }
+
+	        @Override
+	        protected StringQueryBuilder<?> addPart(DataQueryPart type, QueryPart part) {
+	            throw new UnsupportedOperationException();
+	        }
+
+	        @Override
+	        protected void buildQuery(StringBuilder sql) {
+	            sql.append(query);
+	        }
+
+	        @Override
+	        protected void collectArguments(List<Object> args, int batch) {
+	            args.addAll(Arrays.asList(batches.get(batch)));
+	        }
+
+	        @Override
+	        public QueryType<StringQueryBuilder<?>> getQueryType() {
+	            return BasicQuery.STRING;
+	        }
+
+	        @Override
+	        public StringQueryBuilder<?> query(String query) {
+	            this.query = query;
+	            return this;
+	        }
+
+	        @Override
+	        public StringQueryBuilder<?> batch(Object... values) {
+	            batches.add(values);
+	            return this;
+	        }
+
+	        @Override
+	        public int getBatchCount() {
+	            if (batches.size() == 1) return 0;
+	            return batches.size();
+	        }
+	        
+	        @Override
+			public ResultSet execute(Connection connection) throws SQLException {
+				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
+				tt.start();
+				try {
+					return super.execute(connection);
+				} finally {
+					tt.done = true;
+				}
+			}
+	    }
+		
+		private static final AtomicInteger count = new AtomicInteger(0);
+		
+		private static class TimerThread extends Thread {
+			
+			private final int n = count.getAndIncrement();
+			private final String query;
+			private final Object[] args;
+			private volatile boolean done = false;
+			
+			public TimerThread(String query, Object[] args) {
+				this.query = query;
+				this.args = args;
+			}
+			
+			@Override
+			public void run() {
+				boolean first = true;
+				long t = System.currentTimeMillis();
+				long w = 3500;
+				while (!done) {
+					try {
+						Thread.sleep(w);
+					} catch (InterruptedException e) {
+						return;
+					}
+					if (first) {
+						if (done) return;
+						System.out.println(n + ": " + query);
+						System.out.println(n + ": " + Arrays.toString(args));
+						w = 1000;
+						first = false;
+					}
+					System.out.println(n + ": " + (System.currentTimeMillis() - t)/1000 + "s");
+				}
+			}
+		}
+		
 	};
 }
