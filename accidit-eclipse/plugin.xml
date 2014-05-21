@@ -63,6 +63,14 @@
             name="History"
             restorable="true">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
+            name="Slicing Criteria"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -144,11 +152,6 @@
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
-            id="de.hpi.accidit.eclipse.commands.addBreakpoint"
-            name="Add Breakpoint">
-      </command>
-      <command
-            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showLastChangeStep"
             name="Show Last Change Step">
       </command>
@@ -175,6 +178,11 @@
             categoryId="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
             id="de.hpi.accidit.eclipse.commands.goForward"
             name="Go Forward">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.slice"
+            name="Slice">
       </command>
    </extension>
    <extension
@@ -240,10 +248,6 @@
             commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.breakpoints.AddBreakpointHandler"
-            commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
-      </handler>
-      <handler
             class="de.hpi.accidit.eclipse.history.ShowLastChangeStepHandler"
             commandId="de.hpi.accidit.eclipse.commands.showLastChangeStep">       
          <activeWhen>
@@ -290,6 +294,10 @@
                </equals>
             </with>
          </activeWhen>
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.slice.SliceHandler"
+            commandId="de.hpi.accidit.eclipse.commands.slice">
       </handler>
    </extension>
    <extension
@@ -427,17 +435,6 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="toolbar:de.hpi.accidit.eclipse.views.BreakpointsView">
-         <command
-               commandId="de.hpi.accidit.eclipse.commands.addBreakpoint"
-               icon="icons/add_breakpoint.png"
-               id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
-               label="Add Breakpoint"
-               style="push">
-         </command>
-      </menuContribution>
-      <menuContribution
-            allPopups="false"
             locationURI="popup:de.hpi.accidit.eclipse.views.VariablesView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
@@ -458,6 +455,11 @@
                icon="icons/arrow_large_right.png"
                id="de.hpi.accidit.eclipse.popups.showLastChangeStep"
                label="Show Last Change Step"
+               style="push">
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.slice"
+               label="Slice"
                style="push">
          </command>
       </menuContribution>

@@ -11,9 +11,10 @@ import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 // TODO rename
@@ -79,6 +80,10 @@ public class TraceNavigatorUI {
 	
 	public HistoryView getHistoryView() {
 		return findView(HistoryView.class);
+	}
+	
+	public SlicingCriteriaView getSlicingCriteriaView() {
+		return findView(SlicingCriteriaView.class);
 	}
 	
 	public MiConnection cnn() {
