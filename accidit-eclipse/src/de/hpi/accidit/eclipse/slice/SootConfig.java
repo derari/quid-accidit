@@ -15,27 +15,17 @@ import soot.G;
 import soot.Scene;
 import soot.options.Options;
 
-public class SootConfig {
+public abstract class SootConfig {
 	
-	private final IJavaProject p;
+	protected abstract List<String> getClassPath();
 	
-	public SootConfig(IJavaProject p) {
-		this.p = p;
+	public Map<Token, DataDependency> analyse(String methodId) {
+		int c = methodId.indexOf('#');
+		int s = methodId.indexOf('(');
+		return analyse(methodId.substring(0, c), methodId.substring(c+1, s), methodId.substring(s));
 	}
 	
-	private List<String> getClassPath() {
-		try {
-			List<String> result = new ArrayList<>();
-			for (IClasspathEntry ce: p.getResolvedClasspath(true)) {
-				result.add(ce.getPath().toOSString());
-			}
-			return result;
-		} catch (JavaModelException e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	private Map<Token, DataDependency> analyse(String clazz, String method, String signature) {
+	public Map<Token, DataDependency> analyse(String clazz, String method, String signature) {
 		Lock l = lockSootFor(this);
 		if (l == null) return null;
 		try {
@@ -48,7 +38,7 @@ public class SootConfig {
 	private static SootConfig current = null;
 	private static final ReadWriteLock analysisLock = new ReentrantReadWriteLock();
 	
-	private static synchronized boolean enable(SootConfig cfg) {
+	static synchronized boolean enable(SootConfig cfg) {
 		if (current == cfg) return true;
 		Lock l = analysisLock.writeLock();
 		try {
@@ -64,8 +54,8 @@ public class SootConfig {
 			String sep = System.getProperty("path.separator");
 			StringBuilder sb = new StringBuilder(cp);
 			for (String s: cfg.getClassPath()) {
-				sb.append(s);
 				sb.append(sep);
+				sb.append(s);
 			}
 			Scene.v().setSootClassPath(sb.toString());
 			current = cfg;
@@ -78,7 +68,32 @@ public class SootConfig {
 	private static synchronized Lock lockSootFor(SootConfig cfg) {
 		if (!enable(cfg)) return null;
 		Lock l = analysisLock.readLock();
-		l.lock();
+		try {
+			l.lockInterruptibly();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return null;
+		}	
 		return l;
+	}
+	
+	public static class JavaProjectConfig extends SootConfig {
+		private final IJavaProject p;
+		
+		public JavaProjectConfig(IJavaProject p) {
+			this.p = p;
+		}
+		
+		protected List<String> getClassPath() {
+			try {
+				List<String> result = new ArrayList<>();
+				for (IClasspathEntry ce: p.getResolvedClasspath(true)) {
+					result.add(ce.getPath().toOSString());
+				}
+				return result;
+			} catch (JavaModelException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 }

@@ -27,14 +27,18 @@ public class ValueKey implements Comparable<ValueKey> {
 		this.step = step;
 	}
 
-	public DataDependency getDataDependency() {
-		Token t = asToken();
-		if (t == null) return DataDependency.constant();
-		return getDependencyGraph().get(t);
-	}
+//	public DataDependency getDataDependency() {
+//		Token t = asToken();
+//		if (t == null) return DataDependency.constant();
+//		return getDependencyGraph().get(t);
+//	}
 	
-	public Map<Token, DataDependency> getDependencyGraph() {
-		return invD.getDependencyGraph();
+//	public Map<Token, DataDependency> getDependencyGraph() {
+//		return invD.getDependencyGraph();
+//	}
+	
+	public String getMethodId() {
+		return invD.getMethodId();
 	}
 	
 	public Invocation getInvocation() {
@@ -65,6 +69,18 @@ public class ValueKey implements Comparable<ValueKey> {
 		c = getClass().getName().compareTo(o.getClass().getName());
 		if (c != 0) return c;
 		return specificCompareTo(o);
+	}
+	
+	@Override
+	public int hashCode() {
+		return (int) step;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (!(obj instanceof ValueKey)) return false;
+		return ((ValueKey) obj).compareTo(this) == 0;
 	}
 	
 	protected int specificCompareTo(ValueKey o) {
@@ -313,7 +329,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		private final Invocation inv;
 		private final Map<Long, InvocationData> others;
 		private InvocationKey invKey = null;
-		private SoftReference<Map<Token, DataDependency>> graphRef = null;
+//		private SoftReference<Map<Token, DataDependency>> graphRef = null;
 		
 		public InvocationData(Invocation inv) {
 			this(inv, new HashMap<Long, InvocationData>());
@@ -323,6 +339,11 @@ public class ValueKey implements Comparable<ValueKey> {
 			this.inv = inv;
 			this.others = others;
 			others.put(inv.getStep(), this);
+		}
+		
+		public String getMethodId() {
+			Invocation i = getInvocation();
+			return i.type + "#" + i.method + i.signature;
 		}
 		
 		public InvocationData getInvocationAtCall(long callStep) {
@@ -355,16 +376,16 @@ public class ValueKey implements Comparable<ValueKey> {
 			return invKey;
 		}
 		
-		public Map<Token, DataDependency> getDependencyGraph() {
-			Map<Token, DataDependency> graph = graphRef != null ? graphRef.get() : null;
-			if (graph == null) {
-//				DynamicSlice.processing_time += System.currentTimeMillis();
-				graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
-				graphRef = new SoftReference<Map<Token,DataDependency>>(graph);
-//				DynamicSlice.processing_time -= System.currentTimeMillis();
-			}
-			return graph;
-		}
+//		public Map<Token, DataDependency> getDependencyGraph() {
+//			Map<Token, DataDependency> graph = graphRef != null ? graphRef.get() : null;
+//			if (graph == null) {
+////				DynamicSlice.processing_time += System.currentTimeMillis();
+//				graph = MethodDataDependencyCache.getDependencyGraph(inv.type, inv.method, inv.signature);
+//				graphRef = new SoftReference<Map<Token,DataDependency>>(graph);
+////				DynamicSlice.processing_time -= System.currentTimeMillis();
+//			}
+//			return graph;
+//		}
 	}
 
 //	private static Invocation invocationBefore(int testId, long exitStep, int callLine) {

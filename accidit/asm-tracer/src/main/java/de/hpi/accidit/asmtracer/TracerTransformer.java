@@ -916,6 +916,29 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object traceFilterData) {
             return isEntry;
+        }   
+    }
+    
+    public static class MainRunMethodTraceFilter implements TraceFilter {
+
+        @Override
+        public Object visitClass(String name, String superName) {
+            return null;
+        }
+
+        @Override
+        public Object visitMethod(String name, Object classFilterData) {
+            return (Boolean) name.equals("main") || name.equals("run");
+        }
+
+        @Override
+        public boolean isTraceEntry(String name, Object traceFilterData) {
+            return (Boolean) traceFilterData;
+        }
+
+        @Override
+        public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object traceFilterData) {
+            return isEntry;
         }
         
     }

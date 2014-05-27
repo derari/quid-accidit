@@ -165,12 +165,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				System.out.println("!slicing!");
 				long callStep = 3688;
 				ValueKey key = new InvocationKey(65, callStep);
-				DynamicSlice slice = new DynamicSlice(key);
-				slice.processAll();
-				SLICE.clear();
-				for (ValueKey k: slice.getSlice().keySet()) {
-					SLICE.add(k.getStep());
-				}
+//				DynamicSlice slice = new DynamicSlice(key);
+//				slice.processAll();
+//				SLICE.clear();
+//				for (ValueKey k: slice.getSlice().keySet()) {
+//					SLICE.add(k.getStep());
+//				}
 				System.out.println("!done!");
 			}
 			

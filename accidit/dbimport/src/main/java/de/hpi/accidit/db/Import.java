@@ -96,7 +96,7 @@ public class Import {
         System.out.printf("Using Password: %s%n", dbPassword != null ?  "yes" : "no");
         System.out.printf("Clear Schema: %s%n", newSchema ?  "yes" : "no");
         
-        Connection cnn = DriverManager.getConnection(dbString, p);
+        Connection cnn = getConnection(dbString, dbSchema, p);
         
         new Import(dbType, cnn, dbSchema, csvDir, newSchema).run();
     }
@@ -154,18 +154,26 @@ public class Import {
     private final List<Integer> newTraceIds = new ArrayList<>();
     
     private static Connection getConnection(String dbString, String dbSchema) throws SQLException {
+        return getConnection(dbString, dbSchema, null);
+    }
+    
+    private static Connection getConnection(String dbString, String dbSchema, Properties p) throws SQLException {
         try {
-            return DriverManager.getConnection(dbString);
+            if (p == null) p = new Properties();
+            return DriverManager.getConnection(dbString, p);
         } catch (SQLException e) {
+            String dbString2 = "";
             try {
+                p.remove("currentschema");
                 // maybe schema doesnt exist?
-                String dbString2 = dbString.replace("currentschema=" + dbSchema, "")
+                dbString2 = dbString.replace("currentschema=" + dbSchema, "")
                                     .replace("/" + dbSchema, "");
-                return DriverManager.getConnection(dbString2);
+                return DriverManager.getConnection(dbString2, p);
 //                Connection c = DriverManager.getConnection(dbString);
 //                Statement stmt = c.createStatement();
 //                stmt.execute("CREATE SCHEMA ");
             } catch (SQLException e2) {
+                System.out.println(dbString2);
                 e2.addSuppressed(e);
                 throw e2;
             }
