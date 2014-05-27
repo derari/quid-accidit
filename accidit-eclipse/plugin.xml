@@ -63,6 +63,14 @@
             name="History"
             restorable="true">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
+            name="Slicing Criteria"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
@@ -144,11 +152,6 @@
       </command>
       <command
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
-            id="de.hpi.accidit.eclipse.commands.addBreakpoint"
-            name="Add Breakpoint">
-      </command>
-      <command
-            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showLastChangeStep"
             name="Show Last Change Step">
       </command>
@@ -161,6 +164,25 @@
             categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
             id="de.hpi.accidit.eclipse.commands.showFieldsHistories"
             name="Show Fields Histories">
+      </command>
+      <category
+            id="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            name="Content Nodes Pathway">
+      </category>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            id="de.hpi.accidit.eclipse.commands.goBack"
+            name="Go Back">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.contentNodesPathwayCategory"
+            id="de.hpi.accidit.eclipse.commands.goForward"
+            name="Go Forward">
+      </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.slice"
+            name="Slice">
       </command>
    </extension>
    <extension
@@ -226,10 +248,6 @@
             commandId="de.hpi.accidit.eclipse.commands.toggleAutoCollapse">
       </handler>
       <handler
-            class="de.hpi.accidit.eclipse.breakpoints.AddBreakpointHandler"
-            commandId="de.hpi.accidit.eclipse.commands.addBreakpoint">
-      </handler>
-      <handler
             class="de.hpi.accidit.eclipse.history.ShowLastChangeStepHandler"
             commandId="de.hpi.accidit.eclipse.commands.showLastChangeStep">       
          <activeWhen>
@@ -252,6 +270,34 @@
       <handler
             class="de.hpi.accidit.eclipse.history.ShowFieldsHistoriesHandler"
             commandId="de.hpi.accidit.eclipse.commands.showFieldsHistories">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.history.GoBackHandler"
+            commandId="de.hpi.accidit.eclipse.commands.goBack">
+         <activeWhen>
+            <with
+                  variable="de.hpi.accidit.eclipse.history.backState">
+               <equals
+                     value="true">
+               </equals>
+            </with>
+         </activeWhen>
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.history.GoForwardHandler"
+            commandId="de.hpi.accidit.eclipse.commands.goForward">
+         <activeWhen>
+            <with
+                  variable="de.hpi.accidit.eclipse.history.forwardState">
+               <equals
+                     value="true">
+               </equals>
+            </with>
+         </activeWhen>
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.slice.SliceHandler"
+            commandId="de.hpi.accidit.eclipse.commands.slice">
       </handler>
    </extension>
    <extension
@@ -389,17 +435,6 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="toolbar:de.hpi.accidit.eclipse.views.BreakpointsView">
-         <command
-               commandId="de.hpi.accidit.eclipse.commands.addBreakpoint"
-               icon="icons/add_breakpoint.png"
-               id="de.hpi.accidit.eclipse.toolbars.addBreakpoint"
-               label="Add Breakpoint"
-               style="push">
-         </command>
-      </menuContribution>
-      <menuContribution
-            allPopups="false"
             locationURI="popup:de.hpi.accidit.eclipse.views.VariablesView">
          <command
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
@@ -422,6 +457,11 @@
                label="Show Last Change Step"
                style="push">
          </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.slice"
+               label="Slice"
+               style="push">
+         </command>
       </menuContribution>
       <menuContribution
             allPopups="false"
@@ -432,6 +472,46 @@
                id="de.hpi.accidit.eclipse.popups.toggleAcciditLineBreakpoint"
                label="Toggle Accidit Line Breakpoint"
                style="toggle">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:de.hpi.accidit.eclipse.history.HistoryView">
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.goBack"
+               icon="icons/go_back.png"
+               id="de.hpi.accidit.eclipse.toolbars.goBack"
+               label="Go Back"
+               style="push">
+            <!--
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="de.hpi.accidit.eclipse.history.backState">
+                  <equals
+                        value="true">
+                  </equals>
+               </with>
+            </visibleWhen>
+            -->
+         </command>
+         <command
+               commandId="de.hpi.accidit.eclipse.commands.goForward"
+               icon="icons/go_forward.png"
+               id="de.hpi.accidit.eclipse.toolbars.goForward"
+               label="Go Forward"
+               style="push">
+            <!--
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="de.hpi.accidit.eclipse.history.forwardState">
+                  <equals
+                        value="true">
+                  </equals>
+               </with>
+            </visibleWhen>
+            -->
          </command>
       </menuContribution>
    </extension>
@@ -482,6 +562,20 @@
             includeOnPreferencePage="true"
             verticalRulerPreferenceKey="myMarkerIndicationInVerticalRuler">
       </specification>
+   </extension>
+   <extension
+         point="org.eclipse.ui.services">
+      <sourceProvider
+            provider="de.hpi.accidit.eclipse.history.CommandsState">
+         <variable
+               name="de.hpi.accidit.eclipse.history.forwardState"
+               priorityLevel="workbench">
+         </variable>
+   
+         <variable
+               name="de.hpi.accidit.eclipse.history.backState"
+               priorityLevel="workbench">
+         </variable>   </sourceProvider>
    </extension>
 
 </plugin>

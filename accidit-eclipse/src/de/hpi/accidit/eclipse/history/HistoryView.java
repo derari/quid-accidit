@@ -34,7 +34,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 		GridLayout layout = new GridLayout(2, false);
 		parent.setLayout(layout);
 		
-		historyContainer = new HistoryContainer();
+		historyContainer = new HistoryContainer(getSite());
 		historyContainer.createPartControl(parent);
 		
 		historyContainer.getTreeViewer().addDoubleClickListener(new IDoubleClickListener() {
@@ -85,6 +85,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 		
 		NamedValueNode node = (NamedValueNode) treeSelection.getFirstElement();
 		historyContainer.updateFromContentNode(node);
+		historyContainer.getContentNodesPathway().reset(node);
 	}
 	
 	public HistoryContainer getContainer() {

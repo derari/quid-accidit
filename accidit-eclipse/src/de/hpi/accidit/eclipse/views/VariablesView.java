@@ -29,9 +29,9 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 
 public class VariablesView extends ViewPart implements AcciditView {
 
