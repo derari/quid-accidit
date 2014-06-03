@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/accidit_features_1.0.0.qualifier.jar" id="accidit_features" version="1.0.0.qualifier">
+      <category name="de.hpi.eclipse.accidit"/>
+   </feature>
+   <category-def name="de.hpi.eclipse.accidit" label="Accidit"/>
+</site>
