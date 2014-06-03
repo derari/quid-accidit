@@ -7,6 +7,7 @@ import org.eclipse.jface.viewers.ITreeSelection;
 
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 
 public class SliceHandler extends AbstractHandler {
@@ -19,13 +20,12 @@ public class SliceHandler extends AbstractHandler {
 		NamedValueNode selection = (NamedValueNode) sel.getFirstElement();
 		if (selection == null) return null;
 		
-		NamedValue variableValue = selection.getValue();
-		if (variableValue instanceof NamedValue.VariableValue) {
+		NamedValue value = selection.getValue();
+		if (value instanceof NamedValue.VariableValue) {
 			SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getSlicingCriteriaView();
-			String message = variableValue.getName();
-			slicingCriteriaView.addLine(message);
+			slicingCriteriaView.addVariableValue((VariableValue) value);
 		}
-		
+				
 		return null;
 	}
 }

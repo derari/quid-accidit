@@ -115,6 +115,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		return getInvocationKey().getThis();
 	}
 	
+	public InvocationData getInvD() {
+		return invD;
+	}
+	
 	@Override
 	public String toString() {
 		String s;
@@ -324,7 +328,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 	
-	private static class InvocationData {
+	public static class InvocationData {
 		
 		private final Invocation inv;
 		private final Map<Long, InvocationData> others;
