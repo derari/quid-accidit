@@ -539,18 +539,19 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		@Override
 		public Color getForeground(Object element, int columnIndex) {
-			if (SLICE.isEmpty()) return null;
-			if (!(element instanceof TraceElement)) return null;
-			TraceElement te = (TraceElement) element;
-			if (SLICE.contains(te.getStep())) return null;
-			if (element instanceof Invocation) {
-				Invocation inv = (Invocation) element;
-				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
-					return null; // black
-					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
-				}
-			}
-			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+			return null;
+//			if (SLICE.isEmpty()) return null;
+//			if (!(element instanceof TraceElement)) return null;
+//			TraceElement te = (TraceElement) element;
+//			if (SLICE.contains(te.getStep())) return null;
+//			if (element instanceof Invocation) {
+//				Invocation inv = (Invocation) element;
+//				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
+//					return null; // black
+//					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+//				}
+//			}
+//			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
 		}
 
 		@Override

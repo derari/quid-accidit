@@ -42,7 +42,13 @@ public class TraceNavigatorUI {
 	private int testId;
 	private TraceElement current;
 	
-	private final SliceAPI sliceApi = new SliceAPI();
+	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
+		@Override
+		public void run() {
+			
+		}
+	});
+	private Set<Long> sliceSteps = null;
 	
 	public TraceNavigatorUI() {	}
 
@@ -156,5 +162,9 @@ public class TraceNavigatorUI {
 	
 	public SliceAPI getSliceApi() {
 		return sliceApi;
+	}
+	
+	public Set<Long> getSliceSteps() {
+		return sliceSteps;
 	}
 }
