@@ -12,6 +12,19 @@ import java.io.*;
  */
 public class CsvOut implements Out {
     
+    public static CsvOut lastOut = null;
+    
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                if (lastOut != null) {
+                    lastOut.end(null);
+                }
+            }
+        });
+    }
+    
     public static final class Csv {
         final AccBufferedOutputStream os;
         final AccPrintStream ps;
@@ -146,10 +159,12 @@ public class CsvOut implements Out {
         this.tGet = new Csv(dir, "tGet");
         this.tArrayPut = new Csv(dir, "tArrayPut");
         this.tArrayGet = new Csv(dir, "tArrayGet");
+        lastOut = this;
     }
     
     @Override
     public void end(ThreadTrace trace) {
+        lastOut = null;
         mType.flush();
         mExtends.flush();
         mMethod.flush();

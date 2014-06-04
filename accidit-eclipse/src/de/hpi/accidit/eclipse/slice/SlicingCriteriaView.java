@@ -1,6 +1,11 @@
-package de.hpi.accidit.eclipse.breakpoints;
+package de.hpi.accidit.eclipse.slice;
 
-import org.eclipse.core.runtime.CoreException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.cthul.miro.DSL;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
@@ -8,36 +13,37 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Text;
-import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
 import de.hpi.accidit.eclipse.views.AcciditView;
 
-public class BreakpointsView extends ViewPart implements AcciditView {
+public class SlicingCriteriaView extends ViewPart implements AcciditView {
 
 	/** The ID of the view as specified by the extension. */
-	public static final String ID = "de.hpi.accidit.eclipse.views.BreakpointsView";
+	public static final String ID = "de.hpi.accidit.eclipse.slice.SlicingCriteriaView";
 	
 	private Composite parent;
 	private Image removeImage;
-	
-	private BreakpointsManager breakpointsManager;
-	
-	public BreakpointsView() {
-		breakpointsManager = TraceNavigatorUI.getGlobal().getBreakpointsManager();
+
+	public SlicingCriteriaView() {
 		removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
 	}
 
 	@Override
+	public void setStep(TraceElement te) { }
+
+	@Override
 	public void createPartControl(Composite parent) {
-		GridLayout layout = new GridLayout(4, false);
+		GridLayout layout = new GridLayout(3, false);
 		parent.setLayout(layout);
 		this.parent = parent;
 
@@ -45,6 +51,9 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 
 		TraceNavigatorUI.getGlobal().addView(this);
 	}
+
+	@Override
+	public void setFocus() { }
 	
 	@Override
 	public void dispose() {
@@ -52,12 +61,6 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 		removeImage.dispose();
 		super.dispose();
 	}
-
-	@Override
-	public void setFocus() { }
-	
-	@Override
-	public void setStep(TraceElement te) { }
 	
 	private void addHeadline() {
 		@SuppressWarnings("unused")
@@ -65,56 +68,57 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 		
 		final Label typeLabel = new Label(parent, SWT.NONE);
 		typeLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		typeLabel.setText("Type");
-		
-		final Label locationLabel = new Label(parent, SWT.NONE);
-		locationLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-		locationLabel.setText("Location");
+		typeLabel.setText("Slicing Criteria");
 
 		@SuppressWarnings("unused")
 		final Label placeHolder2 = new Label(parent, SWT.NONE);
 	}
 	
-	public void addBreakpointLine(final LineBreakpoint breakpoint) {
+	public void clear() {
+		TraceNavigatorUI.getGlobal().getSliceApi().clear();
+		
+		// TODO: clear UI
+	}
+	
+	public void addVariableValue(VariableValue value) {
+		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
+		
+		if (value.getLine() < 0) {
+			value = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+						.inCall(value.getTestId(), value.getCallStep())
+						.atStep(value.getValueStep())
+						.byId(value.getId())._execute(DatabaseConnector.cnn())._getSingle();
+		}
+		
+		ValueKey key = new ValueKey.VariableValueKey(invD, value.getValueStep(), value.getName(), value.getLine());
+		addEntry(key);
+	}
+	
+	public void addEntry(final ValueKey key) {
+		TraceNavigatorUI.getGlobal().getSliceApi().addCriterion(key);
+		
 		final Button detailsButton = new Button(parent, SWT.BORDER);
 		detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		detailsButton.setText("v");
-		breakpoint.addUIElement(detailsButton);
 		
-		final Combo typeCombo = new Combo(parent, SWT.READ_ONLY | SWT.V_SCROLL);
-		typeCombo.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-		typeCombo.setItems(new String[] {"line", "field", "exception"});
-		typeCombo.setText("line");
-		breakpoint.addUIElement(typeCombo);
-		
-		final Text locationText = new Text(parent, SWT.SINGLE | SWT.BORDER | SWT.H_SCROLL);
-		locationText.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		locationText.setText(breakpoint.getLocationInformation());
-		breakpoint.addUIElement(locationText);
+		final Label label = new Label(parent, SWT.NONE);
+		label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		label.setText(key.toString());
 		
 		final Label removeButton = new Label(parent, SWT.NONE);
 		removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
 		removeButton.setImage(removeImage);
 		removeButton.addMouseListener(new MouseAdapter() {
-			
 			@Override
 			public void mouseUp(MouseEvent e) {
-				try {
-					breakpointsManager.removeBreakpoint(breakpoint);
-				} catch (CoreException e1) {
-					e1.printStackTrace();
-				}
+				TraceNavigatorUI.getGlobal().getSliceApi().removeCriterion(key);
+				detailsButton.dispose();
+				label.dispose();
+				removeButton.dispose();
+				parent.layout();
 			}
 		});
-		breakpoint.addUIElement(removeButton);
 		
-		parent.layout();
-	}
-	
-	public void removeBreakpointLine(LineBreakpoint breakpoint) {
-		for (Widget widget : breakpoint.getUIElements()) {
-			widget.dispose();
-		}
 		parent.layout();
 	}
 }

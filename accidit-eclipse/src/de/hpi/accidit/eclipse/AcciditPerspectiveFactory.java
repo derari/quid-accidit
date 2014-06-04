@@ -6,9 +6,10 @@ import org.eclipse.ui.IPerspectiveFactory;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
-import de.hpi.accidit.eclipse.views.VariablesView;
+import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.NavigatorView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 
 public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 	
@@ -28,5 +29,6 @@ public class AcciditPerspectiveFactory implements IPerspectiveFactory {
 		layout.addShowViewShortcut(HistoryView.ID);
 		layout.addShowViewShortcut(NavigatorView.ID);
 		layout.addShowViewShortcut(BreakpointsView.ID);
+		layout.addShowViewShortcut(SlicingCriteriaView.ID);
 	}
 }

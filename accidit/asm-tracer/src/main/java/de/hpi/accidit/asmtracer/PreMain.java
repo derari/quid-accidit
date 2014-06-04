@@ -33,6 +33,9 @@ public class PreMain {
                     case "main":
                         TracerTransformer.TRACE_FILTER = new TracerTransformer.MainMethodTraceFilter();
                         break;
+                    case "main+run":
+                        TracerTransformer.TRACE_FILTER = new TracerTransformer.MainRunMethodTraceFilter();
+                        break;
                     case "test":
                         TracerTransformer.TRACE_FILTER = new TracerTransformer.TestTraceFilter();
                         break;

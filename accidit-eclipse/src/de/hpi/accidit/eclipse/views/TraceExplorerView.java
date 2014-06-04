@@ -101,7 +101,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		ui = TraceNavigatorUI.getGlobal();
 		ui.setTraceExplorer(this);
 		
-		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
+		treeViewer.getControl().addKeyListener(new TraceExplorerKeyAdapter());
 		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
 		
 		// restore project name
@@ -165,12 +165,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				System.out.println("!slicing!");
 				long callStep = 3688;
 				ValueKey key = new InvocationKey(65, callStep);
-				DynamicSlice slice = new DynamicSlice(key);
-				slice.processAll();
-				SLICE.clear();
-				for (ValueKey k: slice.getSlice().keySet()) {
-					SLICE.add(k.getStep());
-				}
+//				DynamicSlice slice = new DynamicSlice(key);
+//				slice.processAll();
+//				SLICE.clear();
+//				for (ValueKey k: slice.getSlice().keySet()) {
+//					SLICE.add(k.getStep());
+//				}
 				System.out.println("!done!");
 			}
 			
@@ -210,16 +210,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	}
 	
 	/** Class to manipulate selections of the TraceExplorer's treeViewer */ 
-	/* - handlers.Step*Handler (6), done:
-	 *     stepOver -> selectNextElement
-	 *     stepInto -> selectFirstChildElement
-	 *     StepOut -> selectParentElement + selectNextElement
-	 *     stepBackOver -> selectPreviousElement
-	 *     stepBackOut -> selectParentElement
-	 *     stepBackInto -> selectPreviousElement + selectLastChildElement
-	 * - handlers.ShowVariableHistoryHandler, done:
-	 * 		showVariableHistory -> selectAtStep
-	 */
 	public class TreeViewerSelectionAdapter {
 		
 		/** Selects the currently selected trace element's parent. */
@@ -549,18 +539,19 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		@Override
 		public Color getForeground(Object element, int columnIndex) {
-			if (SLICE.isEmpty()) return null;
-			if (!(element instanceof TraceElement)) return null;
-			TraceElement te = (TraceElement) element;
-			if (SLICE.contains(te.getStep())) return null;
-			if (element instanceof Invocation) {
-				Invocation inv = (Invocation) element;
-				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
-					return null; // black
-					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
-				}
-			}
-			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+			return null;
+//			if (SLICE.isEmpty()) return null;
+//			if (!(element instanceof TraceElement)) return null;
+//			TraceElement te = (TraceElement) element;
+//			if (SLICE.contains(te.getStep())) return null;
+//			if (element instanceof Invocation) {
+//				Invocation inv = (Invocation) element;
+//				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
+//					return null; // black
+//					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+//				}
+//			}
+//			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
 		}
 
 		@Override

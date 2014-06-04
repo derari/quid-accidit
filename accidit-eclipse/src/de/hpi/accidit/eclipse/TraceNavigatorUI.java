@@ -5,15 +5,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.cthul.miro.MiConnection;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.slice.SliceAPI;
+import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
-import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 // TODO rename
@@ -37,6 +41,14 @@ public class TraceNavigatorUI {
 	// Trace
 	private int testId;
 	private TraceElement current;
+	
+	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
+		@Override
+		public void run() {
+			
+		}
+	});
+	private Set<Long> sliceSteps = null;
 	
 	public TraceNavigatorUI() {	}
 
@@ -81,6 +93,10 @@ public class TraceNavigatorUI {
 		return findView(HistoryView.class);
 	}
 	
+	public SlicingCriteriaView getSlicingCriteriaView() {
+		return findView(SlicingCriteriaView.class);
+	}
+	
 	public MiConnection cnn() {
 		return DatabaseConnector.getValidOConnection();
 	}
@@ -107,6 +123,15 @@ public class TraceNavigatorUI {
 	
 	public void setTestId(final int testId) {
 		this.testId = testId;
+		
+		// current project may have changed, too
+		IProject project = DatabaseConnector.getSelectedProject();
+		if (project instanceof IJavaProject) {
+			getSliceApi().reset((IJavaProject) project, testId);
+		} else {
+			getSliceApi().reset(null, testId);
+		}
+		
 		if (getTraceExplorer() == null) {
 			// TODO: open trace explorer
 		}
@@ -133,5 +158,13 @@ public class TraceNavigatorUI {
 	
 	public BreakpointsManager getBreakpointsManager() {
 		return breakpointsManager;
+	}
+	
+	public SliceAPI getSliceApi() {
+		return sliceApi;
+	}
+	
+	public Set<Long> getSliceSteps() {
+		return sliceSteps;
 	}
 }
