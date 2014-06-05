@@ -138,7 +138,8 @@ public class DynamicSlice {
 		}
 		while (pendingKeysCounter.get() > 0) {
 			try {
-				wait();
+				wait(60*1000);
+				pendingKeysCounter.decrementAndGet();
 			} catch (InterruptedException e) {
 				Thread.interrupted();
 				return;

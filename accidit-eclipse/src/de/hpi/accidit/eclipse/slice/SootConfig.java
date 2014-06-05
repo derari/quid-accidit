@@ -1,14 +1,21 @@
 package de.hpi.accidit.eclipse.slice;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
 import soot.G;
@@ -88,12 +95,50 @@ public abstract class SootConfig {
 			try {
 				List<String> result = new ArrayList<>();
 				for (IClasspathEntry ce: p.getResolvedClasspath(true)) {
-					result.add(ce.getPath().toOSString());
+					IPath path = ce.getOutputLocation();
+					if (path == null) path = ce.getPath();
+
+					IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+				    IResource res = root.findMember(path);
+				    if (res != null) {
+				    	result.add(res.getLocation().toOSString());
+				    } else {
+				    	result.add(path.toOSString());
+				    }
 				}
 				return result;
 			} catch (JavaModelException e) {
 				throw new RuntimeException(e);
 			}
+		}
+	}
+	
+	public static class WorkspaceConfig extends SootConfig {
+		@Override
+		protected List<String> getClassPath() {
+			System.out.println(":::::::::::::::::::::::::::::::::");
+			List<String> result = new ArrayList<>();
+			for (IProject p: ResourcesPlugin.getWorkspace().getRoot().getProjects()) {
+				IJavaProject jp = JavaCore.create(p);
+				try {
+					for (IClasspathEntry ce: jp.getResolvedClasspath(true)) {
+						IPath path = ce.getOutputLocation();
+						if (path == null) path = ce.getPath();
+
+						IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+					    IResource res = root.findMember(path);
+					    if (res != null) {
+					    	result.add(res.getLocation().toOSString());
+					    } else {
+					    	result.add(path.toOSString());
+					    }
+					    System.out.println(": " + result.get(result.size()-1));
+					}
+				} catch (JavaModelException e) {
+					e.printStackTrace(System.err);
+				}
+			}
+			return new ArrayList<>(new LinkedHashSet<>(result));
 		}
 	}
 }

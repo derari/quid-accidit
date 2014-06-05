@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -61,8 +62,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
 	
-	public static final SortedSet<Long> SLICE = new TreeSet<>();
-
 	private TraceNavigatorUI ui;
 	private TreeViewerSelectionAdapter treeViewerSelectionAdapter;
 	private TreeViewer treeViewer;
@@ -539,19 +538,20 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		@Override
 		public Color getForeground(Object element, int columnIndex) {
-			return null;
-//			if (SLICE.isEmpty()) return null;
-//			if (!(element instanceof TraceElement)) return null;
-//			TraceElement te = (TraceElement) element;
-//			if (SLICE.contains(te.getStep())) return null;
-//			if (element instanceof Invocation) {
-//				Invocation inv = (Invocation) element;
-//				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
-//					return null; // black
-//					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
-//				}
-//			}
-//			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+			if (!(element instanceof TraceElement)) return null;
+			TraceElement te = (TraceElement) element;
+			
+			SortedSet<Long> slice = TraceNavigatorUI.getGlobal().getSliceSteps();
+			if (slice == null || slice.isEmpty()) return null;
+			if (slice.contains(te.getStep())) return null;
+			if (element instanceof Invocation) {
+				Invocation inv = (Invocation) element;
+				if (!slice.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
+					return null; // black
+					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
+				}
+			}
+			return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
 		}
 
 		@Override

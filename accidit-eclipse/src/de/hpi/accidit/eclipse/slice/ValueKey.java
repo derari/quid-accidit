@@ -274,7 +274,7 @@ public class ValueKey implements Comparable<ValueKey> {
 			this(invD, fieldSetBefore(invD.getInvocation().getTestId(), thisId, field, getStep));
 		}
 		
-		private FieldValueKey(InvocationData invD, FieldValue fv) {
+		public FieldValueKey(InvocationData invD, FieldValue fv) {
 			super(invD.getInvocationAtCall(fv != null ? fv.getCallStep() : 0), 
 					fv != null ? fv.getStep() : 0);
 			if (fv != null) {

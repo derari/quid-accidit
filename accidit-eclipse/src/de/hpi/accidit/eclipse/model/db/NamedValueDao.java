@@ -207,6 +207,12 @@ public class NamedValueDao extends ModelDaoBase {
 			put("name =", field);
 			return this;
 		}
+		
+		public SetFieldQuery atStep(int testId, long step) {
+			put("testId =", testId);
+			put("step =", step);
+			return this;
+		}
 	};
 	
 	private static final Mapping<ItemValue> ARRAY_ITEM_MAPPING = new ReflectiveMapping<ItemValue>(ItemValue.class) {
@@ -325,7 +331,7 @@ public class NamedValueDao extends ModelDaoBase {
 	
 	private static final MappedTemplateProvider<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>(VAR_MAPPING) {{
 		attributes("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`, t.`line`", 
-				   "t.`step` AS `valueStep`, v.`name` AS `name`");
+				   "t.`step` AS `valueStep`, t.`callStep` AS `callStep`, v.`name` AS `name`");
 		
 		table("`VariableTrace` t");
 		join("`Variable` v ON t.`variableId` = v.`id` AND t.`methodId` = v.`methodId`");
@@ -346,6 +352,11 @@ public class NamedValueDao extends ModelDaoBase {
 		
 		public VarHistoryQuery inCall(int testId, long callStep) {
 			where("call_EQ", testId, callStep);
+			return this;
+		}
+		
+		public VarHistoryQuery inTest(int testId) {
+			where("testId =", testId);
 			return this;
 		}
 		

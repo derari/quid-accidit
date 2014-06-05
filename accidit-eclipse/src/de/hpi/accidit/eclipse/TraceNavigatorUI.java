@@ -3,10 +3,12 @@ package de.hpi.accidit.eclipse;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedSet;
 
 import org.cthul.miro.MiConnection;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.ui.IWorkbenchPage;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
@@ -18,6 +20,7 @@ import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.VariablesView;
+import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 // TODO rename
@@ -45,10 +48,11 @@ public class TraceNavigatorUI {
 	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
 		@Override
 		public void run() {
-			
+			sliceSteps = null;
+			getTraceExplorer().refresh();
 		}
 	});
-	private Set<Long> sliceSteps = null;
+	private SortedSet<Long> sliceSteps = null;
 	
 	public TraceNavigatorUI() {	}
 
@@ -126,11 +130,8 @@ public class TraceNavigatorUI {
 		
 		// current project may have changed, too
 		IProject project = DatabaseConnector.getSelectedProject();
-		if (project instanceof IJavaProject) {
-			getSliceApi().reset((IJavaProject) project, testId);
-		} else {
-			getSliceApi().reset(null, testId);
-		}
+		IJavaProject jp = JavaCore.create(project);
+		getSliceApi().reset(jp, testId);
 		
 		if (getTraceExplorer() == null) {
 			// TODO: open trace explorer
@@ -164,7 +165,10 @@ public class TraceNavigatorUI {
 		return sliceApi;
 	}
 	
-	public Set<Long> getSliceSteps() {
+	public SortedSet<Long> getSliceSteps() {
+		if (sliceSteps == null) {
+			sliceSteps = sliceApi.getSliceSteps();
+		}
 		return sliceSteps;
 	}
 }

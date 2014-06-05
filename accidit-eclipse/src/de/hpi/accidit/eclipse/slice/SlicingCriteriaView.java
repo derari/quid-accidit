@@ -21,6 +21,7 @@ import de.hpi.accidit.eclipse.Activator;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
@@ -83,14 +84,32 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public void addVariableValue(VariableValue value) {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 		
-		if (value.getLine() < 0) {
-			value = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-						.inCall(value.getTestId(), value.getCallStep())
+		if (value.getLine() < 0 || value.getCallStep() < 0) {
+			VariableValue newValue = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+						.inTest(value.getTestId())
 						.atStep(value.getValueStep())
 						.byId(value.getId())._execute(DatabaseConnector.cnn())._getSingle();
+			if (newValue != null) value = newValue;
 		}
 		
+		invD = invD.getInvocationAtCall(value.getCallStep());
 		ValueKey key = new ValueKey.VariableValueKey(invD, value.getValueStep(), value.getName(), value.getLine());
+		addEntry(key);
+	}
+	
+	public void addFieldValue(FieldValue value) {
+		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
+		
+		if (value.getLine() < 0 || value.getCallStep() < 0) {
+			FieldValue newValue = DSL.select().from(NamedValue.OBJECT_SET_FIELD_VIEW)
+						.atStep(value.getTestId(), value.getValueStep())
+						._execute(DatabaseConnector.cnn())._getSingle();
+			if (newValue != null) value = newValue;
+		}
+		
+//		System.out.printf("%s %s %s %s%n", value.getCallStep(), value.getStep(), value.getThisId(), value.getName());
+//		invD = invD.getInvocationAtCall(value.getCallStep());
+		ValueKey key = new ValueKey.FieldValueKey(invD, value);
 		addEntry(key);
 	}
 	
