@@ -184,6 +184,16 @@
             id="de.hpi.accidit.eclipse.commands.slice"
             name="Slice">
       </command>
+      <command
+            categoryId="de.hpi.accidit.eclipse.commands.userInteractionsCategory"
+            id="de.hpi.accidit.eclipse.commands.sliceTrace"
+            name="Slice Trace Explorer">
+         <commandParameter
+               id="de.hpi.accidit.eclipse.commands.sliceTrace.type"
+               name="Type"
+               optional="true">
+         </commandParameter>
+      </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
@@ -298,6 +308,10 @@
       <handler
             class="de.hpi.accidit.eclipse.slice.SliceHandler"
             commandId="de.hpi.accidit.eclipse.commands.slice">
+      </handler>
+      <handler
+            class="de.hpi.accidit.eclipse.slice.SliceTraceHandler"
+            commandId="de.hpi.accidit.eclipse.commands.sliceTrace">
       </handler>
    </extension>
    <extension
@@ -435,7 +449,7 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
-            locationURI="popup:de.hpi.accidit.eclipse.views.VariablesView">
+            locationURI="popup:de.hpi.accidit.eclipse.views.VariablesView?after=additions">
          <command
                commandId="de.hpi.accidit.eclipse.commands.showVariableHistory"
                icon="icons/history_book.png"
@@ -513,6 +527,40 @@
             </visibleWhen>
             -->
          </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:de.hpi.accidit.eclipse.views.TraceExplorerView?after=additions">
+         <menu
+               label="Slice">
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.sliceTrace"
+                  label="Call only"
+                  style="push">
+               <parameter
+                     name="de.hpi.accidit.eclipse.commands.sliceTrace.type"
+                     value="call_only">
+               </parameter>
+            </command>
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.sliceTrace"
+                  label="Arguments only"
+                  style="push">
+               <parameter
+                     name="de.hpi.accidit.eclipse.commands.sliceTrace.type"
+                     value="arguments_only">
+               </parameter>
+            </command>
+            <command
+                  commandId="de.hpi.accidit.eclipse.commands.sliceTrace"
+                  label="Call and Arguments"
+                  style="push">
+               <parameter
+                     name="de.hpi.accidit.eclipse.commands.sliceTrace.type"
+                     value="call_and_arguments">
+               </parameter>
+            </command>
+         </menu>
       </menuContribution>
    </extension>
    <extension

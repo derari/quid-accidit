@@ -11,6 +11,8 @@ import java.util.TreeSet;
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
@@ -33,11 +35,13 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
@@ -102,6 +106,13 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		treeViewer.getControl().addKeyListener(new TraceExplorerKeyAdapter());
 		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
+		
+		/* Context menu registration. */
+		MenuManager menuManager = new MenuManager();
+		menuManager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+		final Menu contextMenu = menuManager.createContextMenu(treeViewer.getTree());
+		treeViewer.getControl().setMenu(contextMenu);		
+		getSite().registerContextMenu(menuManager, treeViewer);
 		
 		// restore project name
 		if (memento != null) {

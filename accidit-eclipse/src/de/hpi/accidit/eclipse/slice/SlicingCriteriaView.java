@@ -1,9 +1,7 @@
 package de.hpi.accidit.eclipse.slice;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import org.cthul.miro.DSL;
 import org.eclipse.swt.SWT;
@@ -14,6 +12,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.part.ViewPart;
 
@@ -33,6 +32,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public static final String ID = "de.hpi.accidit.eclipse.slice.SlicingCriteriaView";
 	
 	private Composite parent;
+	private List<Control> headlineControls;
 	private Image removeImage;
 
 	public SlicingCriteriaView() {
@@ -64,21 +64,25 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	}
 	
 	private void addHeadline() {
-		@SuppressWarnings("unused")
-		final Label placeHolder1 = new Label(parent, SWT.NONE);
+		headlineControls = new ArrayList<Control>(3);
+		headlineControls.add(new Label(parent, SWT.NONE));
 		
-		final Label typeLabel = new Label(parent, SWT.NONE);
+		Label typeLabel = new Label(parent, SWT.NONE);
 		typeLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		typeLabel.setText("Slicing Criteria");
+		headlineControls.add(typeLabel);
 
-		@SuppressWarnings("unused")
-		final Label placeHolder2 = new Label(parent, SWT.NONE);
+		headlineControls.add(new Label(parent, SWT.NONE));
 	}
 	
 	public void clear() {
 		TraceNavigatorUI.getGlobal().getSliceApi().clear();
-		
-		// TODO: clear UI
+				
+		for (Control control : parent.getChildren()) {
+			if (!headlineControls.contains(control)) {
+				control.dispose();
+			}
+		}
 	}
 	
 	public void addVariableValue(VariableValue value) {
