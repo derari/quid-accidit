@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: accidit-launcher
+Bundle-SymbolicName: accidit-launcher;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: de.hpi.accidit.launcher.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.debug.core;bundle-version="3.7.100",
+ org.eclipse.jdt.launching;bundle-version="3.6.101",
+ org.eclipse.jdt.junit;bundle-version="3.7.100",
+ de.hpi.accidit.eclipse;bundle-version="0.1.0"
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ClassPath: lib/accidit-db-import-1.0-SNAPSHOT-standalone.jar,
+ .

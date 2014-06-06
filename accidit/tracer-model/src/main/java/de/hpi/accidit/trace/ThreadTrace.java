@@ -72,7 +72,7 @@ public class ThreadTrace {
         } else {
             System.out.println(t.getMessage());
         }
-        if (end) throw new AssertionError("end trace: " + msg);
+        if (end) throw new AssertionError("end trace: " + msg, t);
         //new RuntimeException(msg, t).printStackTrace();
     }
 
@@ -392,6 +392,7 @@ public class ThreadTrace {
             CallTrace call = stack.get(i);
             int fId = bottomFrame - call.getDepth();
             if (fId < 7 || // fId < 7 is already in Tracer code
+                    fId >= actualStack.length ||
                     !actualStack[fId].getMethodName().equals(call.getMethod().getName())) {
                 while (stack.size() > i) stack.pop();
                 if (stack.isEmpty()) {

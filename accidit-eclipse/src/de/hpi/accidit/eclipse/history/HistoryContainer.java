@@ -1,5 +1,10 @@
 package de.hpi.accidit.eclipse.history;
 
+import static org.cthul.miro.DSL.select;
+
+import java.util.LinkedList;
+import java.util.List;
+
 import org.cthul.miro.MiConnection;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ArrayContentProvider;
@@ -28,7 +33,8 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
-import static org.cthul.miro.DSL.*;
+import org.eclipse.ui.IWorkbenchPartSite;
+import org.eclipse.ui.services.ISourceProviderService;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
@@ -38,14 +44,14 @@ import de.hpi.accidit.eclipse.model.ArrayIndex;
 import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.NamedEntity;
 import de.hpi.accidit.eclipse.model.NamedValue;
-import de.hpi.accidit.eclipse.model.Variable;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
-import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
+import de.hpi.accidit.eclipse.model.Variable;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
+import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class HistoryContainer {
@@ -59,6 +65,8 @@ public class HistoryContainer {
 		IMG_PUT = new Image(d, HistoryView.class.getResourceAsStream("/put.png"));
 		IMG_GET = new Image(d, HistoryView.class.getResourceAsStream("/get.png"));
 	}
+	
+	private IWorkbenchPartSite site;
 
 	private Label titleLabel;
 	
@@ -69,8 +77,12 @@ public class HistoryContainer {
 	private HistorySource source;
 
 	private long currentStep = 0;
+	
+	private final ContentNodesPathway contentNodesPathway = new ContentNodesPathway();
 
-	public HistoryContainer() { }
+	public HistoryContainer(IWorkbenchPartSite site) {
+		this.site = site;
+	}
 	
 	public void createPartControl(final Composite container) {		
 		GridLayout layout = new GridLayout(2, false);
@@ -97,9 +109,7 @@ public class HistoryContainer {
 				if (selection.isEmpty()) return;
 				
 				NamedEntity selectedObject = (NamedEntity) selection.getFirstElement();
-				source.show(contentNode, selectedObject.getId());
-//				HistoryContainer.this.comboViewerSelection = selectedObject;
-				
+				source.show(contentNode, selectedObject.getId());				
 				refreshTitleLabel();
 			}
 		});
@@ -153,6 +163,7 @@ public class HistoryContainer {
 				if (selectedNode == null || selectedNode.getDepth() < 2) return;
 				
 				updateFromContentNode(selectedNode);
+				contentNodesPathway.addContentNode(selectedNode);
 			}
 		});
 		
@@ -181,6 +192,8 @@ public class HistoryContainer {
 				._execute(DatabaseConnector.cnn())._asArray();
 		setComboViewerOptions(options);
 		setComboViewerSelection(-1);
+		
+		contentNodesPathway.reset(this.contentNode);
 	}
 	
 	public void updateFromContentNode(NamedValueNode node) {
@@ -293,6 +306,78 @@ public class HistoryContainer {
 			return iv.isPut() ? IMG_PUT : IMG_GET;
 		}
 		return null;
+	}
+	
+	public ContentNodesPathway getContentNodesPathway() {
+		return contentNodesPathway;
+	}
+	
+	public class ContentNodesPathway {
+
+		private final List<NamedValueNode> pathways = new LinkedList<NamedValueNode>();
+		private int currentPosition = -1;
+		
+		public boolean goBackAllowed() {
+			return currentPosition > 0;
+		}
+		
+		private void allowGoBack(boolean state) {
+			ISourceProviderService sourceProviderService = 
+					(ISourceProviderService) site.getService(ISourceProviderService.class);
+			CommandsState stateService = (CommandsState) sourceProviderService.getSourceProvider(CommandsState.BACK_STATE);
+			stateService.setGoBackAllowed(state);
+		}
+		
+		public void goBack() {
+			if (!goBackAllowed()) return;
+			currentPosition--;
+			updateFromContentNode(pathways.get(currentPosition));
+			
+			allowGoForward(true);
+			if (!goBackAllowed()) allowGoBack(false);
+		}
+		
+		public boolean goForwardAllowed() {
+			return currentPosition >= 0 && currentPosition + 1 < pathways.size();
+		}
+		
+		private void allowGoForward(boolean state) {
+			ISourceProviderService sourceProviderService = 
+					(ISourceProviderService) site.getService(ISourceProviderService.class);
+			CommandsState stateService = (CommandsState) sourceProviderService.getSourceProvider(CommandsState.FORWARD_STATE);
+			stateService.setGoForwardAllowed(state);
+		}
+		
+		public void goForward() {
+			if (!goForwardAllowed()) return;
+			currentPosition++;
+			updateFromContentNode(pathways.get(currentPosition));
+			
+			allowGoBack(true);
+			if (!goForwardAllowed()) allowGoForward(false);
+		}
+		
+		public void reset(NamedValueNode node) {
+			pathways.clear();
+			pathways.add(node);
+			currentPosition = 0;
+			
+			allowGoBack(false);
+			allowGoForward(false);
+		}
+		
+		public void addContentNode(NamedValueNode node) {
+			if (currentPosition < pathways.size() - 1) {
+				for (int i = currentPosition + 1; i < pathways.size(); i++) {
+					pathways.remove(i);
+				}
+			}
+			
+			pathways.add(node);
+			currentPosition++;
+			
+			allowGoBack(true);
+		}
 	}
 
 	public static class HistoryLabelProvider extends VariablesLabelProvider {

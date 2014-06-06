@@ -207,6 +207,12 @@ public class NamedValueDao extends ModelDaoBase {
 			put("name =", field);
 			return this;
 		}
+		
+		public SetFieldQuery atStep(int testId, long step) {
+			put("testId =", testId);
+			put("step =", step);
+			return this;
+		}
 	};
 	
 	private static final Mapping<ItemValue> ARRAY_ITEM_MAPPING = new ReflectiveMapping<ItemValue>(ItemValue.class) {
@@ -325,12 +331,11 @@ public class NamedValueDao extends ModelDaoBase {
 	
 	private static final MappedTemplateProvider<VariableValue> VAR_HISTORY_TEMPLATE = new NameValueQueryTemplate<VariableValue>(VAR_MAPPING) {{
 		attributes("t.`variableId` AS `id`, t.`testId`, t.`step` AS `step`, t.`line`", 
-				   "t.`step` AS `valueStep`, v.`name` AS `name`");
+				   "t.`step` AS `valueStep`, t.`callStep` AS `callStep`, v.`name` AS `name`");
 		
 		table("`VariableTrace` t");
 		join("`Variable` v ON t.`variableId` = v.`id` AND t.`methodId` = v.`methodId`");
 		where("call_EQ", "t.`testId` = ? AND t.`callStep` = ?");
-		where("id_EQ", "t.`variableId` = ?");
 		always().orderBy("t.`step`");
 		always().configure("cfgCnn", SET_CONNECTION);
 	}};
@@ -350,16 +355,26 @@ public class NamedValueDao extends ModelDaoBase {
 			return this;
 		}
 		
+		public VarHistoryQuery inTest(int testId) {
+			where("testId =", testId);
+			return this;
+		}
+		
 		public VarHistoryQuery byId(int id) {
 			where("id =", id);
+			return this;
+		}
+		
+		public VarHistoryQuery atStep(long step) {
+			where("step =", step);
 			return this;
 		}
 	};
 	
 	private static final MappedTemplateProvider<FieldValue> OBJ_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
-		attributes("m.`name`, m.`id`");
+		attributes("m.`name`, m.`id`,");
 		using("val")
-			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`");
+			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`, val.`line` AS `line`");
 		using("nextPut")
 			.select("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`");
 		using("nextGet")
@@ -368,9 +383,9 @@ public class NamedValueDao extends ModelDaoBase {
 		table("`Field` m");
 		
 		join("val", 
-			 "JOIN (SELECT `testId`, `step`, `fieldId`, 1 AS `valueIsPut` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? " +
+			 "JOIN (SELECT `testId`, `step`, `fieldId`, 1 AS `valueIsPut`, `line` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? " +
 			  "UNION " +
-			  "SELECT `testId`, `step`, `fieldId`, 0 AS `valueIsPut` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ?) " + 
+			  "SELECT `testId`, `step`, `fieldId`, 0 AS `valueIsPut`, `line` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ?) " + 
 			 "val ON val.`fieldId` = m.`id`");
 		join("LEFT OUTER JOIN `PutTrace` nextPut " +
 			 "ON nextPut.`fieldId` = m.`id` AND nextPut.`step` > val.`step` " +

@@ -2,8 +2,8 @@ package de.hpi.accidit.eclipse.breakpoints;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -26,11 +26,13 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 	public static final String ID = "de.hpi.accidit.eclipse.views.BreakpointsView";
 	
 	private Composite parent;
+	private Image removeImage;
 	
 	private BreakpointsManager breakpointsManager;
 	
 	public BreakpointsView() {
 		breakpointsManager = TraceNavigatorUI.getGlobal().getBreakpointsManager();
+		removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
 	}
 
 	@Override
@@ -47,6 +49,7 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 	@Override
 	public void dispose() {
 		TraceNavigatorUI.getGlobal().removeView(this);
+		removeImage.dispose();
 		super.dispose();
 	}
 
@@ -91,9 +94,8 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 		
 		final Label removeButton = new Label(parent, SWT.NONE);
 		removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-		Image removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
 		removeButton.setImage(removeImage);
-		removeButton.addMouseListener(new MouseListener() {
+		removeButton.addMouseListener(new MouseAdapter() {
 			
 			@Override
 			public void mouseUp(MouseEvent e) {
@@ -103,12 +105,6 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 					e1.printStackTrace();
 				}
 			}
-			
-			@Override
-			public void mouseDown(MouseEvent e) { }
-			
-			@Override
-			public void mouseDoubleClick(MouseEvent e) { }
 		});
 		breakpoint.addUIElement(removeButton);
 		

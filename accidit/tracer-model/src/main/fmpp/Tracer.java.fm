@@ -3,7 +3,7 @@
                 "void": "V", "Object": "A"}>
 <#assign returns = ["Object", "int", "long", "float", "double"]>
 <#assign params = ["Object", "int", "long", "float", "double"]>
-<#assign arrayElements = ["Object", "byte", "char", "short", "int", "long", "float"]>
+<#assign arrayElements = ["Object", "byte", "char", "short", "int", "long", "float", "double"]>
 // generated code
 package de.hpi.accidit.trace;
 

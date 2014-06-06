@@ -1,5 +1,3 @@
-.project
-.classpath
 .settings
 .DS_Store
 .metadata
@@ -10,3 +8,7 @@
 /accidit/tracer-model/target/
 /mysql/csvimport.sql
 /accidit/dbimport/target/
+/accidit-launcher/LauncherTestProject/target/
+**/bin/
+.project
+.classpath

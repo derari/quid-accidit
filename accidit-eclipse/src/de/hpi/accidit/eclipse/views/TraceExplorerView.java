@@ -4,12 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
@@ -32,11 +35,13 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
@@ -61,8 +66,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	/** The ID of the view as specified by the extension. */
 	public static final String ID = "de.hpi.accidit.eclipse.views.TraceExplorerView";
 	
-	public static final SortedSet<Long> SLICE = new TreeSet<>();
-
 	private TraceNavigatorUI ui;
 	private TreeViewerSelectionAdapter treeViewerSelectionAdapter;
 	private TreeViewer treeViewer;
@@ -101,8 +104,15 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		ui = TraceNavigatorUI.getGlobal();
 		ui.setTraceExplorer(this);
 		
-		treeViewer.getTree().addKeyListener(new TraceExplorerKeyAdapter());
+		treeViewer.getControl().addKeyListener(new TraceExplorerKeyAdapter());
 		treeViewerSelectionAdapter = new TreeViewerSelectionAdapter();
+		
+		/* Context menu registration. */
+		MenuManager menuManager = new MenuManager();
+		menuManager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+		final Menu contextMenu = menuManager.createContextMenu(treeViewer.getTree());
+		treeViewer.getControl().setMenu(contextMenu);		
+		getSite().registerContextMenu(menuManager, treeViewer);
 		
 		// restore project name
 		if (memento != null) {
@@ -165,12 +175,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				System.out.println("!slicing!");
 				long callStep = 3688;
 				ValueKey key = new InvocationKey(65, callStep);
-				DynamicSlice slice = new DynamicSlice(key);
-				slice.processAll();
-				SLICE.clear();
-				for (ValueKey k: slice.getSlice().keySet()) {
-					SLICE.add(k.getStep());
-				}
+//				DynamicSlice slice = new DynamicSlice(key);
+//				slice.processAll();
+//				SLICE.clear();
+//				for (ValueKey k: slice.getSlice().keySet()) {
+//					SLICE.add(k.getStep());
+//				}
 				System.out.println("!done!");
 			}
 			
@@ -210,16 +220,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	}
 	
 	/** Class to manipulate selections of the TraceExplorer's treeViewer */ 
-	/* - handlers.Step*Handler (6), done:
-	 *     stepOver -> selectNextElement
-	 *     stepInto -> selectFirstChildElement
-	 *     StepOut -> selectParentElement + selectNextElement
-	 *     stepBackOver -> selectPreviousElement
-	 *     stepBackOut -> selectParentElement
-	 *     stepBackInto -> selectPreviousElement + selectLastChildElement
-	 * - handlers.ShowVariableHistoryHandler, done:
-	 * 		showVariableHistory -> selectAtStep
-	 */
 	public class TreeViewerSelectionAdapter {
 		
 		/** Selects the currently selected trace element's parent. */
@@ -549,13 +549,15 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		@Override
 		public Color getForeground(Object element, int columnIndex) {
-			if (SLICE.isEmpty()) return null;
 			if (!(element instanceof TraceElement)) return null;
 			TraceElement te = (TraceElement) element;
-			if (SLICE.contains(te.getStep())) return null;
+			
+			SortedSet<Long> slice = TraceNavigatorUI.getGlobal().getSliceSteps();
+			if (slice == null || slice.isEmpty()) return null;
+			if (slice.contains(te.getStep())) return null;
 			if (element instanceof Invocation) {
 				Invocation inv = (Invocation) element;
-				if (!SLICE.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
+				if (!slice.subSet(inv.getStep(), inv.exitStep+1).isEmpty()) {
 					return null; // black
 					//return Display.getCurrent().getSystemColor(SWT.COLOR_DARK_GRAY);
 				}

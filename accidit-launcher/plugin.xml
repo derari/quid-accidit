@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.debug.core.launchModes">
+      <launchMode
+            label="trace"
+            mode="trace">
+      </launchMode>
+   </extension>
+   <extension
+         point="org.eclipse.debug.core.launchDelegates">
+      <launchDelegate
+            delegate="de.hpi.accidit.launcher.LocalJavaApplicationLaunchDelegate"
+            delegateDescription="The Accidit launcher to enable tracing in local java applications."
+            id="de.hpi.accidit.launcher.acciditJavaLaunchDelegate"
+            modes="run, debug, trace"
+            name="ACCIDIT Java"
+            sourceLocatorId="org.eclipse.jdt.launching.sourceLocator.JavaSourceLookupDirector"
+            sourcePathComputerId="org.eclipse.jdt.launching.sourceLookup.javaSourcePathComputer"
+            type="org.eclipse.jdt.launching.localJavaApplication">
+      </launchDelegate>
+      <launchDelegate
+            delegate="de.hpi.accidit.launcher.JUnitLaunchDelegate"
+            delegateDescription="The Accidit launcher to enable tracing."
+            id="de.hpi.accidit.launcher.acciditJUnitLaunchDelegate"
+            modes="run, debug"
+            name="ACCIDIT JUnit"
+            sourceLocatorId="org.eclipse.jdt.launching.sourceLocator.JavaSourceLookupDirector"
+            sourcePathComputerId="org.eclipse.jdt.launching.sourceLookup.javaSourcePathComputer"
+            type="org.eclipse.jdt.junit.launchconfig">
+      </launchDelegate>
+   </extension>
+
+</plugin>
