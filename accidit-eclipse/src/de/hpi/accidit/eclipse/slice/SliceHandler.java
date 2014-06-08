@@ -21,7 +21,8 @@ public class SliceHandler extends AbstractHandler {
 		NamedValueNode selection = (NamedValueNode) sel.getFirstElement();
 		if (selection == null) return null;
 		
-		SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getSlicingCriteriaView();
+//		SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getSlicingCriteriaView();
+		SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView();
 		
 		NamedValue value = selection.getValue();
 		if (value instanceof NamedValue.VariableValue) {
