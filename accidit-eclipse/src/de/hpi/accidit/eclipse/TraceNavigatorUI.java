@@ -10,6 +10,8 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
@@ -20,7 +22,6 @@ import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.VariablesView;
-import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 // TODO rename
@@ -99,6 +100,19 @@ public class TraceNavigatorUI {
 	
 	public SlicingCriteriaView getSlicingCriteriaView() {
 		return findView(SlicingCriteriaView.class);
+	}
+	
+	public SlicingCriteriaView getOrOpenSlicingCriteriaView() {
+		SlicingCriteriaView slicingCriteriaView = getSlicingCriteriaView();
+		if (slicingCriteriaView == null) {
+			try {
+				slicingCriteriaView = (SlicingCriteriaView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(SlicingCriteriaView.ID);
+			} catch (PartInitException e) {
+				// TODO:: decide: print stack trace or raise exception
+				e.printStackTrace();
+			}
+		}
+		return slicingCriteriaView;
 	}
 	
 	public MiConnection cnn() {
