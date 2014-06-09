@@ -19,6 +19,7 @@ import org.eclipse.ui.part.ViewPart;
 import de.hpi.accidit.eclipse.Activator;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
+import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
@@ -115,6 +116,27 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 //		invD = invD.getInvocationAtCall(value.getCallStep());
 		ValueKey key = new ValueKey.FieldValueKey(invD, value);
 		addEntry(key);
+	}
+	
+	public void addInvocation(Invocation invocation) {
+		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
+		invD = invD.getInvocationAtCall(invocation.getStep());
+		addEntry(new ValueKey.InvocationKey(invD));
+	}
+	
+	public void addInvocationArguments(Invocation invocation) {
+		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
+		invD = invD.getInvocationAtCall(invocation.getStep());
+		
+		List<VariableValue> variables = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+				.inTest(invocation.getTestId())
+				.atStep(invocation.getStep())
+				._execute(DatabaseConnector.cnn())._asList();
+		
+		for (VariableValue v: variables) {
+			ValueKey key = new ValueKey.VariableValueKey(invD, v.getValueStep(), v.getName(), v.getLine());
+			addEntry(key);
+		}
 	}
 	
 	public void addEntry(final ValueKey key) {

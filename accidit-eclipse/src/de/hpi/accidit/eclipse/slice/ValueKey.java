@@ -150,7 +150,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		private InvocationThisKey thisKey = null;
 		private Invocation inv;
 
-		private InvocationKey(InvocationData invD) {
+		public InvocationKey(InvocationData invD) {
 			super(invD.getParent(), invD.getInvocation().getStep());
 			inv = invD.getInvocation();
 		}
