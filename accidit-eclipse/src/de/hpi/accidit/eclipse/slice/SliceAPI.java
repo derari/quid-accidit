@@ -86,9 +86,12 @@ public class SliceAPI {
 		return testId;
 	}
 	
+	private static final Timer time = new Timer();
+	
 	private void updateSlice() {
 		sliceSteps = null;
 		if (!slicingCritera.isEmpty()) {
+			time.enter();
 			init();
 			DynamicSlice slicer = new DynamicSlice(sootConfig);
 			for (ValueKey k: slicingCritera) {
@@ -99,6 +102,8 @@ public class SliceAPI {
 			for (ValueKey k: result.keySet()) {
 				sliceSteps.add(k.getStep());
 			}
+			time.exit();
+			DynamicSlice.printTimers(time);
 		}
 		onUpdate.run();
 	}

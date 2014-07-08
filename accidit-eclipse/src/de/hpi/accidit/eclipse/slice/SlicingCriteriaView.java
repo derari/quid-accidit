@@ -102,6 +102,22 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		addEntry(key);
 	}
 	
+	public void addThisValue(NamedValue value) {
+		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
+
+		if (value.getLine() < 0 || value.getCallStep() < 0) {
+			VariableValue newValue = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+						.inTest(value.getTestId())
+						.atStep(value.getValueStep())
+						.byId(value.getId())._execute(DatabaseConnector.cnn())._getSingle();
+			if (newValue != null) value = newValue;
+		}
+		
+		invD = invD.getInvocationAtCall(value.getCallStep());
+		ValueKey key = new ValueKey.InvocationThisKey(invD, value.getValueStep());
+		addEntry(key);
+	}
+	
 	public void addFieldValue(FieldValue value) {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 		

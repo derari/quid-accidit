@@ -36,6 +36,7 @@ public class InvocationDao extends TraceElementDaoBase {
 		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`",
 				"x.`line` AS `exitLine`", 
 				"m.`name` AS `method`, t.`name` AS `type`");
+		select("COALESCE(e.`parentStep`,-1) AS `callStep`");
 		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
 		internalSelect("e.`line` AS `callLine`");
 		using("x")
@@ -94,7 +95,7 @@ public class InvocationDao extends TraceElementDaoBase {
 		public static void inInvocation(MappedInternalQueryBuilder query, Invocation inv) {
 			query.configure(CfgSetField.newInstance("parent", inv));
 			query.put("testId =", inv.getTestId());
-			query.put("depth =", inv.depth+1);
+			//query.put("depth =", inv.depth+1);
 			query.put("parentStep =", inv.getStep());
 			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 			query.put("orderBy-step");
@@ -102,9 +103,9 @@ public class InvocationDao extends TraceElementDaoBase {
 		
 		public static void parentOf(MappedInternalQueryBuilder query, Invocation inv) {
 			query.put("testId =", inv.getTestId());
-			query.put("depth =", inv.depth-1);
-			query.put("step <", inv.getStep());
-			query.put("exit_GT", inv.getStep());
+//			query.put("depth =", inv.depth-1);
+			query.put("step =", inv.getCallStep());
+//			query.put("exit_GT", inv.getStep());
 			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
 //			query.put("orderBy-step");
 		}

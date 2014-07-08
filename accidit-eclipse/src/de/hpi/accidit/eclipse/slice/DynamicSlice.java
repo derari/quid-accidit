@@ -2,6 +2,8 @@ package de.hpi.accidit.eclipse.slice;
 
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -69,14 +71,18 @@ public class DynamicSlice {
 		
 		time.exit();
 		
-		System.out.println(" total time: " + time);
+		printTimers(time);
+		
+		EXECUTOR.shutdownNow();
+	}
+	
+	public static void printTimers(Timer time) {
+		if (time != null) System.out.println(" total time: " + time);
 		System.out.println("depend time: " + MethodDataDependencyAnalysis.total_time);
 		System.out.println("    db time: " + db_time);
 		System.out.println("  lock time: " + lock_time);
 		System.out.println("slicin time: " + slice_time);
-		System.out.println(MethodDataDependencyAnalysis.total_time.value() / (1.0 * time.value()));
-		
-		EXECUTOR.shutdownNow();
+		if (time != null) System.out.println(MethodDataDependencyAnalysis.total_time.value() / (1.0 * time.value()));
 	}
 	
 	private static Timer db_time = new Timer();

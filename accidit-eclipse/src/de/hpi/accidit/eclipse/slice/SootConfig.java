@@ -26,13 +26,24 @@ public abstract class SootConfig {
 	
 	protected abstract List<String> getClassPath();
 	
+	private final Cache<String, Map<Token, DataDependency>> graphCache = new Cache<String, Map<Token,DataDependency>>() {
+		@Override
+		protected Map<Token, DataDependency> value(String key) {
+			return doAnalyse(key);
+		}
+	};
+	
 	public Map<Token, DataDependency> analyse(String methodId) {
-		int c = methodId.indexOf('#');
-		int s = methodId.indexOf('(');
-		return analyse(methodId.substring(0, c), methodId.substring(c+1, s), methodId.substring(s));
+		return graphCache.get(methodId);
 	}
 	
-	public Map<Token, DataDependency> analyse(String clazz, String method, String signature) {
+	private Map<Token, DataDependency> doAnalyse(String methodId) {
+		int c = methodId.indexOf('#');
+		int s = methodId.indexOf('(');
+		return doAnalyse(methodId.substring(0, c), methodId.substring(c+1, s), methodId.substring(s));
+	}
+	
+	public Map<Token, DataDependency> doAnalyse(String clazz, String method, String signature) {
 		Lock l = lockSootFor(this);
 		if (l == null) return null;
 		try {
@@ -93,18 +104,10 @@ public abstract class SootConfig {
 		
 		protected List<String> getClassPath() {
 			try {
+				IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 				List<String> result = new ArrayList<>();
 				for (IClasspathEntry ce: p.getResolvedClasspath(true)) {
-					IPath path = ce.getOutputLocation();
-					if (path == null) path = ce.getPath();
-
-					IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-				    IResource res = root.findMember(path);
-				    if (res != null) {
-				    	result.add(res.getLocation().toOSString());
-				    } else {
-				    	result.add(path.toOSString());
-				    }
+					resolveClassPathEntry(ce, root, result);
 				}
 				return result;
 			} catch (JavaModelException e) {
@@ -118,21 +121,12 @@ public abstract class SootConfig {
 		protected List<String> getClassPath() {
 			System.out.println(":::::::::::::::::::::::::::::::::");
 			List<String> result = new ArrayList<>();
+			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 			for (IProject p: ResourcesPlugin.getWorkspace().getRoot().getProjects()) {
 				IJavaProject jp = JavaCore.create(p);
 				try {
 					for (IClasspathEntry ce: jp.getResolvedClasspath(true)) {
-						IPath path = ce.getOutputLocation();
-						if (path == null) path = ce.getPath();
-
-						IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-					    IResource res = root.findMember(path);
-					    if (res != null) {
-					    	result.add(res.getLocation().toOSString());
-					    } else {
-					    	result.add(path.toOSString());
-					    }
-					    System.out.println(": " + result.get(result.size()-1));
+						resolveClassPathEntry(ce, root, result);
 					}
 				} catch (JavaModelException e) {
 					e.printStackTrace(System.err);
@@ -140,5 +134,31 @@ public abstract class SootConfig {
 			}
 			return new ArrayList<>(new LinkedHashSet<>(result));
 		}
+	}
+	
+	public static void resolveClassPathEntry(IClasspathEntry ce, IWorkspaceRoot root, List<String> result) {
+		IPath path = ce.getOutputLocation();
+		if (path == null) path = ce.getPath();
+		
+		IResource res = root.findMember(path);
+		String newPath;
+	    if (res != null) {
+	    	newPath = res.getLocation().toOSString();
+	    } else {
+	    	newPath = path.toOSString();
+	    }
+	    int sizeBefore = result.size();
+	    if (newPath != null) {
+	    	result.add(newPath);
+	    	int i = newPath.indexOf("/src/");
+	    	if (i < 0) i = newPath.indexOf("\\src\\");
+	    	if (i > 0) {
+	    		result.add(newPath.substring(0, i) + "/bin");
+	    		result.add(newPath.substring(0, i) + "/build/classes");
+	    	}
+	    }
+	    for (int i = sizeBefore; i < result.size(); i++) {
+	    	System.out.println(": " + result.get(i));
+	    }
 	}
 }

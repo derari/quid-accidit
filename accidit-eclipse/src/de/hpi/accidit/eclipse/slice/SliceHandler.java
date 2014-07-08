@@ -29,6 +29,11 @@ public class SliceHandler extends AbstractHandler {
 			slicingCriteriaView.addVariableValue((VariableValue) value);
 		} else if (value instanceof NamedValue.FieldValue) {
 			slicingCriteriaView.addFieldValue((FieldValue) value);
+		} else if ("this".equals(value.getName())) {
+			slicingCriteriaView.addThisValue(value);
+		} else {
+			System.out.println(value);
+			if (value != null) System.out.println(value.getClass());
 		}
 				
 		return null;
