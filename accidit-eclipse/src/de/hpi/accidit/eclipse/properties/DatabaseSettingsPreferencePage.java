@@ -30,7 +30,7 @@ public class DatabaseSettingsPreferencePage extends FieldEditorOverlayPage
 
 	@Override
 	public void init(IWorkbench workbench) {
-		setDescription("The preference page to specify the database connection parameters.");
+		setDescription("The preference page to edit database connection preferences.");
 	}
 
 	@Override
