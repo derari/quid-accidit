@@ -71,6 +71,14 @@
             name="Slicing Criteria"
             restorable="true">
       </view>
+      <view
+            category="de.hpi.accidit.eclipse"
+            class="de.hpi.accidit.eclipse.views.SlicingStatusView"
+            icon="icons/a_logo.png"
+            id="de.hpi.accidit.eclipse.views.SlicingStatusView"
+            name="Slicing Step"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.commands">
