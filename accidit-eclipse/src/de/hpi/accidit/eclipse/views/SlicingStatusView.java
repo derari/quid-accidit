@@ -61,9 +61,8 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		
 		// previous
 		
-		headlineControls.add(new Label(parent, SWT.NONE));
 		Label prevLabel = new Label(parent, SWT.NONE);
-		prevLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		prevLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
 		prevLabel.setText("Previous Steps");
 		headlineControls.add(prevLabel);
 		headlineControls.add(new Label(parent, SWT.NONE));
@@ -80,9 +79,8 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		
 		// next
 		
-		headlineControls.add(new Label(parent, SWT.NONE));
 		Label nextLabel = new Label(parent, SWT.NONE);
-		nextLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		nextLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
 		nextLabel.setText("Next Steps");
 		headlineControls.add(nextLabel);
 		headlineControls.add(new Label(parent, SWT.NONE));
