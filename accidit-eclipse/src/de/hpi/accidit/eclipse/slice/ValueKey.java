@@ -150,13 +150,17 @@ public class ValueKey implements Comparable<ValueKey> {
 		private InvocationThisKey thisKey = null;
 		private Invocation inv;
 
-		private InvocationKey(InvocationData invD) {
-			super(invD.getParent(), invD.getInvocation().getStep());
-			inv = invD.getInvocation();
-		}
-		
 		public InvocationKey(int testId, long step) {
 			this(new InvocationData(invocationAtStep(testId, step)));
+		}
+		
+		public InvocationKey(InvocationData invD) {
+			this(invD.getParent(), invD);
+		}
+		
+		private InvocationKey(InvocationData parent, InvocationData invD) {
+			super(parent != null ? parent : invD, invD.getInvocation().getStep());
+			inv = invD.getInvocation();
 			invD.invKey = this;
 		}
 		
@@ -188,6 +192,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		private Invocation inv;
 
+		public InvocationThisKey(InvocationData invD, long step) {
+			this(invD, step, invD.getInvocation());
+		}
+		
 		public InvocationThisKey(InvocationData invD, long step, Invocation inv) {
 			super(invD, step);
 			this.inv = inv;
@@ -351,6 +359,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		public InvocationData getInvocationAtCall(long callStep) {
+			if (callStep < 0) return null;
 			InvocationData id = others.get(callStep);
 			if (id == null) {
 				Invocation i = invocationAtStep(inv.getTestId(), callStep);

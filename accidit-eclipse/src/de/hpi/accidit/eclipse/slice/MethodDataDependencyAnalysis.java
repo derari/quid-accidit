@@ -128,6 +128,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		synchronized (MethodDataDependencyAnalysis.class) {
 			b = sMethod.retrieveActiveBody();
 		}
+		System.out.println("!!! analyzing " + sMethod);
 //		Body b = sMethod.getSource().getBody(sMethod, "");
 		UnitGraph graph = new ExceptionalUnitGraph(b);
 		MethodDataDependencyAnalysis analysis = new MethodDataDependencyAnalysis(graph);

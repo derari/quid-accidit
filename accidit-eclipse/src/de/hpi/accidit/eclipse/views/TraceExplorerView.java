@@ -165,6 +165,10 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		return treeViewer;
 	}
 	
+	public ISelection getSelection() {
+		return treeViewer.getSelection();
+	}
+	
 	@Override
 	public void setStep(TraceElement te) {
 		if (current == te) {

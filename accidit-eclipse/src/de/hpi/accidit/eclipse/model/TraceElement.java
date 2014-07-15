@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.model;
 public class TraceElement extends ModelBase implements Comparable<TraceElement> {
 
 	protected int testId = -1;
+	protected long callStep = -1;
 	public Invocation parent;
 	public int line;
 	protected long step;
@@ -26,7 +27,7 @@ public class TraceElement extends ModelBase implements Comparable<TraceElement> 
 	}
 	
 	public long getCallStep() {
-		if (parent == null) return 0;
+		if (parent == null) return callStep;
 		return parent.getStep();
 	}
 
