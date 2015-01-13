@@ -128,7 +128,7 @@ public class DynamicSlice {
 	}
 	
 	public synchronized void addCriterion(ValueKey key) {
-		queue.add(key);
+		enqueueKey(key);
 	}
 	
 	public SortedMap<ValueKey, Node> getSlice() {
@@ -137,15 +137,10 @@ public class DynamicSlice {
 	}
 	
 	protected synchronized void processAll() {
-		while (!queue.isEmpty()) {
-			ValueKey key = queue.first();
-			queue.remove(key);
-			enqueueKey(key);
-		}
 		while (pendingKeysCounter.get() > 0) {
 			try {
-				wait(60*1000);
-				pendingKeysCounter.decrementAndGet();
+				wait(1000);
+//				pendingKeysCounter.decrementAndGet();
 			} catch (InterruptedException e) {
 				Thread.interrupted();
 				return;
@@ -162,21 +157,24 @@ public class DynamicSlice {
 	}
 	
 	protected void sliceResult(ValueKey key, Node n) {
-		if (n != null) {
-			slice.put(key, n);
-			addToSlice(n.dependencies.values);
-			addToSlice(n.dependencies.control);
-		}
-		if (pendingKeysCounter.decrementAndGet() == 0) {
-			synchronized (this) {
-				notifyAll();
+		try {
+			if (n != null) {
+				slice.put(key, n);
+				addToSlice(n.dependencies.values);
+				addToSlice(n.dependencies.control);
+			}
+		} finally {
+			if (pendingKeysCounter.decrementAndGet() == 0) {
+				synchronized (this) {
+					notifyAll();
+				}
 			}
 		}
 	}
 	
 	protected void enqueueKey(ValueKey key) {
 		int i = pendingKeysCounter.incrementAndGet();
-		System.out.println("---------- " + i);
+//		System.out.println("---------- " + i);
 		methodSlicers.get(key.getMethodId()).enqueueKey(key);
 	}
 	
@@ -454,8 +452,8 @@ public class DynamicSlice {
 		
 		public synchronized void enqueueKey(ValueKey key) {
 			if (dependencyGraph == null) {
-				fetchGraph();
 				keys.add(key);
+				fetchGraph();
 			} else {
 				enqueue(key);
 			}
@@ -495,11 +493,12 @@ public class DynamicSlice {
 		}
 		
 		private void processKey(ValueKey key) {
-			Token t = key.asToken();
-			DataDependency dd = t == null ? DataDependency.constant() : dependencyGraph.get(t);
-			System.out.print(key);// + ": " + dd);
-			Node n = new Node();
+			Node n = null;
 			try {
+				Token t = key.asToken();
+				DataDependency dd = t == null ? DataDependency.constant() : dependencyGraph.get(t);
+				System.out.print(key);// + ": " + dd);
+				n = new Node();
 				if (dd != null) {
 					collectDependencies(n.dependencies, key, dd);
 					System.out.println(": " + n.dependencies);

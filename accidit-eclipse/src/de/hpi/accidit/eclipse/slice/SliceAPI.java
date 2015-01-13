@@ -41,7 +41,6 @@ public class SliceAPI {
 	
 	private void init(IJavaProject project, int testId) {
 		this.project = project;
-		this.sootConfig = null;
 		this.testId = testId;
 		if (project != null) {
 			sootConfig = new JavaProjectConfig(project);

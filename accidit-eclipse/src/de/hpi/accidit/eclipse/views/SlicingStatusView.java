@@ -65,26 +65,53 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		prevLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
 		prevLabel.setText("Previous Steps");
 		headlineControls.add(prevLabel);
-		headlineControls.add(new Label(parent, SWT.NONE));
+		l = new Label(parent, SWT.NONE);
+		l.setText("Step #");
+		l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		headlineControls.add(l);
 		
 		// ...
+		
+		l = new Label(parent, SWT.NONE);
+		l.setImage(DEP_C);
+		headlineControls.add(l);
+		l = new Label(parent, SWT.NONE);
+		l.setText("index = 1");
+		l.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+		headlineControls.add(l);
+		l = new Label(parent, SWT.NONE);
+		l.setText("361");
+		l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		headlineControls.add(l);
 		
 		l = new Label(parent, SWT.NONE);
 		l.setImage(DEP_V);
 		headlineControls.add(l);
 		l = new Label(parent, SWT.NONE);
-		l.setText("asdasd asdasd");
+		l.setText("parseTimeString() -> 43200000");
 		headlineControls.add(l);
-		headlineControls.add(new Label(parent, SWT.NONE));
+		l = new Label(parent, SWT.NONE);
+		l.setText("3616");
+		l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		headlineControls.add(l);
 		
 		// next
 		
 		Label nextLabel = new Label(parent, SWT.NONE);
-		nextLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 2, 1));
+		nextLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false, 3, 1));
 		nextLabel.setText("Next Steps");
 		headlineControls.add(nextLabel);
-		headlineControls.add(new Label(parent, SWT.NONE));
 		
+		l = new Label(parent, SWT.NONE);
+		l.setImage(DEP_VCR);
+		headlineControls.add(l);
+		l = new Label(parent, SWT.NONE);
+		l.setText("[1] = 43200000");
+		headlineControls.add(l);
+		l = new Label(parent, SWT.NONE);
+		l.setText("3652");
+		l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		headlineControls.add(l);
 		
 		// fonts
 		
@@ -134,9 +161,9 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		parent.layout();
 	}
 	
-	private static final Image DEP_V;
-	private static final Image DEP_C;
-	private static final Image DEP_VCR;
+	public static final Image DEP_V;
+	public static final Image DEP_C;
+	public static final Image DEP_VCR;
 	
 	static {
 		DEP_V = Activator.getImageDescriptor("icons/dep_v.png").createImage();

@@ -10,10 +10,10 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
@@ -26,6 +26,8 @@ import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
 import de.hpi.accidit.eclipse.views.AcciditView;
+import de.hpi.accidit.eclipse.views.SlicingFilterDialog;
+import de.hpi.accidit.eclipse.views.SlicingStatusView;
 
 public class SlicingCriteriaView extends ViewPart implements AcciditView {
 
@@ -158,13 +160,24 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public void addEntry(final ValueKey key) {
 		TraceNavigatorUI.getGlobal().getSliceApi().addCriterion(key);
 		
-		final Button detailsButton = new Button(parent, SWT.BORDER);
+		final Label detailsButton = new Label(parent, SWT.NONE);
 		detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-		detailsButton.setText("v");
+		detailsButton.setImage(SlicingStatusView.DEP_C);
 		
 		final Label label = new Label(parent, SWT.NONE);
 		label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		label.setText(key.toString());
+		
+		detailsButton.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseUp(MouseEvent e) {
+				Shell s = getSite().getShell();
+				SlicingFilterDialog dialog = new SlicingFilterDialog(s);
+				if (dialog.open() == SWT.OK) {
+					
+				}
+			}
+		});
 		
 		final Label removeButton = new Label(parent, SWT.NONE);
 		removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
