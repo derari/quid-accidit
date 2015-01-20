@@ -57,6 +57,9 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 	public void setFocus() { }
 	
 	@Override
+	public void sliceChanged() { }
+	
+	@Override
 	public void setStep(TraceElement te) { }
 	
 	private void addHeadline() {

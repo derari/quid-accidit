@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
@@ -13,6 +14,7 @@ import org.eclipse.jdt.core.JavaCore;
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.slice.DynamicSlice.Node;
+import de.hpi.accidit.eclipse.slice.DynamicSlice.OnSliceUpdate;
 import de.hpi.accidit.eclipse.slice.SootConfig.JavaProjectConfig;
 import de.hpi.accidit.eclipse.slice.SootConfig.WorkspaceConfig;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
@@ -24,8 +26,11 @@ public class SliceAPI {
 	
 	private IJavaProject project = null;
 	private SootConfig sootConfig = null;
+	private DynamicSlice dynamicSlice = null;
 	private Set<ValueKey> slicingCritera = new LinkedHashSet<>();
 	private SortedSet<Long> sliceSteps = null;
+	private long lastUpdate = 0;
+	private final Object updateGuard = new Object();
 	
 	private int testId = -1;
 	private ValueKey rootInvocation;
@@ -42,6 +47,7 @@ public class SliceAPI {
 	private void init(IJavaProject project, int testId) {
 		this.project = project;
 		this.testId = testId;
+		dynamicSlice = null;
 		if (project != null) {
 			sootConfig = new JavaProjectConfig(project);
 		} else {
@@ -60,19 +66,38 @@ public class SliceAPI {
 		}
 	}
 	
-	public void clear() {
-		slicingCritera.clear();
-		updateSlice();
+	private synchronized DynamicSlice dynamicSlice() {
+		init();
+		if (dynamicSlice == null) {
+			OnSliceUpdate onUpdate = new OnSliceUpdate() {
+				@Override
+				public void run(boolean done) { onSliceUpdate(done); }
+			};
+			dynamicSlice = new DynamicSlice(sootConfig, onUpdate);
+		}
+		return dynamicSlice;
 	}
 	
-	public void addCriterion(ValueKey key) {
-		slicingCritera.add(key);
-		updateSlice();
+	private void onSliceUpdate(boolean done) {
+		synchronized (updateGuard) {
+			if (!done && lastUpdate + 500 > System.currentTimeMillis()) {
+				return;
+			}
+			lastUpdate = System.currentTimeMillis();
+		}
+		synchronized (this) {
+			SortedMap<ValueKey, Node> result = dynamicSlice().getSlice();
+			sliceSteps = new TreeSet<>();
+			for (ValueKey k: result.keySet()) {
+				sliceSteps.add(k.getStep());
+			}
+			onUpdate.run();			
+		}
 	}
-
-	public void removeCriterion(ValueKey key) {
-		slicingCritera.remove(key);
-		updateSlice();
+	
+	public void clear() {
+		slicingCritera.clear();
+		onUpdate.run();
 	}
 	
 	public InvocationData getInvocationData() {
@@ -87,27 +112,15 @@ public class SliceAPI {
 	
 	private static final Timer time = new Timer();
 	
-	private void updateSlice() {
-		sliceSteps = null;
-		if (!slicingCritera.isEmpty()) {
-			time.enter();
-			init();
-			DynamicSlice slicer = new DynamicSlice(sootConfig);
-			for (ValueKey k: slicingCritera) {
-				slicer.addCriterion(k);
-			}
-			SortedMap<ValueKey, Node> result = slicer.getSlice();
-			sliceSteps = new TreeSet<>();
-			for (ValueKey k: result.keySet()) {
-				sliceSteps.add(k.getStep());
-			}
-			time.exit();
-			DynamicSlice.printTimers(time);
-		}
-		onUpdate.run();
-	}
-	
 	public SortedSet<Long> getSliceSteps() {
 		return sliceSteps;
+	}
+
+	public void setCriterion(ValueKey key, int flags) {
+		dynamicSlice().setCriterion(key, flags);
+	}
+	
+	public void removeCriterion(ValueKey key) {
+		setCriterion(key, -1);
 	}
 }

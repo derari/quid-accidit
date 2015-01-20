@@ -30,6 +30,9 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 	public SlicingStatusView() {
 		removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
 	}
+	
+	@Override
+	public void sliceChanged() { }
 
 	@Override
 	public void setStep(TraceElement te) { }
@@ -161,13 +164,25 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		parent.layout();
 	}
 	
+	public static final Image DEP_X;
 	public static final Image DEP_V;
+	public static final Image DEP_R;
 	public static final Image DEP_C;
+	public static final Image DEP_VR;
+	public static final Image DEP_VC;
+	public static final Image DEP_RC;
 	public static final Image DEP_VCR;
+	public static final Image[] DEP;
 	
 	static {
+		DEP_X = Activator.getImageDescriptor("icons/dep_v.png").createImage();
 		DEP_V = Activator.getImageDescriptor("icons/dep_v.png").createImage();
+		DEP_R = Activator.getImageDescriptor("icons/dep_v.png").createImage();
 		DEP_C = Activator.getImageDescriptor("icons/dep_c.png").createImage();
+		DEP_VR = Activator.getImageDescriptor("icons/dep_v.png").createImage();
+		DEP_VC = Activator.getImageDescriptor("icons/dep_v.png").createImage();
+		DEP_RC = Activator.getImageDescriptor("icons/dep_v.png").createImage();
 		DEP_VCR = Activator.getImageDescriptor("icons/dep_vcr.png").createImage();
+		DEP = new Image[]{DEP_X, DEP_V, DEP_R, DEP_VR, DEP_C, DEP_VC, DEP_RC, DEP_VCR};
 	}
 }

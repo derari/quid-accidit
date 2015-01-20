@@ -62,4 +62,8 @@ public class SlicingFilterDialog extends Dialog {
 	protected void cancelPressed() {
 		super.cancelPressed();
 	}
+
+	public int getFlags() {
+		return 1 + 2 + 4;
+	}
 }

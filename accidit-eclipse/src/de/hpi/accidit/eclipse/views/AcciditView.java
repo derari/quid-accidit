@@ -6,4 +6,5 @@ public interface AcciditView {
 	
 	public void setStep(TraceElement te);
 	
+	public void sliceChanged();
 }

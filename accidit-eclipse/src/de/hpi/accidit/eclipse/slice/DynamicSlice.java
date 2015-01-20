@@ -2,20 +2,17 @@ package de.hpi.accidit.eclipse.slice;
 
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -24,57 +21,55 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cthul.miro.DSL;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
-import de.hpi.accidit.eclipse.slice.ValueKey.MethodResultKey;
 
 public class DynamicSlice {
 	
-	public static void main(String[] args) {		
-		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
-//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
-		DatabaseConnector.overrideSchema("accidit");
-		
-		Timer time = new Timer();
-		time.enter();
-		
-		ValueKey key;
-		
-		int testId = 65;
-		long callStep = 3688;
-		key = new InvocationKey(testId, callStep);
-		
-		//		long exitStep = 537662;
-//		key = new MethodResultKey(testId, exitStep);
-		
-		// 461 + 210649
-		
-//		int testId = 240;
-////		long callStep = 320510;
-////		key = new InvocationKey(testId, callStep);
-//		long exitStep = 380553;
-//		key = new MethodResultKey(testId, exitStep);
-		
-		DynamicSlice slice = new DynamicSlice(MethodDataDependencyAnalysis.testSootConfig());
-		slice.addCriterion(key);
-		slice.processAll();
-		System.out.println("\n-----------------------------\n\n\n\n\n\n\n\n\n\n\n\n");
-		for (ValueKey vk: slice.slice.keySet()) {
-			System.out.println(vk);
-		}
-		System.out.println("\n\n\n");
-		
-		time.exit();
-		
-		printTimers(time);
-		
-		EXECUTOR.shutdownNow();
-	}
+//	public static void main(String[] args) {		
+//		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=root");
+////		DatabaseConnector.overrideDBString("jdbc:mysql://localhost:3306/accidit?user=root&password=");
+//		DatabaseConnector.overrideSchema("accidit");
+//		
+//		Timer time = new Timer();
+//		time.enter();
+//		
+//		ValueKey key;
+//		
+//		int testId = 65;
+//		long callStep = 3688;
+//		key = new InvocationKey(testId, callStep);
+//		
+//		//		long exitStep = 537662;
+////		key = new MethodResultKey(testId, exitStep);
+//		
+//		// 461 + 210649
+//		
+////		int testId = 240;
+//////		long callStep = 320510;
+//////		key = new InvocationKey(testId, callStep);
+////		long exitStep = 380553;
+////		key = new MethodResultKey(testId, exitStep);
+//		
+//		DynamicSlice slice = new DynamicSlice(MethodDataDependencyAnalysis.testSootConfig());
+//		slice.addCriterion(key);
+//		slice.processAll();
+//		System.out.println("\n-----------------------------\n\n\n\n\n\n\n\n\n\n\n\n");
+//		for (ValueKey vk: slice.slice.keySet()) {
+//			System.out.println(vk);
+//		}
+//		System.out.println("\n\n\n");
+//		
+//		time.exit();
+//		
+//		printTimers(time);
+//		
+//		EXECUTOR.shutdownNow();
+//	}
 	
 	public static void printTimers(Timer time) {
 		if (time != null) System.out.println(" total time: " + time);
@@ -89,7 +84,7 @@ public class DynamicSlice {
 	private static Timer lock_time = new Timer();
 	private static Timer slice_time = new Timer();
 	
-	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(8);
+	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(12);
 	
 	static {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -100,12 +95,9 @@ public class DynamicSlice {
 		});
 	}
 	
-	private final SortedSet<ValueKey> queue = new TreeSet<>(new Comparator<ValueKey>() {
-		@Override
-		public int compare(ValueKey o1, ValueKey o2) {
-			return o2.compareTo(o1);
-		}
-	});
+	public static int VALUE = 1;
+	public static int REACH = 2;
+	public static int CONTROL = 4;
 	
 	private final Cache<String, MethodSlicer> methodSlicers = new Cache<String, DynamicSlice.MethodSlicer>() {
 		@Override
@@ -115,68 +107,105 @@ public class DynamicSlice {
 	};
 	
 	private final SootConfig cfg;
-	private final Set<ValueKey> guardSet = new ConcurrentSkipListSet<>();
-	private final SortedMap<ValueKey, Node> slice = new ConcurrentSkipListMap<>();
+//	private final Set<ValueKey> guardSet = new ConcurrentSkipListSet<>();
+	
+	private final Set<Node> criteria = new ConcurrentSkipListSet<>();
+	private volatile ConcurrentNavigableMap<ValueKey, Node> slice = null;
+	private final ConcurrentNavigableMap<ValueKey, Node> nodes = new ConcurrentSkipListMap<>();
 	private final SortedMap<Token, DependencySet> internalSlice = new TreeMap<>();
 	private final Map<Invocation, Map<String, List<VariableValue>>> variableHistories = new ConcurrentHashMap<>();
 	private final Map<Invocation, List<ItemValue>> aryElementGetHistories = new ConcurrentHashMap<>();
 	private final Map<Invocation, List<FieldValue>> fieldGetHistories = new ConcurrentHashMap<>();
-	private final AtomicInteger pendingKeysCounter = new AtomicInteger(0);
+	
+	private final AtomicInteger pendingTasksCounter = new AtomicInteger(0);
+	private final OnSliceUpdate onUpdate;
 
-	public DynamicSlice(SootConfig cfg) {
+	public DynamicSlice(SootConfig cfg, OnSliceUpdate onUpdate) {
 		this.cfg = cfg;
+		this.onUpdate = onUpdate;
 	}
 	
-	public synchronized void addCriterion(ValueKey key) {
-		enqueueKey(key);
+	public synchronized void clear() {
+		for (Node n: criteria) {
+			n.setFlags(-1);
+		}
+		criteria.clear();
+		newSlice();
+	}
+	
+	public synchronized void setCriterion(ValueKey key, int flags) {
+		Node n = getNode(key);
+		if (flags == -1) {
+			criteria.remove(n);
+		} else {
+			criteria.add(n);
+		}
+		n.setFlags(flags);
+		newSlice();
+	}
+	
+	public Node getNode(ValueKey vk) {
+		Node n = nodes.get(vk);
+		if (n != null) return n;
+		n = new Node(vk);
+		nodes.putIfAbsent(vk, n);
+		return nodes.get(vk);
+	}
+	
+	public boolean isEmpty() {
+		return criteria.isEmpty();
+	}
+	
+	private void newSlice() {
+		execute(new Runnable() {
+			@Override
+			public void run() {
+				createNewSlice();
+			}
+		});
+	}
+	
+	private synchronized void createNewSlice() {
+		slice = new ConcurrentSkipListMap<>();
+		for (Node n: nodes.values()) {
+			n.clearInheritedFlags();
+		}
+		for (Node n: criteria) {
+			n.fillSlice(slice);
+		}
 	}
 	
 	public SortedMap<ValueKey, Node> getSlice() {
-		processAll();
+		if (slice == null) return new TreeMap<>();
 		return slice;
 	}
 	
-	protected synchronized void processAll() {
-		while (pendingKeysCounter.get() > 0) {
-			try {
-				wait(1000);
-//				pendingKeysCounter.decrementAndGet();
-			} catch (InterruptedException e) {
-				Thread.interrupted();
-				return;
-			}
-		}
-	}
-	
-	protected void addToSlice(Iterable<ValueKey> keys) {
-		for (ValueKey key: keys) {
-			if (guardSet.add(key)) {
-				enqueueKey(key);
-			}
-		}
-	}
-	
-	protected void sliceResult(ValueKey key, Node n) {
-		try {
-			if (n != null) {
-				slice.put(key, n);
-				addToSlice(n.dependencies.values);
-				addToSlice(n.dependencies.control);
-			}
-		} finally {
-			if (pendingKeysCounter.decrementAndGet() == 0) {
-				synchronized (this) {
-					notifyAll();
+	protected void execute(final Runnable r) {
+		pendingTasksCounter.incrementAndGet();
+		EXECUTOR.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					r.run();
+				} finally {
+					int c = pendingTasksCounter.decrementAndGet();
+					onUpdate.run(c == 0);
 				}
 			}
-		}
+		});
 	}
 	
-	protected void enqueueKey(ValueKey key) {
-		int i = pendingKeysCounter.incrementAndGet();
-//		System.out.println("---------- " + i);
-		methodSlicers.get(key.getMethodId()).enqueueKey(key);
-	}
+//	protected synchronized void processAll() {
+//		while (pendingTasksCounter.get() > 0) {
+//			try {
+//				wait(1000);
+////				pendingKeysCounter.decrementAndGet();
+//			} catch (InterruptedException e) {
+//				Thread.interrupted();
+//				return;
+//			}
+//		}
+//	}
 	
 	protected boolean collectDependencies(DependencySet bag, ValueKey key, DataDependency dd) {
 		if (dd instanceof DataDependency.Complex) {
@@ -269,7 +298,7 @@ public class DynamicSlice {
 		if (depSet == null) {
 			depSet = new DependencySet();
 			internalSlice.put(t, depSet);
-			DataDependency dd =  methodSlicers.get(key.getMethodId()).dependencyGraph.get(t);
+			DataDependency dd =  methodSlicers.get(key.getMethodId()).dependencyGraph().get(t);
 			if (dd == null) return false;
 			collectDependencies(depSet, key, dd);
 		}
@@ -442,76 +471,34 @@ public class DynamicSlice {
 	public class MethodSlicer {
 		
 		private final String methodId;
-		private boolean graphRequested = false;
 		private volatile Map<Token, DataDependency> dependencyGraph = null;
-		private List<ValueKey> keys = new ArrayList<>();
 		
 		public MethodSlicer(String methodId) {
 			this.methodId = methodId;
 		}
 		
-		public synchronized void enqueueKey(ValueKey key) {
+		private synchronized Map<Token, DataDependency> dependencyGraph() {
 			if (dependencyGraph == null) {
-				keys.add(key);
-				fetchGraph();
+				dependencyGraph = cfg.analyse(methodId);
+			}
+			return dependencyGraph;
+		}
+		
+		private void fillDependencies(Node n) {
+			ValueKey key = n.key;
+			Token t = key.asToken();
+			DataDependency dd = t == null ? DataDependency.constant() : dependencyGraph().get(t);
+			System.out.print(key);// + ": " + dd);
+			if (dd != null) {
+				collectDependencies(n.dependencies, key, dd);
+				System.out.println(": " + n.dependencies);
 			} else {
-				enqueue(key);
-			}
-		}
-		
-		private synchronized void enqueueAll() {
-			for (ValueKey k: keys) {
-				enqueue(k);
-			}
-			keys = null;
-		}
-		
-		private void fetchGraph() {
-			if (graphRequested) return;
-			graphRequested = true;
-			EXECUTOR.execute(new Runnable() {
-				@Override
-				public void run() {
-					dependencyGraph = cfg.analyse(methodId);
-					enqueueAll();
-				}
-			});
-		}
-		
-		private void enqueue(final ValueKey key) {
-			EXECUTOR.execute(new Runnable(){
-				@Override
-				public void run() {
-					try {
-						slice_time.enter();
-						processKey(key);
-					} finally {
-						slice_time.exit();
-					}
-				}
-			});
-		}
-		
-		private void processKey(ValueKey key) {
-			Node n = null;
-			try {
-				Token t = key.asToken();
-				DataDependency dd = t == null ? DataDependency.constant() : dependencyGraph.get(t);
-				System.out.print(key);// + ": " + dd);
-				n = new Node();
-				if (dd != null) {
-					collectDependencies(n.dependencies, key, dd);
-					System.out.println(": " + n.dependencies);
+				if (key instanceof InvocationKey) {
+					System.out.println("!! NO DATA FOR INVOCATION");
 				} else {
-					if (key instanceof InvocationKey) {
-						System.out.println("!! NO DATA FOR INVOCATION");
-					} else {
-						n.dependencies.addValue(key.getInvocationKey());
-						System.out.println(":?? " + n.dependencies);
-					}
+					n.dependencies.addValue(key.getInvocationKey());
+					System.out.println(":?? " + n.dependencies);
 				}
-			} finally {
-				sliceResult(key, n);
 			}
 		}
 	}
@@ -580,7 +567,78 @@ public class DynamicSlice {
 		}
 	}
 	
-	public static class Node {
-		private final DependencySet dependencies = new DependencySet();
+	public class Node implements Comparable<Node> {
+		private final ValueKey key;
+		private DependencySet dependencies = null;
+		private int configuredFlags = -1;
+		private int inheritedFlags = 0;
+		private int currentFlags = 0;
+		
+		public Node(ValueKey key) {
+			this.key = key;
+		}
+		
+		public void setFlags(final int flags) {
+			configuredFlags = flags;
+		}
+		
+		public synchronized void clearInheritedFlags() {
+			inheritedFlags = 0;
+			currentFlags = 0;
+		}
+		
+		private void inheritFlag(ConcurrentNavigableMap<ValueKey, Node> slice, int flags) {
+			inheritedFlags |= flags;
+			fillSlice(slice);
+		}
+		
+		private synchronized void initialize() {
+			if (dependencies != null) return;
+			dependencies = new DependencySet();
+			methodSlicers.get(key.getMethodId()).fillDependencies(this);
+		}
+		
+		public int getFlags() {
+			if (configuredFlags == -1) return inheritedFlags;
+			return configuredFlags;// | inheritedFlags;
+		}
+		
+		public void fillSlice(final ConcurrentNavigableMap<ValueKey, Node> slice) {
+			execute(new Runnable() {
+				@Override
+				public void run() {
+					updateSlice(slice);
+				}
+			});
+		}
+
+		private synchronized void updateSlice(ConcurrentNavigableMap<ValueKey, Node> slice) {
+			if (slice != DynamicSlice.this.slice) return;
+			int actualFlags = getFlags();
+			if (currentFlags == actualFlags) return;
+			int missingFlags = currentFlags ^ actualFlags;
+			initialize();
+			slice.put(key, this);
+			if ((missingFlags & VALUE) != 0) {
+				for (ValueKey k: dependencies.values) {
+					getNode(k).inheritFlag(slice, actualFlags);
+				}
+			}
+			if ((missingFlags & CONTROL) != 0) {
+				for (ValueKey k: dependencies.values) {
+					getNode(k).inheritFlag(slice, actualFlags);
+				}
+			}
+			currentFlags = actualFlags;
+		}
+
+		@Override
+		public int compareTo(Node arg0) {
+			return key.compareTo(arg0.key);
+		}
+	}
+	
+	public interface OnSliceUpdate {
+		void run(boolean done);
 	}
 }

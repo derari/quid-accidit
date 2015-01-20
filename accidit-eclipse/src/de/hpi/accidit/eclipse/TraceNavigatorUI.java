@@ -50,7 +50,9 @@ public class TraceNavigatorUI {
 		@Override
 		public void run() {
 			sliceSteps = null;
-			getTraceExplorer().refresh();
+			for (AcciditView v: views) {
+				v.sliceChanged();
+			}
 		}
 	});
 	private SortedSet<Long> sliceSteps = null;

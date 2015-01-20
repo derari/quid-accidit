@@ -41,7 +41,10 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public SlicingCriteriaView() {
 		removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
 	}
-
+	
+	@Override
+	public void sliceChanged() { }
+	
 	@Override
 	public void setStep(TraceElement te) { }
 
@@ -158,41 +161,57 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	}
 	
 	public void addEntry(final ValueKey key) {
-		TraceNavigatorUI.getGlobal().getSliceApi().addCriterion(key);
+		new Criterion(key).setDependencyType(DynamicSlice.VALUE + DynamicSlice.CONTROL);
+	}
+	
+	private class Criterion {
+		Label detailsButton;
+		final ValueKey key;
+		public Criterion(ValueKey key) {
+			this.key = key;
+			init();
+		}
 		
-		final Label detailsButton = new Label(parent, SWT.NONE);
-		detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-		detailsButton.setImage(SlicingStatusView.DEP_C);
+		private void setDependencyType(int flags) {
+			TraceNavigatorUI.getGlobal().getSliceApi().setCriterion(key, flags);
+			detailsButton.setImage(SlicingStatusView.DEP[flags & 7]);
+		}
 		
-		final Label label = new Label(parent, SWT.NONE);
-		label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		label.setText(key.toString());
-		
-		detailsButton.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseUp(MouseEvent e) {
-				Shell s = getSite().getShell();
-				SlicingFilterDialog dialog = new SlicingFilterDialog(s);
-				if (dialog.open() == SWT.OK) {
-					
+		private void init() {
+			detailsButton = new Label(parent, SWT.NONE);
+			detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
+			
+			
+			final Label label = new Label(parent, SWT.NONE);
+			label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+			label.setText(key.toString());
+			
+			detailsButton.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseUp(MouseEvent e) {
+					Shell s = getSite().getShell();
+					SlicingFilterDialog dialog = new SlicingFilterDialog(s);
+					if (dialog.open() == SWT.OK) {
+						setDependencyType(dialog.getFlags());
+					}
 				}
-			}
-		});
-		
-		final Label removeButton = new Label(parent, SWT.NONE);
-		removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-		removeButton.setImage(removeImage);
-		removeButton.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseUp(MouseEvent e) {
-				TraceNavigatorUI.getGlobal().getSliceApi().removeCriterion(key);
-				detailsButton.dispose();
-				label.dispose();
-				removeButton.dispose();
-				parent.layout();
-			}
-		});
-		
-		parent.layout();
+			});
+			
+			final Label removeButton = new Label(parent, SWT.NONE);
+			removeButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
+			removeButton.setImage(removeImage);
+			removeButton.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseUp(MouseEvent e) {
+					TraceNavigatorUI.getGlobal().getSliceApi().removeCriterion(key);
+					detailsButton.dispose();
+					label.dispose();
+					removeButton.dispose();
+					parent.layout();
+				}
+			});
+			
+			parent.layout();
+		}
 	}
 }

@@ -106,6 +106,10 @@ public class VariablesView extends ViewPart implements AcciditView {
 	}
 	
 	@Override
+	public void sliceChanged() {
+	}
+	
+	@Override
 	public void setStep(TraceElement te) {
 		rootNode.setStep(te.getTestId(), te.getCallStep(), te.getStep());
 	}

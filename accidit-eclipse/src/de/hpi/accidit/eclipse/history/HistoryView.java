@@ -30,7 +30,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 	public HistoryView() {}
 
 	@Override
-	public void createPartControl(final Composite parent) {		
+	public void createPartControl(final Composite parent) {
 		GridLayout layout = new GridLayout(2, false);
 		parent.setLayout(layout);
 		
@@ -58,7 +58,12 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 	public void setFocus() {
 		historyContainer.getControl().setFocus();
 	}
-
+	
+	@Override
+	public void sliceChanged() {
+		historyContainer.getTreeViewer().refresh();
+	}
+	
 	@Override
 	public void setStep(TraceElement te) {		
 		int testId = te.getTestId();

@@ -170,6 +170,11 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	}
 	
 	@Override
+	public void sliceChanged() {
+		refresh();
+	}
+	
+	@Override
 	public void setStep(TraceElement te) {
 		if (current == te) {
 			return;
