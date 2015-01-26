@@ -5,6 +5,12 @@
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
+            class="de.hpi.accidit.eclipse.properties.GeneralSettingsPreferencePage"
+            id="de.hpi.accidit.eclipse.preferencePages.GeneralSettings"
+            name="Accidit">
+      </page>
+      <page
+            category="de.hpi.accidit.eclipse.preferencePages.GeneralSettings"
             class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
             id="de.hpi.accidit.eclipse.preferencePages.DatabaseSettings"
             name="Database Settings">
@@ -583,8 +589,18 @@
    <extension
          point="org.eclipse.ui.propertyPages">
       <page
+            class="de.hpi.accidit.eclipse.properties.GeneralSettingsPropertyPage"
+            id="de.hpi.accidit.eclipse.propertyPages.GeneralSettings"
+            name="Accidit">
+         <enabledWhen>
+            <instanceof
+                  value="org.eclipse.core.resources.IProject">
+            </instanceof>
+         </enabledWhen>
+      </page>
+      <page
+            category="de.hpi.accidit.eclipse.propertyPages.GeneralSettings"
             class="de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage"
-            icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.propertyPages.DatabaseSettings"
             name="Database Settings">
          <enabledWhen>
