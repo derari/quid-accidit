@@ -36,6 +36,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	
 	private Composite parent;
 	private List<Control> headlineControls;
+	private final List<Criterion> criteria = new ArrayList<>();
 	private Image removeImage;
 
 	public SlicingCriteriaView() {
@@ -104,6 +105,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		
 		invD = invD.getInvocationAtCall(value.getCallStep());
 		ValueKey key = new ValueKey.VariableValueKey(invD, value.getValueStep(), value.getName(), value.getLine());
+		key.setValue(value.getValue());
 		addEntry(key);
 	}
 	
@@ -120,6 +122,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		
 		invD = invD.getInvocationAtCall(value.getCallStep());
 		ValueKey key = new ValueKey.InvocationThisKey(invD, value.getValueStep());
+		key.setValue(value.getValue());
 		addEntry(key);
 	}
 	
@@ -136,6 +139,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 //		System.out.printf("%s %s %s %s%n", value.getCallStep(), value.getStep(), value.getThisId(), value.getName());
 //		invD = invD.getInvocationAtCall(value.getCallStep());
 		ValueKey key = new ValueKey.FieldValueKey(invD, value);
+		key.setValue(value.getValue());
 		addEntry(key);
 	}
 	
@@ -154,14 +158,32 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 				.atStep(invocation.getStep())
 				._execute(DatabaseConnector.cnn())._asList();
 		
+		int i = 0;
 		for (VariableValue v: variables) {
-			ValueKey key = new ValueKey.VariableValueKey(invD, v.getValueStep(), v.getName(), v.getLine());
-			addEntry(key);
+//			ValueKey arg = new ValueKey.InvocationArgKey(invD, v.getValueStep(), i++, invocation);
+//			addEntry(arg);
+//			ValueKey key = new ValueKey.VariableValueKey(invD, v.getValueStep(), v.getName(), v.getLine());
+//			key.setValue(v.getValue());
+//			addEntry(key);
+			addVariableValue(v);
 		}
 	}
 	
 	public void addEntry(final ValueKey key) {
-		new Criterion(key).setDependencyType(DynamicSlice.VALUE + DynamicSlice.CONTROL);
+		addEntry(key, DynamicSlice.ALL_DEPS);
+	}
+	
+	private Criterion getCriterion(ValueKey key) {
+		for (Criterion c: criteria) {
+			if (c.key.equals(key)) return c;
+		}
+		Criterion c = new Criterion(key);
+		criteria.add(c);
+		return c;
+	}
+	
+	public void addEntry(ValueKey key, int flags) {
+		getCriterion(key).setDependencyType(flags);
 	}
 	
 	private class Criterion {
@@ -173,14 +195,14 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		}
 		
 		private void setDependencyType(int flags) {
-			TraceNavigatorUI.getGlobal().getSliceApi().setCriterion(key, flags);
 			detailsButton.setImage(SlicingStatusView.DEP[flags & 7]);
+			TraceNavigatorUI.getGlobal().getSliceApi().setCriterion(key, flags);
 		}
 		
 		private void init() {
 			detailsButton = new Label(parent, SWT.NONE);
 			detailsButton.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-			
+			detailsButton.setImage(SlicingStatusView.DEP[0]);
 			
 			final Label label = new Label(parent, SWT.NONE);
 			label.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -190,8 +212,10 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 				@Override
 				public void mouseUp(MouseEvent e) {
 					Shell s = getSite().getShell();
-					SlicingFilterDialog dialog = new SlicingFilterDialog(s);
-					if (dialog.open() == SWT.OK) {
+					int flags = TraceNavigatorUI.getGlobal().getSliceApi().getFlags(key);
+					SlicingFilterDialog dialog = new SlicingFilterDialog(s, flags);
+					int i = dialog.open();
+					if (i == SWT.OK) {
 						setDependencyType(dialog.getFlags());
 					}
 				}
@@ -203,6 +227,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 			removeButton.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseUp(MouseEvent e) {
+					criteria.remove(Criterion.this);
 					TraceNavigatorUI.getGlobal().getSliceApi().removeCriterion(key);
 					detailsButton.dispose();
 					label.dispose();

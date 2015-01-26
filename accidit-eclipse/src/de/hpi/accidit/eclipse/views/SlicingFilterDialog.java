@@ -10,16 +10,20 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
+import de.hpi.accidit.eclipse.slice.DynamicSlice;
+
 public class SlicingFilterDialog extends Dialog {
 	
 	private Button cbValue;
 	private Button cbReach;
 	private Button cbControl;
+	private int flags;
 	
-	public SlicingFilterDialog(Shell shell) {
+	public SlicingFilterDialog(Shell shell, int flags) {
 		super(shell);
 		setShellStyle(getShellStyle() | SWT.MAX | SWT.RESIZE);
 		setBlockOnOpen(true);
+		this.flags = flags;
 	}
 	
 	@Override
@@ -30,10 +34,13 @@ public class SlicingFilterDialog extends Dialog {
 		
 		cbValue = new Button(parent, SWT.CHECK);
 		cbValue.setText("Value");
+		cbValue.setSelection((flags & DynamicSlice.VALUE) != 0);
 		cbReach = new Button(parent, SWT.CHECK);
 		cbReach.setText("Reachability");
+		cbReach.setSelection((flags & DynamicSlice.REACH) != 0);
 		cbControl = new Button(parent, SWT.CHECK);
 		cbControl.setText("Control");
+		cbControl.setSelection((flags & DynamicSlice.CONTROL) != 0);
 		
 		return parent;
 	}
@@ -50,20 +57,25 @@ public class SlicingFilterDialog extends Dialog {
 	
 	@Override
 	protected Point getInitialSize() {
-		return new Point(200, 100);
+		return new Point(250, 150);
 	}
 	
 	@Override
 	protected void okPressed() {
+		flags = (cbValue.getSelection() ? DynamicSlice.VALUE : 0) +
+				(cbReach.getSelection() ? DynamicSlice.REACH : 0) +
+				(cbControl.getSelection() ? DynamicSlice.CONTROL : 0);
 		super.okPressed();
+		setReturnCode(SWT.OK);
 	}
 	
 	@Override
 	protected void cancelPressed() {
 		super.cancelPressed();
+		setReturnCode(SWT.CANCEL);
 	}
 
 	public int getFlags() {
-		return 1 + 2 + 4;
+		return flags;
 	}
 }

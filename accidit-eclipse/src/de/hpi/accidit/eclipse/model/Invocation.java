@@ -114,4 +114,8 @@ public class Invocation extends TraceElement {
 		
 		children = result.toArray(new TraceElement[result.size()]);
 	}
+
+	public Method quickGetMethod() {
+		return Method.VIEW.select().byId(methodId)._execute(cnn())._getSingle();
+	}
 }

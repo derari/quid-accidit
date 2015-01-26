@@ -22,6 +22,7 @@ import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.VariablesView;
+import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
 
 // TODO rename
@@ -50,9 +51,14 @@ public class TraceNavigatorUI {
 		@Override
 		public void run() {
 			sliceSteps = null;
-			for (AcciditView v: views) {
-				v.sliceChanged();
-			}
+			DoInUiThread.run(new Runnable() {
+				@Override
+				public void run() {
+					for (AcciditView v: views) {
+						v.sliceChanged();
+					}
+				}
+			});
 		}
 	});
 	private SortedSet<Long> sliceSteps = null;

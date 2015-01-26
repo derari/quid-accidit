@@ -128,7 +128,8 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		synchronized (MethodDataDependencyAnalysis.class) {
 			b = sMethod.retrieveActiveBody();
 		}
-		System.out.println("!!! analyzing " + sMethod);
+		System.out.println("Creating static dependency graph of");
+		System.out.println("    " + sMethod);
 //		Body b = sMethod.getSource().getBody(sMethod, "");
 		UnitGraph graph = new ExceptionalUnitGraph(b);
 		MethodDataDependencyAnalysis analysis = new MethodDataDependencyAnalysis(graph);
@@ -176,7 +177,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 		for (SootMethod m0: sClass.getMethods()) {
 			if (m0.getName().equals(method) && matchSignature(m0, signature)) {
 				sMethod = m0;
-				System.out.println("    <<<" + m0 + ">>>");
+//				System.out.println("    <<<" + m0 + ">>>");
 				break;
 			}
 		}
@@ -274,7 +275,7 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 			for (int i = 0; i < inv.getArgCount(); i++) {
 				args.add(getDataDependency(inv.getArg(i), out, line));
 			}
-			DataDependency.Invoke d = DataDependency.invoke(inv.getMethod(), self, args);
+			DataDependency.InvocationResult d = DataDependency.invocationResult(inv.getMethod(), self, args);
 			out.setInvoke(d.getMethodKey(), line, d);
 			return d;
 			
@@ -403,7 +404,9 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 
 	@Override
 	protected DataDependencyFlow newInitialFlow() {
-		return new DataDependencyFlow(dependencies);
+		DataDependencyFlow ddf = new DataDependencyFlow(dependencies);
+		ddf.pushCondition(DataDependency.invocation());
+		return ddf;
 	}
 
 	@Override

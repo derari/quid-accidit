@@ -26,7 +26,7 @@ public class SliceTraceHandler extends AbstractHandler implements IHandler {
 		// values: "call_only", "arguments_only", "call_and_arguments"
 		String type = event.getParameter(TYPE_PARAMETER_ID);
 		
-		SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getSlicingCriteriaView();
+		SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView();
 		
 		if (selection instanceof Invocation) {
 			Invocation invocation = (Invocation) selection;

@@ -2,9 +2,11 @@ package de.hpi.accidit.eclipse.slice;
 
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +28,8 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
+import de.hpi.accidit.eclipse.slice.ValueKey.InvocationAndArgsKey;
+import de.hpi.accidit.eclipse.slice.ValueKey.InvocationArgKey;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 
 public class DynamicSlice {
@@ -84,7 +88,7 @@ public class DynamicSlice {
 	private static Timer lock_time = new Timer();
 	private static Timer slice_time = new Timer();
 	
-	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(12);
+	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(1);
 	
 	static {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -98,6 +102,7 @@ public class DynamicSlice {
 	public static int VALUE = 1;
 	public static int REACH = 2;
 	public static int CONTROL = 4;
+	public static int ALL_DEPS = VALUE + REACH + CONTROL;
 	
 	private final Cache<String, MethodSlicer> methodSlicers = new Cache<String, DynamicSlice.MethodSlicer>() {
 		@Override
@@ -213,6 +218,11 @@ public class DynamicSlice {
 			return collectDependencies(bag, key, cplx.getValue())
 				 & collectDependencies(bag.controlOnly(), key, cplx.getControl());
 		}
+		if (dd instanceof DataDependency.Reach) {
+			DataDependency.Reach reach = (DataDependency.Reach) dd;
+			return collectDependencies(bag, key, reach.getValue())
+				 & collectDependencies(bag.reachOnly(), key, reach.getReach());
+		}
 		if (dd instanceof DataDependency.All) {
 			DataDependency.All all = (DataDependency.All) dd;
 			boolean success = true;
@@ -255,9 +265,18 @@ public class DynamicSlice {
 			return true;
 			
 		}
-		if (dd instanceof DataDependency.Invoke) {
-			DataDependency.Invoke iv = (DataDependency.Invoke) dd;
+		if (dd instanceof DataDependency.Invocation) {
+			bag.addValue(key.getInvocationKey());
+			return true;
+		}
+		if (dd instanceof DataDependency.InvocationResult) {
+			DataDependency.InvocationResult iv = (DataDependency.InvocationResult) dd;
 			if (key instanceof InvocationKey && iv.getMethodKey().equals(((InvocationKey) key).getMethodKey())) {
+				// special case: the invocation itself
+				return true;
+			}
+			if (key instanceof InvocationAndArgsKey && iv.getMethodKey().equals(((InvocationAndArgsKey) key).getMethodKey())) {
+				// special case: we want the invocation, not the return value
 				return collectInvocation(bag, key, iv);						
 			}
 			ValueKey resultKey = key.newResultKey(iv.getType(), iv.getMethod(), iv.getSignature(), key.getStep());
@@ -458,15 +477,28 @@ public class DynamicSlice {
 		return items;
 	}
 	
-	private boolean collectInvocation(DependencySet bag, ValueKey key, DataDependency.Invoke iv) {
+	private boolean collectInvocation(DependencySet bag, ValueKey key, DataDependency.InvocationResult iv) {
 		DataDependency self = iv.getSelf();
 		boolean success = true;
 		if (self != null) success &= collectDependencies(bag, key, self);
 		for (DataDependency arg: iv.getArgs()) {
 			success &= collectDependencies(bag, key, arg);
 		}
+		if (key instanceof InvocationAndArgsKey) {
+			bag.addReach(((InvocationAndArgsKey) key).getThisInvocation());
+		}
 		return success;
 	}
+	
+//	private boolean collectInvocationAndArgs(DependencySet bag, ValueKey key, DataDependency.Invoke iv) {
+//		DataDependency self = iv.getSelf();
+//		boolean success = true;
+//		if (self != null) success &= collectDependencies(bag, key, self);
+//		for (DataDependency arg: iv.getArgs()) {
+//			success &= collectDependencies(bag, key, arg);
+//		}
+//		return success;
+//	}
 	
 	public class MethodSlicer {
 		
@@ -493,36 +525,87 @@ public class DynamicSlice {
 				collectDependencies(n.dependencies, key, dd);
 				System.out.println(": " + n.dependencies);
 			} else {
+				if (t.toString().startsWith("-1:")) {
+					String search = t.toString().substring(2);
+					int max = 9999999;
+					Token match = null;
+					for (Token t2: dependencyGraph().keySet()) {
+						String t2String = t2.toString();
+						if (t2String.endsWith(search)) {
+							int i = Integer.parseInt(t2String.substring(0, t2String.indexOf(':')));
+							if (i < max) {
+								max = i;
+								match = t2;
+							}
+						}
+					}
+					if (match != null) {
+						collectDependencies(n.dependencies, key, dependencyGraph().get(match));
+						System.out.println(": " + n.dependencies);
+						return;
+					}
+				}
 				if (key instanceof InvocationKey) {
 					System.out.println("!! NO DATA FOR INVOCATION");
 				} else {
-					n.dependencies.addValue(key.getInvocationKey());
+					n.dependencies.addValue(key.getInvocationKey().allArgs());
+					
+//					String invocationStep = key.getInvocationKey().getStep() + ":";
+//					for (Token t2: dependencyGraph().keySet()) {
+//						if (t2.toString().startsWith(invocationStep)) {
+//							collectDependencies(n.dependencies, key, dependencyGraph().get(t2));
+//						}
+//					}
+					
 					System.out.println(":?? " + n.dependencies);
 				}
 			}
 		}
 	}
 	
+	private static final Set<ValueKey> DEV_NULL = new AbstractSet<ValueKey>() {
+		public boolean add(ValueKey arg0) {
+			return false;
+		};
+		@Override
+		public Iterator<ValueKey> iterator() {
+			return Collections.emptyIterator();
+		}
+		@Override
+		public int size() {
+			return 0;
+		}
+	};
+	
 	protected static class DependencySet {
+		
 		private final Set<ValueKey> values;
+		private final Set<ValueKey> reach;
 		private final Set<ValueKey> control;
 		private final Set<Token> tokens;
 		
 		public DependencySet() {
 			values = new TreeSet<>();
 			control = new TreeSet<>();
+			reach = new TreeSet<>();
 			tokens = new TreeSet<>();
 		}
 		
-		private DependencySet(Set<ValueKey> values, Set<ValueKey> control, Set<Token> tokens) {
+		private DependencySet(Set<ValueKey> values, Set<ValueKey> reach, Set<ValueKey> control, Set<Token> tokens) {
 			this.values = values;
+			this.reach = reach;
 			this.control = control;
 			this.tokens = tokens;
 		}
 		
 		public DependencySet controlOnly() {
 			if (values == control) return this;
-			return new DependencySet(control, control, tokens);
+			return new DependencySet(control, DEV_NULL, control, tokens);
+		}
+		
+		public DependencySet reachOnly() {
+			if (values == control) return this;
+			return new DependencySet(reach, reach, reach, tokens);
 		}
 		
 		public boolean isEmpty() {
@@ -545,12 +628,19 @@ public class DynamicSlice {
 			}
 		}
 		
+		public void addReach(ValueKey key) {
+			reach.add(key);
+		}
+		
 		public void addValue(DependencySet other) {
 			for (ValueKey k: other.values) {
 				addValue(k);
 			}
 			for (ValueKey k: other.control) {
 				addControl(k);
+			}
+			for (ValueKey k: other.reach) {
+				addReach(k);
 			}
 		}
 		
@@ -570,12 +660,19 @@ public class DynamicSlice {
 	public class Node implements Comparable<Node> {
 		private final ValueKey key;
 		private DependencySet dependencies = null;
+		private List<Node> dependenciesInSlice = null;
 		private int configuredFlags = -1;
 		private int inheritedFlags = 0;
 		private int currentFlags = 0;
+		private int dependencyFlags = 0;
+		private Node representative = null;
 		
 		public Node(ValueKey key) {
 			this.key = key;
+		}
+		
+		public ValueKey getKey() {
+			return key;
 		}
 		
 		public void setFlags(final int flags) {
@@ -583,11 +680,14 @@ public class DynamicSlice {
 		}
 		
 		public synchronized void clearInheritedFlags() {
+			dependenciesInSlice = null;
 			inheritedFlags = 0;
 			currentFlags = 0;
+			dependencyFlags = 0;
 		}
 		
-		private void inheritFlag(ConcurrentNavigableMap<ValueKey, Node> slice, int flags) {
+		private void inheritFlag(int dependencyFlags, ConcurrentNavigableMap<ValueKey, Node> slice, int flags) {
+			this.dependencyFlags |= dependencyFlags; 
 			inheritedFlags |= flags;
 			fillSlice(slice);
 		}
@@ -595,12 +695,18 @@ public class DynamicSlice {
 		private synchronized void initialize() {
 			if (dependencies != null) return;
 			dependencies = new DependencySet();
-			methodSlicers.get(key.getMethodId()).fillDependencies(this);
+			MethodSlicer slicer = methodSlicers.get(key.getMethodId());
+			slicer.fillDependencies(this);
 		}
 		
 		public int getFlags() {
 			if (configuredFlags == -1) return inheritedFlags;
 			return configuredFlags;// | inheritedFlags;
+		}
+		
+		public int getDependencyFlags() {
+			if (configuredFlags > -1) return 8;
+			return dependencyFlags;
 		}
 		
 		public void fillSlice(final ConcurrentNavigableMap<ValueKey, Node> slice) {
@@ -615,27 +721,71 @@ public class DynamicSlice {
 		private synchronized void updateSlice(ConcurrentNavigableMap<ValueKey, Node> slice) {
 			if (slice != DynamicSlice.this.slice) return;
 			int actualFlags = getFlags();
+			if (actualFlags == 0) return;
 			if (currentFlags == actualFlags) return;
 			int missingFlags = currentFlags ^ actualFlags;
+			if (dependenciesInSlice == null) dependenciesInSlice = new ArrayList<>();
 			initialize();
+			
 			slice.put(key, this);
 			if ((missingFlags & VALUE) != 0) {
 				for (ValueKey k: dependencies.values) {
-					getNode(k).inheritFlag(slice, actualFlags);
+					Node n = getNode(k);
+					if (k instanceof InvocationArgKey) {
+						n.representative = this;
+					}
+					dependenciesInSlice.add(n);
+					n.inheritFlag(VALUE, slice, actualFlags);
 				}
 			}
 			if ((missingFlags & CONTROL) != 0) {
-				for (ValueKey k: dependencies.values) {
-					getNode(k).inheritFlag(slice, actualFlags);
+				for (ValueKey k: dependencies.control) {
+					Node n = getNode(k);
+					dependenciesInSlice.add(n);
+					n.inheritFlag(CONTROL, slice, actualFlags);
+				}
+			}
+			if ((missingFlags & REACH) != 0) {
+				for (ValueKey k: dependencies.reach) {
+					Node n = getNode(k);
+					dependenciesInSlice.add(n);
+					n.inheritFlag(REACH, slice, actualFlags);
 				}
 			}
 			currentFlags = actualFlags;
+			
+		}
+		
+		public List<Node> getDependenciesInSlice() {
+			if (dependenciesInSlice == null) return Collections.emptyList();
+			return dependenciesInSlice;
 		}
 
 		@Override
 		public int compareTo(Node arg0) {
 			return key.compareTo(arg0.key);
 		}
+		
+		@Override
+		public String toString() {
+			return key.toString() + "(" + getFlags() + ")";
+		}
+		
+//		public boolean isInternalNode() {
+//			return (key instanceof InvocationArgKey) || (key instanceof InvocationAndArgsKey);
+//		}
+		public Node getRepresentative() {
+			if (representative != null) {
+				return representative;
+			}
+			if (key instanceof InvocationAndArgsKey) {
+				Node n = getNode(((InvocationAndArgsKey) key).getThisInvocation());
+				n.dependencyFlags |= dependencyFlags;
+				return n;
+			}
+			return this;
+		}
+		
 	}
 	
 	public interface OnSliceUpdate {

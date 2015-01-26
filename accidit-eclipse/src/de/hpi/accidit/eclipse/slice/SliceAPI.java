@@ -123,4 +123,12 @@ public class SliceAPI {
 	public void removeCriterion(ValueKey key) {
 		setCriterion(key, -1);
 	}
+
+	public int getFlags(ValueKey key) {
+		return dynamicSlice().getNode(key).getFlags();
+	}
+
+	public SortedMap<ValueKey, Node> getSlice() {
+		return dynamicSlice().getSlice();
+	}
 }

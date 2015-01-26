@@ -63,6 +63,7 @@ public class ValueKey implements Comparable<ValueKey> {
 
 	@Override
 	public int compareTo(ValueKey o) {
+		if (o == this) return 0;
 		long cStep = (step - o.step);
 		int c = cStep < 0 ? -1 : (cStep > 0 ? 1 : 0);
 		if (c != 0) return c;
@@ -84,7 +85,7 @@ public class ValueKey implements Comparable<ValueKey> {
 	}
 	
 	protected int specificCompareTo(ValueKey o) {
-		return 0;
+		return 0; //toString().compareTo(o.toString());
 	}
 	
 	public VariableValueKey newVariableKey(String variable, int line, long step) {
@@ -119,6 +120,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		return invD;
 	}
 	
+	public String getUserString() {
+		return toString();
+	}
+	
 	@Override
 	public String toString() {
 		String s;
@@ -148,6 +153,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		private List<InvocationArgKey> args = new ArrayList<>(8);
 		private InvocationThisKey thisKey = null;
+		private InvocationAndArgsKey allKey = null;
 		private Invocation inv;
 
 		public InvocationKey(int testId, long step) {
@@ -169,6 +175,13 @@ public class ValueKey implements Comparable<ValueKey> {
 			return Token.invoke(inv.type, inv.method, inv.signature, inv.line);
 		}
 		
+		public InvocationAndArgsKey allArgs() {
+			if (allKey == null) {
+				allKey = new InvocationAndArgsKey(this);
+			}
+			return allKey;
+		}
+		
 		public InvocationArgKey getArg(int index) {
 			while (args.size() <= index) {
 				args.add(new InvocationArgKey(invD, step, args.size(), inv));
@@ -185,6 +198,16 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		public String getMethodKey() {
 			return Token.methodKey(inv.type, inv.method, inv.signature);
+		}
+		
+		@Override
+		public String getUserString() {
+			String t = inv.type;
+			t = t.substring(t.lastIndexOf('.')+1);
+			String m = inv.method;
+			String sig = inv.signature;
+			sig = sig.substring(0, sig.indexOf(')')+1);
+			return t + "." + m + sig;
 		}
 	}
 	
@@ -205,6 +228,11 @@ public class ValueKey implements Comparable<ValueKey> {
 		protected Token asToken() {
 			return Token.invokeThis(inv.type, inv.method, inv.signature, inv.line);
 		}
+		
+		@Override
+		public String getUserString() {
+			return "this = " + getValueString();
+		}
 	}
 
 	public static class InvocationArgKey extends ValueKey {
@@ -221,6 +249,50 @@ public class ValueKey implements Comparable<ValueKey> {
 		@Override
 		protected Token asToken() {
 			return Token.invokeArg(inv.type, inv.method, inv.signature, index, inv.line);
+		}
+		
+		@Override
+		protected int specificCompareTo(ValueKey o) {
+			InvocationArgKey a = (InvocationArgKey) o;
+			return Integer.compare(index, a.index);
+		}
+		
+		@Override
+		public String getUserString() {
+			return "[" + index + "] = " + getValueString();
+		}
+	}
+	
+	public static class InvocationAndArgsKey extends ValueKey {
+		
+		private final InvocationKey invKey;
+
+		public InvocationAndArgsKey(InvocationKey invKey) {
+			super(invKey.getInvD(), invKey.getStep());
+			this.invKey = invKey;
+		}
+		
+		@Override
+		protected Token asToken() {
+			return invKey.asToken();
+		}
+		
+		@Override
+		protected int specificCompareTo(ValueKey o) {
+			return invKey.compareTo(((InvocationAndArgsKey) o).invKey);
+		}
+		
+		@Override
+		public String toString() {
+			return invKey.toString() + "**";
+		}
+		
+		public InvocationKey getThisInvocation() {
+			return invKey;
+		}
+
+		public String getMethodKey() {
+			return invKey.getMethodKey();
 		}
 	}
 	
@@ -253,6 +325,13 @@ public class ValueKey implements Comparable<ValueKey> {
 		protected Token asToken() {
 			return Token.result(getInvocation().exitLine);
 		}
+		
+		@Override
+		public String getUserString() {
+			String method = getInvocation().method;
+			method = method.substring(method.indexOf('#') + 1);
+			return method + "() \u21B5 " + getValueString();
+		}
 	}
 	
 	public static class VariableValueKey extends ValueKey {
@@ -263,12 +342,20 @@ public class ValueKey implements Comparable<ValueKey> {
 		public VariableValueKey(InvocationData invD, long step, String variable, int line) {
 			super(invD, step);
 			this.variable = variable;
+			if (line < 0) {
+				//invD.getInvocation().quickGetMethod().
+			}
 			this.line = line;
 		}
 		
 		@Override
 		protected Token asToken() {
 			return Token.variable(variable, line);
+		}
+		
+		@Override
+		protected int specificCompareTo(ValueKey o) {
+			return variable.compareTo(((VariableValueKey) o).variable);
 		}
 	}
 	
@@ -306,6 +393,11 @@ public class ValueKey implements Comparable<ValueKey> {
 			int i = s.lastIndexOf('>')+1;
 			return s.substring(0, i) + "#" + thisId + "." + s.substring(i);
 		}
+		
+		@Override
+		protected int specificCompareTo(ValueKey o) {
+			return field.compareTo(((FieldValueKey) o).field);
+		}
 	}
 	
 	public static class ArrayItemValueKey extends ValueKey {
@@ -333,6 +425,14 @@ public class ValueKey implements Comparable<ValueKey> {
 		@Override
 		protected String detailString(String s) {
 			return s + "#" + thisId + "[" + index + "]";
+		}
+		
+		@Override
+		protected int specificCompareTo(ValueKey o) {
+			ArrayItemValueKey a = (ArrayItemValueKey) o;
+			int c = Long.compare(thisId, a.thisId);
+			if (c != 0) return c;
+			return Integer.compare(index, a.index);
 		}
 	}
 	
@@ -500,5 +600,5 @@ public class ValueKey implements Comparable<ValueKey> {
 		inv.parent = parent;
 		return parent;
 	}
-	
+
 }

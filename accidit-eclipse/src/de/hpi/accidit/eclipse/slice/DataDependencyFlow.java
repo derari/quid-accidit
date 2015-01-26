@@ -11,10 +11,11 @@ import java.util.TreeSet;
 
 public class DataDependencyFlow {
 	
-	List<DataDependency> controlDependencies = new ArrayList<>();
-	Map<Token, DataDependency> dependencies;
+	List<DataDependency> branchDependencyStack = new ArrayList<>();
 	Map<String, DataDependency> variableValues = new TreeMap<>();
 	Map<String, DataDependency> currentDependencies = new TreeMap<>();
+	
+	Map<Token, DataDependency> dependencies;
 	
 	public DataDependencyFlow(Map<Token, DataDependency> dependencies) {
 		super();
@@ -26,7 +27,7 @@ public class DataDependencyFlow {
 	}
 	
 	public void pushCondition(DataDependency cond) {
-		controlDependencies.add(cond);
+		branchDependencyStack.add(cond);
 	}
 	
 	public void setVariable(int line, String name, DataDependency value) {
@@ -49,7 +50,7 @@ public class DataDependencyFlow {
 		setValue(Token.thrown(line), line, value);
 	}
 	
-	public void setInvoke(String methodKey, int line, DataDependency.Invoke value) {
+	public void setInvoke(String methodKey, int line, DataDependency.InvocationResult value) {
 		setValue(Token.invoke(methodKey, line), line, value);
 		DataDependency self = value.getSelf();
 		if (self != null) {
@@ -62,10 +63,12 @@ public class DataDependencyFlow {
 	}
 	
 	public void setValue(Token t, int line, DataDependency value) {
-		if (!controlDependencies.isEmpty()) {
-//			value = DataDependency.complex(DataDependency.all(controlDependencies), value);
+		if (branchDependencyStack.isEmpty()) {
+			dependencies.put(t, value);
+		} else {
+			DataDependency reachable = DataDependency.reach(DataDependency.all(branchDependencyStack), value);
+			dependencies.put(t, reachable);
 		}
-		dependencies.put(t, value);
 		String name = t.getVar();
 		if (name != null) {
 			variableValues.put(name, value);
@@ -80,8 +83,8 @@ public class DataDependencyFlow {
 //		dest.dependencies.putAll(dependencies);
 		dest.currentDependencies.clear();
 		dest.currentDependencies.putAll(currentDependencies);
-		dest.controlDependencies.clear();
-		dest.controlDependencies.addAll(controlDependencies);
+		dest.branchDependencyStack.clear();
+		dest.branchDependencyStack.addAll(branchDependencyStack);
 	}
 	
 	public void merge(DataDependencyFlow in, DataDependencyFlow dest) {
@@ -89,22 +92,22 @@ public class DataDependencyFlow {
 		dest.dependencies.putAll(in.dependencies);
 		
 		int maxStackSize, stackSize;
-		if (in.controlDependencies.isEmpty()) {
-			maxStackSize = stackSize = dest.controlDependencies.size();
+		if (in.branchDependencyStack.isEmpty()) {
+			maxStackSize = stackSize = dest.branchDependencyStack.size();
 		} else {
-			maxStackSize = Math.min(dest.controlDependencies.size(), in.controlDependencies.size());
-			stackSize = dest.controlDependencies.size() != in.controlDependencies.size()
+			maxStackSize = Math.min(dest.branchDependencyStack.size(), in.branchDependencyStack.size());
+			stackSize = dest.branchDependencyStack.size() != in.branchDependencyStack.size()
 					? maxStackSize // pop only delta
 					: Math.max(0, maxStackSize-1); // pop at least one element
 			for (int i = 0; i < maxStackSize; i++) {
-				if (!dest.controlDependencies.get(i).equals(in.controlDependencies.get(i))) {
+				if (!dest.branchDependencyStack.get(i).equals(in.branchDependencyStack.get(i))) {
 					stackSize = i;
 				}
 			}
 		}
-		List<DataDependency> dp1 = dest.controlDependencies.subList(stackSize, dest.controlDependencies.size());
-		stackSize = Math.min(stackSize, in.controlDependencies.size()); 
-		List<DataDependency> dp2 = in.controlDependencies.subList(stackSize, in.controlDependencies.size());
+		List<DataDependency> dp1 = dest.branchDependencyStack.subList(stackSize, dest.branchDependencyStack.size());
+		stackSize = Math.min(stackSize, in.branchDependencyStack.size()); 
+		List<DataDependency> dp2 = in.branchDependencyStack.subList(stackSize, in.branchDependencyStack.size());
 		Set<DataDependency> mergeDependencies = new TreeSet<>();
 		mergeDependencies.addAll(dp1);
 		mergeDependencies.addAll(dp2);
@@ -129,7 +132,7 @@ public class DataDependencyFlow {
 	@Override
 	public String toString() {
 		String s = "";
-		for (DataDependency dd: controlDependencies) {
+		for (DataDependency dd: branchDependencyStack) {
 			s += (MethodDataDependencyAnalysis.LOG_ALL ? dd : "") + 
 					"/";
 		}

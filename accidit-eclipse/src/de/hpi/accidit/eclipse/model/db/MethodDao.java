@@ -28,6 +28,9 @@ public class MethodDao {
 		@Require("t")
 		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
 		Query declaredAs(String type, String name, String signature);
+		
+		@Where("m.`id` = ?")
+		Query byId(long id);
 	}
 	
 }

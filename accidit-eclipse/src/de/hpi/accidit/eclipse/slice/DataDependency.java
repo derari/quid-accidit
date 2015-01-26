@@ -63,14 +63,18 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		return new Element(instance, index, line);
 	}
 	
-	public static Invoke invoke(SootMethod method, DataDependency self, List<DataDependency> args) {
+	public static Invocation invocation() {
+		return new Invocation();
+	}
+	
+	public static InvocationResult invocationResult(SootMethod method, DataDependency self, List<DataDependency> args) {
 		String type = method.getDeclaringClass().getName();
 		String mName = method.getName();
 		String sig = method.getBytecodeSignature();
 		int i = sig.indexOf('(');
 		sig = sig.substring(i, sig.length()-1); // fix signature format
 		
-		return new Invoke(type, mName, sig, self, args);
+		return new InvocationResult(type, mName, sig, self, args);
 	}
 	
 	public static DataDependency all(DataDependency... all) {
@@ -133,6 +137,10 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		if (control instanceof Constant) return value;
 		boolean implicitControl = false;
 		return new Complex(control, value, implicitControl);
+	}
+	
+	public static DataDependency reach(DataDependency reach, DataDependency value) {
+		return new Reach(reach, value);
 	}
 	
 //	public static DataDependency conditional(DataDependency condition, DataDependency v1, DataDependency v2) {
@@ -343,14 +351,23 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 		}
 	}
 	
-	public static class Invoke extends Atomic {
+	public static class Invocation extends Atomic {
+		public Invocation() {
+		}
+		@Override
+		public String toString() {
+			return "<call>";
+		}
+	}
+	
+	public static class InvocationResult extends Atomic {
 		String clazz;
 		String method;
 		String signature;
 		DataDependency self;
 		List<DataDependency> args;
 		
-		public Invoke(String clazz, String method, String signature, DataDependency self,
+		public InvocationResult(String clazz, String method, String signature, DataDependency self,
 				List<DataDependency> args) {
 			this.clazz = clazz;
 			this.method = method;
@@ -656,6 +673,43 @@ public abstract class DataDependency implements Comparable<DataDependency> {
 			} else if (!value.equals(other.value))
 				return false;
 			return true;
+		}
+	}
+	
+	public static class Reach extends Composite {
+		
+		DataDependency reach, value;
+		
+		public Reach(DataDependency reach, DataDependency value) {
+			super();
+			this.reach = reach;
+			this.value = value;
+		}
+
+		public DataDependency getReach() {
+			return reach;
+		}
+		
+		public DataDependency getValue() {
+			return value;
+		}
+
+		@Override
+		protected void flattenAll(Set<DataDependency> bag) {
+			reach.flattenAll(bag);
+			value.flattenAll(bag);
+		}
+		
+		@Override
+		protected void removeFrom(Collection<DataDependency> controlDependencies) {
+			reach.removeFrom(controlDependencies);
+			value.removeFrom(controlDependencies);
+			while (controlDependencies.remove(this));
+		}
+		
+		@Override
+		public String toString() {
+			return value.toString();
 		}
 	}
 
