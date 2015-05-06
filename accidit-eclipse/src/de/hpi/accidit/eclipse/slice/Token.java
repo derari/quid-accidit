@@ -60,16 +60,29 @@ public class Token implements Comparable<Token> {
 	
 	private final String key;
 	private final String var;
+	private final int id;
 	
 	private Token(String key) {
 		this.key = key;
 		this.var = null;
+		this.id = 0;
 	}
 	
 	public Token(String key, String var) {
-		super();
 		this.key = key;
 		this.var = var;
+		this.id = 0;
+	}
+	
+	private Token(String key, String var, int id) {
+		this.key = key + "_" + id;
+		this.var = var;
+		this.id = id;
+	}
+	
+	public Token makeUnique() {
+		String key = id == 0 ? this.key : this.key.substring(0, this.key.lastIndexOf('_'));
+		return new Token(key, var, id+1);
 	}
 	
 	public String getVar() {

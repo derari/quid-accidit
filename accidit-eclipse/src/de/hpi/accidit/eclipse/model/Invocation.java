@@ -20,6 +20,8 @@ public class Invocation extends TraceElement {
 	
 	public static final ViewR<Query> VIEW = InvocationDao.VIEW;
 
+	public Long thisId;
+	
 	public long exitStep = -1;
 	public int depth = -1;
 	

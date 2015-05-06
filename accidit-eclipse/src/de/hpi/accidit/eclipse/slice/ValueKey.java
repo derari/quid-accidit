@@ -204,6 +204,9 @@ public class ValueKey implements Comparable<ValueKey> {
 		public String getUserString() {
 			String t = inv.type;
 			t = t.substring(t.lastIndexOf('.')+1);
+			if (inv.thisId != null) {
+				t = "<" + t + " #" + inv.thisId + ">";
+			}
 			String m = inv.method;
 			String sig = inv.signature;
 			sig = sig.substring(0, sig.indexOf(')')+1);
@@ -328,9 +331,15 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		@Override
 		public String getUserString() {
+			Invocation inv = getInvocation();
+			String t = inv.type;
+			t = t.substring(t.lastIndexOf('.')+1);
+			if (inv.thisId != null) {
+				t = "<" + t + " #" + inv.thisId + ">";
+			}
 			String method = getInvocation().method;
 			method = method.substring(method.indexOf('#') + 1);
-			return method + "() \u21B5 " + getValueString();
+			return t + "." + method + "() \u21B5 " + getValueString();
 		}
 	}
 	
@@ -356,7 +365,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		@Override
 		protected int specificCompareTo(ValueKey o) {
 			return variable.compareTo(((VariableValueKey) o).variable);
-		}
+		}		
 	}
 	
 	public static class FieldValueKey extends ValueKey {
@@ -398,6 +407,17 @@ public class ValueKey implements Comparable<ValueKey> {
 		protected int specificCompareTo(ValueKey o) {
 			return field.compareTo(((FieldValueKey) o).field);
 		}
+		
+		@Override
+		public String getUserString() {
+			String s = thisId <= 0 ? "" : "<#" + thisId + ">.";
+			if (field != null) {
+				s += field + " = ";
+			}
+			s += getValueString();
+			return s;
+//			return toString();
+		}
 	}
 	
 	public static class ArrayItemValueKey extends ValueKey {
@@ -433,6 +453,13 @@ public class ValueKey implements Comparable<ValueKey> {
 			int c = Long.compare(thisId, a.thisId);
 			if (c != 0) return c;
 			return Integer.compare(index, a.index);
+		}
+		
+		@Override
+		public String getUserString() {
+			String s = "<#" + thisId + ">";
+			s += "[" + index + "] = " + getValueString(); // \u21A4
+			return s;
 		}
 	}
 	

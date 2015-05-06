@@ -12,6 +12,10 @@ public class ValueToString {
 		if (typeName == null) return simpleLongName(v);
 		Integer aLen = v.getArrayLength();
 		if (aLen != null) {
+			if (aLen < 3) {
+				String s = getArrayContentString(v, children);
+				if (s != null && s.length() < 30) return s;
+			}
 			int i = typeName.indexOf('[');
 			if (i < 0) {
 				return typeName + "[" + aLen + "] #" + v.getThisId();
@@ -34,6 +38,11 @@ public class ValueToString {
 			return javaUtilName(v, children);
 		}
 		return simpleLongName(v);
+	}
+
+	private static String getArrayContentString(ObjectSnapshot v, NamedValue[] children) {
+		String s = "[";
+		return null;
 	}
 
 	private static String simpleLongName(ObjectSnapshot v) {

@@ -109,6 +109,7 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		clearUi();
 		int section = -1;
 		for (Node n: nodes) {
+			if (n.getFlags() <= 0) continue;
 			Node rep = n.getRepresentative();
 			if (rep != n && nodes.contains(rep)) continue;
 			if (section == -1) {
@@ -196,8 +197,19 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 				TraceNavigatorUI.getGlobal().setStep(step);
 			}
 		};
+		
+		MouseAdapter onClickSlice = new MouseAdapter() {
+			@Override
+			public void mouseUp(MouseEvent e) {
+				SlicingFilterDialog dlg = new SlicingFilterDialog(parent.getShell(), n.getFlags());
+				if (dlg.open() == SWT.OK) {
+					TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView().addEntry(n.getKey(), dlg.getFlags());
+				}
+			}
+		};
 		Label l = new Label(parent, SWT.NONE);
 		l.setImage(DEP[n.getDependencyFlags()]);
+		l.addMouseListener(onClickSlice);
 		l = new Label(parent, SWT.NONE);
 		String s = n.getKey().getUserString();
 		l.setText(s.substring(s.indexOf(':') + 1));

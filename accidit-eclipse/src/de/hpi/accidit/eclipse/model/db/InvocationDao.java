@@ -33,7 +33,7 @@ public class InvocationDao extends TraceElementDaoBase {
 	};
 	
 	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
-		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`",
+		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`, e.`thisId`",
 				"x.`line` AS `exitLine`", 
 				"m.`name` AS `method`, t.`name` AS `type`");
 		select("COALESCE(e.`parentStep`,-1) AS `callStep`");
