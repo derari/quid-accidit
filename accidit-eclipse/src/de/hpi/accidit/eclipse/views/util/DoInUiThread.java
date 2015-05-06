@@ -4,10 +4,14 @@ import org.cthul.miro.MiFuture;
 import org.cthul.miro.MiFutureAction;
 import org.eclipse.swt.widgets.Display;
 
-public abstract class DoInUiThread<T> implements MiFutureAction<MiFuture<T>, Void> {
+public abstract class DoInUiThread<T> implements MiFutureAction<MiFuture<? extends T>, Void> {
 
+	public static void run(Runnable r) {
+		Display.getDefault().asyncExec(r);
+	}
+	
 	@Override
-	public Void call(MiFuture<T> param) throws Exception {
+	public Void call(MiFuture<? extends T> param) throws Exception {
 		T value = param.getResult();
 		Throwable error = param.getException();
 		Display.getDefault().asyncExec(new UiThreadRunnable(value, error));

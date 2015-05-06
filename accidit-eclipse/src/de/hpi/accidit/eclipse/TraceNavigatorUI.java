@@ -1,12 +1,31 @@
 package de.hpi.accidit.eclipse;
 
-import org.cthul.miro.MiConnection;
-import org.eclipse.ui.IWorkbenchPage;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.SortedSet;
 
+import org.cthul.miro.MiConnection;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
+import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
+import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.views.LocalsExplorerView;
-import de.hpi.accidit.eclipse.views.MethodExplorerView;
+import de.hpi.accidit.eclipse.slice.SliceAPI;
+import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
+import de.hpi.accidit.eclipse.views.AcciditView;
+import de.hpi.accidit.eclipse.views.TraceExplorerView;
+import de.hpi.accidit.eclipse.views.VariablesView;
+import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
+
+// TODO rename
 
 public class TraceNavigatorUI {
 
@@ -17,45 +36,91 @@ public class TraceNavigatorUI {
 		return GLOBAL;
 	}
 	
-	// UI
 	private IWorkbenchPage mainPage = null;
-	private MethodExplorerView traceExplorer = null;
-	private LocalsExplorerView localsExplorer = null;
+	
+	private final Set<AcciditView> views = Collections.synchronizedSet(new HashSet<AcciditView>());
 	
 	private final JavaSrcFilesLocator srcFilesLocator = new JavaSrcFilesLocator();
+	private final BreakpointsManager breakpointsManager = new BreakpointsManager();
 	
 	// Trace
 	private int testId;
-	private long callStep;
-	private long step;
+	private TraceElement current;
 	
-	public TraceNavigatorUI() {
-	}
+	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
+		@Override
+		public void run() {
+			sliceSteps = null;
+			DoInUiThread.run(new Runnable() {
+				@Override
+				public void run() {
+					for (AcciditView v: views) {
+						v.sliceChanged();
+					}
+				}
+			});
+		}
+	});
+	private SortedSet<Long> sliceSteps = null;
+	
+	public TraceNavigatorUI() {	}
 
-	public void setTraceExplorer(MethodExplorerView traceExplorer) {
+	public void setTraceExplorer(TraceExplorerView traceExplorer) {
 		this.mainPage = traceExplorer.getViewSite().getPage();
-		this.traceExplorer = traceExplorer;
-		traceExplorer.setTestCaseId(testId);
+		addView(traceExplorer);
 	}
 	
-	public void unsetTraceExplorer(MethodExplorerView traceExplorer) {
-		if (this.traceExplorer == traceExplorer) {
-			this.traceExplorer = null;
+	public void addView(AcciditView view) {
+		if (current != null) {
+			view.setStep(current);
 		}
+		views.add(view);
 	}
 	
-	public void setLocalsExprorer(LocalsExplorerView localsExprorer) {
-		this.localsExplorer = localsExprorer;
+	public void removeView(AcciditView view) {
+		views.remove(view);
 	}
 	
-	public void unsetLocalsExprorer(LocalsExplorerView localsExprorer) {
-		if (this.localsExplorer == localsExprorer) {
-			this.localsExplorer = null;
+	public <T> T findView(Class<T> type) {
+		for (Object o: views) {
+			if (type.isInstance(o)) {
+				return type.cast(o);
+			}
 		}
+		return null;
 	}
 	
-	public LocalsExplorerView getLocalsExplorer() {
-		return localsExplorer;
+	public TraceExplorerView getTraceExplorer() {
+		return findView(TraceExplorerView.class);
+	}
+	
+	public BreakpointsView getBreakpointsView() {
+		return findView(BreakpointsView.class);
+	}
+	
+	public VariablesView getVariablesView() {
+		return findView(VariablesView.class);
+	}
+	
+	public HistoryView getHistoryView() {
+		return findView(HistoryView.class);
+	}
+	
+	public SlicingCriteriaView getSlicingCriteriaView() {
+		return findView(SlicingCriteriaView.class);
+	}
+	
+	public SlicingCriteriaView getOrOpenSlicingCriteriaView() {
+		SlicingCriteriaView slicingCriteriaView = getSlicingCriteriaView();
+		if (slicingCriteriaView == null) {
+			try {
+				slicingCriteriaView = (SlicingCriteriaView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(SlicingCriteriaView.ID);
+			} catch (PartInitException e) {
+				// TODO:: decide: print stack trace or raise exception
+				e.printStackTrace();
+			}
+		}
+		return slicingCriteriaView;
 	}
 	
 	public MiConnection cnn() {
@@ -75,36 +140,57 @@ public class TraceNavigatorUI {
 	}
 	
 	public long getStep() {
-		return step;
+		return current.getStep();
 	}
 	
 	public long getCallStep() {
-		return callStep;
+		return current.getCallStep();
 	}
 	
-	public void setTestId(int testId) {
-		this.step = 0;
+	public void setTestId(final int testId) {
 		this.testId = testId;
-		if (traceExplorer != null) traceExplorer.setTestCaseId(testId);
-		if (localsExplorer != null) localsExplorer.setStep(testId, 0, 0);
+		
+		// current project may have changed, too
+		IProject project = DatabaseConnector.getSelectedProject();
+		IJavaProject jp = JavaCore.create(project);
+		getSliceApi().reset(jp, testId);
+		
+		if (getTraceExplorer() == null) {
+			// TODO: open trace explorer
+		}
+		setStep(0);
 	}
 	
-	public void setStep(long step) {
-		this.step = step;
+	public void setStep(final long newStep) {
+		setStep(new TraceElement() {{
+			this.testId = TraceNavigatorUI.this.testId;
+			this.step = newStep;
+		}});
 	}
-
+	
 	public void setStep(TraceElement le) {
-		setStep(le.step);
-		callStep = 0;
+		current = le;
+		for (AcciditView v: views) {
+			v.setStep(le);
+		}
 		if (le.parent != null) {
-			callStep = le.parent.step;
 			String filePath = le.parent.type;
-			srcFilesLocator.open(filePath, le.line, mainPage, traceExplorer);
-
-			if (localsExplorer != null) {
-				localsExplorer.setStep(le.parent.testId, le.parent.step, le.step);
-			}
+			srcFilesLocator.open(filePath, le.line, mainPage, getTraceExplorer());
 		}
 	}
 	
+	public BreakpointsManager getBreakpointsManager() {
+		return breakpointsManager;
+	}
+	
+	public SliceAPI getSliceApi() {
+		return sliceApi;
+	}
+	
+	public SortedSet<Long> getSliceSteps() {
+		if (sliceSteps == null) {
+			sliceSteps = sliceApi.getSliceSteps();
+		}
+		return sliceSteps;
+	}
 }

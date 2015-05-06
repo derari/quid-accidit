@@ -4,12 +4,13 @@ import de.hpi.accidit.model.*;
 import de.hpi.accidit.trace.Tracer;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
+import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 
-
+@SuppressWarnings("CallToThreadDumpStack")
 public class TracerTransformer implements ClassFileTransformer {
     
     private static class DoNotInstrumentException extends RuntimeException { }
@@ -39,6 +40,7 @@ public class TracerTransformer implements ClassFileTransformer {
 //        "com/sun",
         "org/eclipse",
         "org/drools/rule/GroupElement",
+        "org/apache/maven/surefire/util"
     };
     
     private static String[] no_details = {
@@ -62,6 +64,61 @@ public class TracerTransformer implements ClassFileTransformer {
     };
     
     private static int classCounter = 0;
+    private static final Map<Object, Map<String, Class>> knownClasses = new WeakHashMap<>();
+    private static final Object NO_CL = new Object();
+    
+    private static synchronized Class getKnownClass(ClassLoader cl, String clazz) {
+        Class c = null;
+        while (c == null) {
+            Object key = cl != null ? cl : NO_CL;
+            Map<String, Class> map = knownClasses.get(key);
+            if (map != null) {
+                c = map.get(clazz);
+            }
+            if (cl == null) break;
+            cl = cl.getParent();
+        }
+        if (c == null) {
+            try {
+                //System.out.println("forname> " + clazz + " " + cl);
+                try {
+                    c = Class.forName(clazz, false, cl);
+                } catch (ClassNotFoundException e) {
+                    //System.out.println("unknown class: " + clazz);
+                    return null;
+                }
+                putKnownClass(clazz, c);
+            } catch (ClassCircularityError e) {
+                return null;
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                throw e;
+            } catch (Throwable t) {
+                t.printStackTrace();
+                throw new RuntimeException(t);
+            }
+        }
+        return c;
+    }
+    
+    private static synchronized void putKnownClass(String clazzName, Class clazz) {
+        if (clazz == null) return;
+        ClassLoader cl = clazz.getClassLoader();
+        Object key = cl != null ? cl : NO_CL;
+        Map<String, Class> map = knownClasses.get(key);
+        if (map == null) {
+            map = new HashMap<>();
+            knownClasses.put(key, map);
+        }
+        map.put(clazzName, clazz);
+    }
+    
+    private List<Class> circulars = new ArrayList<>();
+
+    public TracerTransformer() {
+    }
+    
+    public static TraceFilter TRACE_FILTER = new MainMethodTraceFilter();
 
     @Override
     public byte[] transform(ClassLoader loader, String className, 
@@ -72,7 +129,26 @@ public class TracerTransformer implements ClassFileTransformer {
         synchronized (Tracer.class) {
             boolean t = Tracer.pauseTrace();
             try {
+                putKnownClass(className.replace('.', '/'), classBeingRedefined);
+                if (!circulars.isEmpty()) {
+                    try {
+                        Class[] moreClasses = circulars.toArray(new Class[0]);
+                        circulars.clear();
+                        PreMain.inst.retransformClasses(moreClasses);
+                    } catch (UnmodifiableClassException ex) {
+                        ex.printStackTrace();
+                    }
+                }
                 return transformUntraced(className, classfileBuffer, loader);
+            } catch (ClassCircularityError e) {
+                circulars.add(classBeingRedefined);
+                return classfileBuffer;
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                throw e;
+            } catch (Throwable e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             } finally {
                 Tracer.resumeTrace(t);
             }
@@ -83,6 +159,11 @@ public class TracerTransformer implements ClassFileTransformer {
         for (String e: excludes) {
             if (className.startsWith(e))
                 return classfileBuffer;
+        }
+        if (className.equals("org/netbeans/mdr/storagemodel/StorableObject") || 
+                className.equals("org/argouml/configuration/ConfigurationFactory")) {
+            System.out.println(">> " + className + "     " + loader);
+            return classfileBuffer;
         }
 //        System.out.println(">> " + className + "     " + loader);
         if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
@@ -104,7 +185,7 @@ public class TracerTransformer implements ClassFileTransformer {
             ClassReader cr = new ClassReader(classfile);
             ClassWriter cw = new MyClassWriter(cl, ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
             CheckClassAdapter cca = new CheckClassAdapter(cw, false);
-            ClassVisitor transform = new MyClassVisitor(cca, model, cl);
+            ClassVisitor transform = new MyClassVisitor(TRACE_FILTER, cca, model, cl);
             cr.accept(transform, 0);
 //            TracerTransformer2.tranform(cr, cw);
             return cw.toByteArray();
@@ -119,9 +200,10 @@ public class TracerTransformer implements ClassFileTransformer {
 
         private static final String AtTraced = "Lde/hpi/accidit/asmtracer/Traced;";
         
+        final TraceFilter traceFilter;
+        Object filterData;
         boolean isAlreadyTraced = false;
         boolean isTracedFlagSet = false;
-        boolean isTestClass;
         boolean noDetails;
         boolean hasSource = false;
         
@@ -132,8 +214,9 @@ public class TracerTransformer implements ClassFileTransformer {
         String[] interfaces;
         
         
-        public MyClassVisitor(ClassVisitor cv, Model model, ClassLoader cl) {
+        public MyClassVisitor(TraceFilter traceFilter, ClassVisitor cv, Model model, ClassLoader cl) {
             super(ASM4, cv);
+            this.traceFilter = traceFilter;
             this.model = model;
             this.cl = cl;
         }
@@ -148,7 +231,7 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
             super.visit(version, access, name, signature, superName, interfaces);
-            isTestClass = name.endsWith("Test");
+            filterData = traceFilter.visitClass(name, superName);
             type = model.getType(name.replace('/', '.'), cl);
             this.superName = superName;
             this.interfaces = interfaces;
@@ -206,7 +289,7 @@ public class TracerTransformer implements ClassFileTransformer {
             if (!hasSource) {
                 return sup;
             }
-            return new MyMethodVisitor(access, name, desc, sup, isTestClass, type, model, cl, noDetails, exceptions);
+            return new MyMethodVisitor(traceFilter, filterData, access, name, desc, sup, type, model, cl, noDetails, exceptions);
         }
         
     }
@@ -251,6 +334,8 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String END = "end";
         private static final String END_DESC = "()V";
         
+        private final TraceFilter traceFilter;
+        private final Object traceFilterData;
         private final ClassLoader cl;
         private final Model model;
         private final String name;
@@ -270,15 +355,17 @@ public class TracerTransformer implements ClassFileTransformer {
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
         
-        public MyMethodVisitor(int access, String name, String desc, MethodVisitor mv, boolean testclass, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
+        public MyMethodVisitor(TraceFilter traceFilter, Object classFilterData, int access, String name, String desc, MethodVisitor mv, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
 //            DEBUG = type.getName().endsWith("String;") || type.getName().endsWith("String");
+            this.traceFilter = traceFilter;
+            this.traceFilterData = traceFilter.visitMethod(name, classFilterData);
             this.name = name;
             this.descriptor = desc;
             this.model = model;
             this.cl = cl;
             this.traceDetails = !noDetails;
-            test = testclass && name.startsWith("test");
+            test = traceFilter.isTraceEntry(name, traceFilterData);
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
             this.me = type.getMethod(name, desc);
@@ -290,7 +377,7 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-            test = test || desc.endsWith("/Test;");
+            test = traceFilter.isTraceEntryAt(desc, visible, test, traceFilterData);
             return super.visitAnnotation(desc, visible);
         }
         
@@ -762,30 +849,132 @@ public class TracerTransformer implements ClassFileTransformer {
             }
         }
         
-        protected String superGetCommonSuperClass(final String type1, final String type2)
-        {
-            Class<?> c, d;
-            ClassLoader classLoader = cl;
+        protected String superGetCommonSuperClass(final String type1, final String type2) {
             try {
-                c = Class.forName(type1.replace('/', '.'), false, classLoader);
-                d = Class.forName(type2.replace('/', '.'), false, classLoader);
-            } catch (Exception e) {
+                Class<?> c, d;
+                ClassLoader classLoader = cl;
+                String type1d = type1.replace('/', '.');
+                String type2d = type2.replace('/', '.');
+                c = getKnownClass(classLoader, type1d);
+                d = getKnownClass(classLoader, type2d);
+                if (d == null) {
+                    return type1;
+                }
+                if (c == null) {
+                    return type2;
+                }
+                if (c.isAssignableFrom(d)) {
+                    return type1;
+                }
+                if (d.isAssignableFrom(c)) {
+                    return type2;
+                }
+                if (c.isInterface() || d.isInterface()) {
+                    return "java/lang/Object";
+                } else {
+                    do {
+                        c = c.getSuperclass();
+                    } while (!c.isAssignableFrom(d));
+                    return c.getName().replace('.', '/');
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
                 throw new RuntimeException(e.toString());
             }
-            if (c.isAssignableFrom(d)) {
-                return type1;
+        }
+        
+    }
+    
+    public static interface TraceFilter {
+
+        public Object visitClass(String name, String superName);
+
+        public Object visitMethod(String name, Object classFilterData);
+
+        public boolean isTraceEntry(String name, Object traceFilterData);
+
+        public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object traceFilterData);
+    }
+    
+    public static class MainMethodTraceFilter implements TraceFilter {
+
+        @Override
+        public Object visitClass(String name, String superName) {
+            return null;
+        }
+
+        @Override
+        public Object visitMethod(String name, Object classFilterData) {
+            return (Boolean) name.equals("main");
+        }
+
+        @Override
+        public boolean isTraceEntry(String name, Object traceFilterData) {
+            return (Boolean) traceFilterData;
+        }
+
+        @Override
+        public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object traceFilterData) {
+            return isEntry;
+        }   
+    }
+    
+    public static class MainRunMethodTraceFilter implements TraceFilter {
+
+        @Override
+        public Object visitClass(String name, String superName) {
+            return null;
+        }
+
+        @Override
+        public Object visitMethod(String name, Object classFilterData) {
+            return (Boolean) name.equals("main") || name.equals("run");
+        }
+
+        @Override
+        public boolean isTraceEntry(String name, Object traceFilterData) {
+            return (Boolean) traceFilterData;
+        }
+
+        @Override
+        public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object traceFilterData) {
+            return isEntry;
+        }
+        
+    }
+    
+    private static final Object TEST_CLASS_KEY = "test-class";
+    private static final Object TEST_METHOD_KEY = "test-method";
+    
+    public static class TestTraceFilter implements TraceFilter {
+
+        @Override
+        public Object visitClass(String name, String superName) {
+            if (name.endsWith("Test") || (superName != null && superName.contains("TestCase"))) {
+                return TEST_CLASS_KEY;
             }
-            if (d.isAssignableFrom(c)) {
-                return type2;
+            return null;
+        }
+
+        @Override
+        public Object visitMethod(String name, Object classFilterData) {
+            if (classFilterData == TEST_CLASS_KEY) {
+                if (name.startsWith("test")) {
+                    return TEST_METHOD_KEY;
+                }
+                return TEST_CLASS_KEY;
             }
-            if (c.isInterface() || d.isInterface()) {
-                return "java/lang/Object";
-            } else {
-                do {
-                    c = c.getSuperclass();
-                } while (!c.isAssignableFrom(d));
-                return c.getName().replace('.', '/');
-            }
+            return null;
+        }
+
+        @Override
+        public boolean isTraceEntry(String name, Object methodFilterData) {
+            return methodFilterData == TEST_METHOD_KEY;
+        }
+
+        @Override
+        public boolean isTraceEntryAt(String desc, boolean visible, boolean isEntry, Object methodFilterData) {
+            return isEntry || (methodFilterData == TEST_CLASS_KEY && desc.endsWith("/Test;"));
         }
         
     }

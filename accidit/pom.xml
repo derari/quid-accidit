@@ -9,9 +9,10 @@
     <modules>
         <!-- <module>lib</module> -->
         <module>tracer-model</module>
-        <module>jdi-tracer</module>
+        <!--<module>jdi-tracer</module>-->
         <module>asm-tracer</module>
         <module>testapp</module>
+        <module>dbimport</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

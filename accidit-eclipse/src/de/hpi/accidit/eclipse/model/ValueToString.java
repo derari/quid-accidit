@@ -12,6 +12,10 @@ public class ValueToString {
 		if (typeName == null) return simpleLongName(v);
 		Integer aLen = v.getArrayLength();
 		if (aLen != null) {
+			if (aLen < 3) {
+				String s = getArrayContentString(v, children);
+				if (s != null && s.length() < 30) return s;
+			}
 			int i = typeName.indexOf('[');
 			if (i < 0) {
 				return typeName + "[" + aLen + "] #" + v.getThisId();
@@ -30,7 +34,15 @@ public class ValueToString {
 		case "java.lang.String":
 			return stringValue(v, children);
 		}
+		if (typeName.startsWith("java.util")) {
+			return javaUtilName(v, children);
+		}
 		return simpleLongName(v);
+	}
+
+	private static String getArrayContentString(ObjectSnapshot v, NamedValue[] children) {
+		String s = "[";
+		return null;
 	}
 
 	private static String simpleLongName(ObjectSnapshot v) {
@@ -56,6 +68,11 @@ public class ValueToString {
 				vOffset = (Primitive) nv.getValue();
 				break;
 			case "value":
+				if (nv.getValue() instanceof Primitive) {
+					System.out.println(
+							"Error? Primitive 'value' in " + simpleLongName(v) +": " + nv.getValue().getLongString());
+					break;
+				}
 				vValue = (ObjectSnapshot) nv.getValue();
 				break;
 			}
@@ -80,19 +97,67 @@ public class ValueToString {
 	}
 	
 	private static String integerValue(ObjectSnapshot v, NamedValue[] children) {
-		Primitive vValue = null;
-		for (NamedValue nv: children) {
-			switch (nv.getName()) {
-			case "value":
-				vValue = (Primitive) nv.getValue();
-				break;
-			}
-		}
-		if (vValue == null) {
+		String val = getValueShortString(children, "value");
+		if (val == null) {
 			return simpleLongName(v);
 		}
-		String s = vValue.getShortString();
-		return s + " (" + simpleShortName(v) + ")";
+		return val + " (" + simpleShortName(v) + ")";
 	}
 	
+	private static String javaUtilName(ObjectSnapshot v, NamedValue[] children) {
+		String name = v.getTypeName() + " #" + v.getThisId();
+		String size = null;
+		if (name.startsWith("java.util.Collections$")) {
+			name = name.substring(22);
+			if (name.startsWith("Empty")) {
+				size = "0";
+			}
+		}
+		if (size == null) size = getSize(v);
+		if (size == null) {
+			return name;
+		}
+		int i = name.lastIndexOf('.');
+		if (i >= 0) name = name.substring(i); 
+		return name + " (size = " + size + ")";
+	}
+	
+	private static String getSize(Value collection) {
+		String size = null;
+		while (collection != null && size == null) {
+			NamedValue[] c = collection.getChildren();
+			size = getValueShortString(c, "size");
+			if (size == null) {
+				// collection is just a delegator, find actual
+				collection = getValue(c, "map", "c", "list");
+			}
+		}
+		return size;
+	}
+	
+	private static String getValueShortString(NamedValue[] children, String name) {
+		Value v = getValue(children, name);
+		if (v == null) return null;
+		return v.getShortString();
+	}
+
+	private static Value getValue(NamedValue[] children, String name) {
+		for (NamedValue nv: children) {
+			if (name.equals(nv.getName())) {
+				return nv.getValue();
+			}
+		}
+		return null;
+	}
+	
+	private static Value getValue(NamedValue[] children, String... names) {
+		for (NamedValue nv: children) {
+			for (String n: names) {
+				if (n.equals(nv.getName())) {
+					return nv.getValue();
+				}
+			}
+		}
+		return null;
+	}
 }

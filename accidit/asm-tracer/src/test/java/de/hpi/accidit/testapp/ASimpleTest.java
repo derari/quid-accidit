@@ -2,6 +2,7 @@ package de.hpi.accidit.testapp;
 
 import de.hpi.accidit.asmtracer.TestAt;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -138,6 +139,50 @@ public class ASimpleTest {
     public long nested2Test() {
         new PrintStream(new ByteArrayOutputStream(1024)).println(this);
         return aLong;
+    }
+    
+    public int variableScope() {
+        int a = 3;
+        {
+            int b = 2;
+            a += b;
+        }
+        int c = 2;
+        a += c;
+        return a;
+    }
+    
+    public void variableComplex() {
+        variableComplex(new Object());
+    }
+    
+    public static boolean variableComplex(Object dir) {
+
+        if ( dir != null) {
+            String[] children = {dir.toString()};
+            for ( String child : children ) {
+                String other = child.trim();
+                boolean success = other == null;
+                if ( !success ) {
+                    // this is a hack, but some time you need to wait for a file release to release
+                    // Windows was having intermittent issues with DirectoryScannerTest with the dir not being empty
+                    System.gc();
+                    try {
+                        Thread.sleep( 300 );
+                    } catch ( InterruptedException e ) {
+                        throw new RuntimeException( "This should never happen" );
+                    }
+                    success = other == null;
+                    if ( !success ) {
+                        //ok now give up 
+                        //throw new RuntimeException("Unable to delete !");
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return dir == null;
     }
 
     @Override
