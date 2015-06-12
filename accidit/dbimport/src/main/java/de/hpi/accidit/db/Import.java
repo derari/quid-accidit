@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -20,6 +21,12 @@ public class Import {
     // jdbc:sap://VM-APM-HIWI.EAALAB.HPI.UNI-POTSDAM.DE:30015/ACC2?user=SYSTEM&password=manager&currentschema=ACC2 C:/trace -n
     
     public static void main(String... args) throws Exception {
+        if (args.length == 0 || Arrays.asList(args).contains("-?")) {
+            System.out.println("Usage: ");
+            System.out.println(" [DB-TYPE] DB-STRING [TRACE-DIR] [-n|--new] [-s SCHEMA] [-t DB-TYPE] [-d TRACE-DIR] [-u USER] [-p PASSWORD] ");
+            return;
+        }
+        
         boolean newSchema = false;
         String dbType = null;
         String dbSchema = null;
@@ -117,6 +124,7 @@ public class Import {
         int start = dbString.indexOf(currentSchemaKey);
         if (start < 0) {
             int i = dbString.indexOf("//");
+            if (i < 0) i = 0;
             URI uri = URI.create(dbString.substring(i));
             String path = uri.getPath();
             if (path != null && !path.isEmpty()) {

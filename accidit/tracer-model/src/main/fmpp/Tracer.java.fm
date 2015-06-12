@@ -196,7 +196,7 @@ public class Tracer {
 <@each_type params>
     public static void get${s}(Object instance, ${t} value, int field, int line) {
         <@traced>
-            t.put(instance, value, field, line);
+            t.get(instance, value, field, line);
         </@>
     }
 

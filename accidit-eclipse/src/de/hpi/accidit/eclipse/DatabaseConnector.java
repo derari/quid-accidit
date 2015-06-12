@@ -42,7 +42,7 @@ public class DatabaseConnector {
 	 * @param dbPassword The password associated with the user.
 	 * @return The database connection.
 	 */
-	public static Connection getConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
+	public static Connection getTestConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
 		if (!initialized) {
 			initializeDriver();
 		}
@@ -69,17 +69,21 @@ public class DatabaseConnector {
 		overrideSchema = string;
 	}
 
-	private static String getDBString() {
+	public static String getDBString() {
+		return getDBString(selectedProject);
+	}
+
+	public static String getDBString(IProject project) {
 		if (overrideDBString != null) return overrideDBString;
 		
 		String dbAddress = DatabaseSettingsRetriever
-				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_ADDRESS);
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_ADDRESS);
 		String dbSchema	= DatabaseSettingsRetriever
-				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
 		String dbUser = DatabaseSettingsRetriever
-				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_USER);
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_USER);
 		String dbPassword = DatabaseSettingsRetriever
-				.getPreferenceValue(selectedProject, DatabaseSettingsPreferencePage.CONNECTION_PASSWORD);
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_PASSWORD);
 		
 		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
 	}
@@ -138,7 +142,7 @@ public class DatabaseConnector {
 	 */
 	public static boolean testConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) {
 		try {
-			Connection c = getConnection(dbAddress, dbSchema, dbUser, dbPassword);
+			Connection c = getTestConnection(dbAddress, dbSchema, dbUser, dbPassword);
 			c.close();
 		} catch (SQLException e) {
 			e.printStackTrace(System.err);
@@ -148,11 +152,11 @@ public class DatabaseConnector {
 	}
 	
 	private static void initializeDriver() {
-		try {
-			Class.forName(MYSQL_DATABASE_DRIVER);
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			Class.forName(MYSQL_DATABASE_DRIVER);
+//		} catch (ClassNotFoundException e) {
+//			e.printStackTrace();
+//		}
 		initialized = true;
 	}
 

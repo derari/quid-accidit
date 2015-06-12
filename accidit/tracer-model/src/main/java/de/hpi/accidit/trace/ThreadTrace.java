@@ -191,6 +191,10 @@ public class ThreadTrace {
                 root.ensurePersisted();
             } else {
                 invocation = invocation.enter(method, instance);
+                if (invocation == null) {
+                    System.out.println("asdadsasd!!!");
+                    throw new AssertionError();
+                }
             }
             stack.push(invocation);
             long s = step.current();
@@ -387,11 +391,11 @@ public class ThreadTrace {
 
     boolean sanatizeStack() {
         StackTraceElement[] actualStack = Thread.currentThread().getStackTrace();
-        int bottomFrame = actualStack.length - baseStack + 5;
+        int bottomFrame = actualStack.length - baseStack + 3;
         for (int i = 0; i < stack.size(); i++) {
             CallTrace call = stack.get(i);
             int fId = bottomFrame - call.getDepth();
-            if (fId < 7 || // fId < 7 is already in Tracer code
+            if (fId < 5 || // fId < 5 is already in Tracer code
                     fId >= actualStack.length ||
                     !actualStack[fId].getMethodName().equals(call.getMethod().getName())) {
                 while (stack.size() > i) stack.pop();

@@ -18,6 +18,7 @@ public class PreMain {
 
     private static String traceRoot = "target/trace";
     private static boolean timestampDir = true;
+    private static String resultFile = null;
     
     public static void premain(String argString, Instrumentation inst) throws Exception {
         try {
@@ -52,6 +53,21 @@ public class PreMain {
                 String a = args[3].toLowerCase();
                 timestampDir = a.equals("1") || a.startsWith("t") || a.startsWith("y");
 //                System.out.println("Timestamp: " + args[3] + "(" + timestampDir + ")");
+            }
+            if (args.length > 4) {
+                resultFile = args[4];
+                Runtime.getRuntime().addShutdownHook(new Thread(){
+                    @Override
+                    public void run() {
+                        File f = new File(resultFile);
+                        f.getParentFile().mkdirs();
+                        try (PrintWriter pw = new PrintWriter(f)) {
+                            pw.append("ok");
+                        } catch (Exception e) {
+                            e.printStackTrace(System.err);
+                        }
+                    }
+                });
             }
 
             PreMain.inst = inst;

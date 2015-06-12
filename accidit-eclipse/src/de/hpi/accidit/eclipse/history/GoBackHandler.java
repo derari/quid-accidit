@@ -11,7 +11,7 @@ public class GoBackHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		ContentNodesPathway contentNodesPathway = TraceNavigatorUI.getGlobal().getHistoryView().getContainer().getContentNodesPathway();
+		ContentNodesPathway contentNodesPathway = TraceNavigatorUI.getGlobal().getOrOpenHistoryView().getContainer().getContentNodesPathway();
 		contentNodesPathway.goBack();
 		return null;
 	}

@@ -19,6 +19,7 @@
             </activation>
             <properties>
                 <toolsjar>${java.home}/../lib/tools.jar</toolsjar>
+		<ngdbcjar>C:\Program Files\sap\hdbclient\ngdbc.jar</ngdbcjar>
             </properties>
         </profile>
         <profile>
@@ -30,6 +31,7 @@
             </activation>
             <properties>
                 <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
+		<ngdbcjar>/usr/sap/hdbclient/ngdbc.jar</ngdbcjar>
             </properties>
         </profile>
     </profiles>
@@ -51,6 +53,20 @@
                             <groupId>com.sun</groupId>
                             <artifactId>tools</artifactId>
                             <version>${jdi.version}</version>
+                            <packaging>jar</packaging>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>ex-install-hana-jdbc</id>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>install</phase>
+                        <configuration>
+                            <file>${ngdbcjar}</file>
+                            <groupId>sap</groupId>
+                            <artifactId>hana-jdbc</artifactId>
+                            <version>1</version>
                             <packaging>jar</packaging>
                         </configuration>
                     </execution>

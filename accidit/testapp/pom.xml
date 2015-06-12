@@ -36,7 +36,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <argLine>-Xmx1G -noverify "-javaagent:${agentjar}=${modeljar}"</argLine>
+                            <argLine>-Xmx1G -noverify "-javaagent:${agentjar}=${modeljar}#test"</argLine>
                         </configuration>
                     </plugin>
                 </plugins>

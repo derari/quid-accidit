@@ -15,7 +15,7 @@ public class TracerTransformer implements ClassFileTransformer {
     
     private static class DoNotInstrumentException extends RuntimeException { }
     
-    private static String[] excludes = {
+    private static final String[] excludes = {
         // tracing infrastructure
         "de/hpi/accidit/asm",
         "de/hpi/accidit/model",
@@ -43,14 +43,14 @@ public class TracerTransformer implements ClassFileTransformer {
         "org/apache/maven/surefire/util"
     };
     
-    private static String[] no_details = {
+    private static final String[] no_details = {
         "java",
         "sun",
         "com/sun",
         "org/mvel2/asm",
     };
     
-    private static String[] do_details = {
+    private static final String[] do_details = {
         "java/lang/Boolean",
         "java/lang/Byte",
         "java/lang/Character",
@@ -113,7 +113,7 @@ public class TracerTransformer implements ClassFileTransformer {
         map.put(clazzName, clazz);
     }
     
-    private List<Class> circulars = new ArrayList<>();
+    private final List<Class> circulars = new ArrayList<>();
 
     public TracerTransformer() {
     }
@@ -160,11 +160,11 @@ public class TracerTransformer implements ClassFileTransformer {
             if (className.startsWith(e))
                 return classfileBuffer;
         }
-        if (className.equals("org/netbeans/mdr/storagemodel/StorableObject") || 
-                className.equals("org/argouml/configuration/ConfigurationFactory")) {
-            System.out.println(">> " + className + "     " + loader);
-            return classfileBuffer;
-        }
+//        if (className.equals("org/netbeans/mdr/storagemodel/StorableObject") || 
+//                className.equals("org/argouml/configuration/ConfigurationFactory")) {
+//            System.out.println(">> " + className + "     " + loader);
+//            return classfileBuffer;
+//        }
 //        System.out.println(">> " + className + "     " + loader);
         if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
         return transform(classfileBuffer, loader);
@@ -296,7 +296,7 @@ public class TracerTransformer implements ClassFileTransformer {
     
     static class MyMethodVisitor extends MethodVisitor implements Opcodes {
         
-        private static final boolean DEBUG = false;
+        private static boolean DEBUG = false;
         
         private static final String TRACER = "de/hpi/accidit/trace/Tracer";
         private static final String LINE = "line";
@@ -351,13 +351,14 @@ public class TracerTransformer implements ClassFileTransformer {
         private int lastLine = -1;
         private int lastTracedLine = -2;
         private int lastOffset = 0;
+        private boolean visitMethodInsnGuard = false;
         
         private final Set<Label> exHandlers = new HashSet<>();
         private final List<String> argTypes = new ArrayList<>();
         
         public MyMethodVisitor(TraceFilter traceFilter, Object classFilterData, int access, String name, String desc, MethodVisitor mv, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
-//            DEBUG = type.getName().endsWith("String;") || type.getName().endsWith("String");
+            DEBUG = type.getName().endsWith("/String;") || type.getName().endsWith(".String");
             this.traceFilter = traceFilter;
             this.traceFilterData = traceFilter.visitMethod(name, classFilterData);
             this.name = name;
@@ -369,7 +370,7 @@ public class TracerTransformer implements ClassFileTransformer {
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
             this.me = type.getMethod(name, desc);
-            if (DEBUG) System.out.println("\n" + name + desc);
+            if (DEBUG) System.out.println("\n" + type + " " + name + desc);
             isStatic = (access & ACC_STATIC) != 0;
             isInit = name.equals("<init>");
             this.exceptions = exceptions;
@@ -386,7 +387,7 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitCode();
             if (test) {
                 System.out.println("- " + name);
-                super.visitMethodInsn(INVOKESTATIC, TRACER, BEGIN, BEGIN_DESC);
+                superVisitMethodInsn(INVOKESTATIC, TRACER, BEGIN, BEGIN_DESC);
             }
             super.visitLdcInsn(me.getCodeId());
             if (isStatic) {
@@ -394,7 +395,7 @@ public class TracerTransformer implements ClassFileTransformer {
             } else {
                 super.visitVarInsn(ALOAD, 0);
             }
-            super.visitMethodInsn(INVOKESTATIC, TRACER, ENTER, ENTER_DESC);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, ENTER, ENTER_DESC);
             traceArgs();
         }
 
@@ -403,8 +404,8 @@ public class TracerTransformer implements ClassFileTransformer {
             if (DEBUG) System.out.println(index + " " + desc + "/" + signature + " " + name + " " + start.getOffset() + "-" + end.getOffset());
             super.visitLocalVariable(name, desc, signature, start, end, index);
             if (me.variablesAreInitialized()) return;
-            String type = org.objectweb.asm.Type.getType(desc).getClassName();
-            VarDescriptor vdesc = me.addVariable(index, start.getOffset(), name, type);
+            String varType = org.objectweb.asm.Type.getType(desc).getClassName();
+            VarDescriptor vdesc = me.addVariable(index, start.getOffset(), name, varType);
             if (index < argTypes.size()) argTypes.set(index, null);
             if (DEBUG) System.out.println(" " + vdesc.getId());
 //            if (DEBUG) System.out.println(vdesc);
@@ -435,24 +436,61 @@ public class TracerTransformer implements ClassFileTransformer {
             if (lastTracedLine != lastLine) {
                 super.visitLdcInsn(lastLine);
                 lastTracedLine = lastLine;
-                super.visitMethodInsn(INVOKESTATIC, TRACER, LINE, LINE_DESC);
+                superVisitMethodInsn(INVOKESTATIC, TRACER, LINE, LINE_DESC);
+            }
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            visitMethodInsnGuard = true;
+            try {
+                if (owner.equals(TRACER)) {
+                    throw new DoNotInstrumentException();
+                }
+                if (traceDetails) {
+                    ensureLineNumberIsTraced();
+
+                    MethodDescriptor md = model.getType(owner.replace('/', '.'), cl).getMethod(name, desc);
+                    super.visitLdcInsn(md.getCodeId());
+                    super.visitMethodInsn(INVOKESTATIC, TRACER, CALL, CALL_DESC, false);
+                }
+
+                itf = itf && (opcode == Opcodes.INVOKEINTERFACE);
+                super.visitMethodInsn(opcode, owner, name, desc, itf);
+            } finally {
+                visitMethodInsnGuard = false;
+            }
+        }
+        
+        public void superVisitMethodInsn(int opcode, String owner, String name, String desc) {
+            boolean itf = opcode == Opcodes.INVOKEINTERFACE;
+            superVisitMethodInsn(opcode, owner, name, desc, itf);
+        }
+        
+        public void superVisitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            boolean g = visitMethodInsnGuard;
+            visitMethodInsnGuard = true;
+            try {
+                super.visitMethodInsn(opcode, owner, name, desc, itf);
+            } finally {
+                visitMethodInsnGuard = g;
             }
         }
 
         @Override
         public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-            if (owner.equals(TRACER)) {
-                throw new DoNotInstrumentException();
+            if (visitMethodInsnGuard) {
+                super.visitMethodInsn(opcode, owner, name, desc);
+            } else {
+                boolean itf = opcode == Opcodes.INVOKEINTERFACE;
+                visitMethodInsn(opcode, owner, name, desc, itf);
             }
-            if (traceDetails) {
-                ensureLineNumberIsTraced();
+        }
 
-                MethodDescriptor md = model.getType(owner.replace('/', '.'), cl).getMethod(name, desc);
-                super.visitLdcInsn(md.getCodeId());
-                super.visitMethodInsn(INVOKESTATIC, TRACER, CALL, CALL_DESC);
-            }
-            
-            super.visitMethodInsn(opcode, owner, name, desc);
+        @Override
+        public void visitIincInsn(int var, int increment) {
+            super.visitIincInsn(var, increment);
+            traceInc(ArgumentType.INT, var);
         }
 
         @Override
@@ -499,10 +537,10 @@ public class TracerTransformer implements ClassFileTransformer {
             }
             super.visitLdcInsn(me.getCodeId());
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
 
             if (test) {
-                super.visitMethodInsn(INVOKESTATIC, TRACER, END, END_DESC);
+                superVisitMethodInsn(INVOKESTATIC, TRACER, END, END_DESC);
             }
         }
 
@@ -516,7 +554,20 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLdcInsn(var);
             super.visitLdcInsn(lastLine);
             super.visitLdcInsn(lastOffset);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);          
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+        }
+
+        private void traceInc(ArgumentType type, int var) {
+            if (!traceDetails) return;
+            if (DEBUG) System.out.println("S " + type + " " + var);
+            String desc;
+            String method = STORE_ + type.getKey();
+            super.visitVarInsn(type.LOAD(), var);
+            desc = "(" + type.getDescriptor() + STORE_DESC_2;
+            super.visitLdcInsn(var);
+            super.visitLdcInsn(lastLine);
+            super.visitLdcInsn(lastOffset);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
 
         private void traceArg(ArgumentType type, int var) {
@@ -528,7 +579,7 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitVarInsn(type.LOAD(), var);
             desc = "(" + type.getDescriptor() + ARG_DESC_2;
             super.visitLdcInsn(var);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);          
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);          
         }
 
         private void tracePutStatic(FieldDescriptor f, ArgumentType type) {
@@ -538,7 +589,7 @@ public class TracerTransformer implements ClassFileTransformer {
             String desc = "(" + type.getDescriptor() + PUT_DESC_2;
             super.visitLdcInsn(f.getCodeId());
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
 
         private void tracePutField(FieldDescriptor f, ArgumentType type) {
@@ -562,7 +613,7 @@ public class TracerTransformer implements ClassFileTransformer {
             String desc = PUT_DESC_1 + type.getDescriptor() + PUT_DESC_2;
             super.visitLdcInsn(f.getCodeId());
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
         
         private void traceGet(FieldDescriptor f, ArgumentType type, boolean inst) {
@@ -573,7 +624,7 @@ public class TracerTransformer implements ClassFileTransformer {
             desc += type.getDescriptor() + GET_DESC_2;
             super.visitLdcInsn(f.getCodeId());
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
         
         private void traceAStore(ArgumentType type) {
@@ -589,7 +640,7 @@ public class TracerTransformer implements ClassFileTransformer {
             String method = ASTORE_ + type.getKey();
             String desc = ASTORE_DESC_1 + type.getDescriptor() + ASTORE_DESC_2;
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc, false);
         }
         
         private void traceALoad(ArgumentType type) {
@@ -600,7 +651,7 @@ public class TracerTransformer implements ClassFileTransformer {
             String method = ALOAD_ + type.getKey();
             String desc = ALOAD_DESC_1 + type.getDescriptor() + ALOAD_DESC_2;
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, method, desc);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
         }
 
         @Override
@@ -711,13 +762,13 @@ public class TracerTransformer implements ClassFileTransformer {
         private void traceThrow() {
             super.visitInsn(DUP);
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, THROW, THROW_DESC);
+            superVisitMethodInsn(INVOKESTATIC, TRACER, THROW, THROW_DESC);
         }
 
         private void traceCatch() {
             super.visitInsn(DUP);
             super.visitLdcInsn(lastLine);
-            super.visitMethodInsn(INVOKESTATIC, TRACER, CATCH, CATCH_DESC);            
+            superVisitMethodInsn(INVOKESTATIC, TRACER, CATCH, CATCH_DESC);            
         }
         
     }
@@ -788,9 +839,13 @@ public class TracerTransformer implements ClassFileTransformer {
         
         private static final int O_BYTE = 6;//BYTE.ordinal();
         
+        private boolean isSubInt() {
+            return ordinal() >= O_BYTE;
+        }
+        
         public int LOAD() {
             int o = ordinal();
-            if (o >= O_BYTE) return INT.LOAD();
+            if (isSubInt()) return INT.LOAD();
             return Opcodes.ILOAD + o;
         }
         

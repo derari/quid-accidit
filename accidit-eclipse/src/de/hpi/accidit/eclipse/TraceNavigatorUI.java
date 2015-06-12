@@ -90,6 +90,18 @@ public class TraceNavigatorUI {
 		return null;
 	}
 	
+	public <T> T findOrOpenView(Class<T> type, String id) {
+		T t = findView(type);
+		if (t != null) return t;
+		try {
+			t = (T) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(id);
+		} catch (PartInitException e) {
+			// TODO:: decide: print stack trace or raise exception
+			e.printStackTrace();
+		}
+		return t;
+	}
+	
 	public TraceExplorerView getTraceExplorer() {
 		return findView(TraceExplorerView.class);
 	}
@@ -102,8 +114,12 @@ public class TraceNavigatorUI {
 		return findView(VariablesView.class);
 	}
 	
-	public HistoryView getHistoryView() {
-		return findView(HistoryView.class);
+//	public HistoryView getHistoryView() {
+//		return findView(HistoryView.class);
+//	}
+	
+	public HistoryView getOrOpenHistoryView() {
+		return findOrOpenView(HistoryView.class, HistoryView.ID);
 	}
 	
 	public SlicingCriteriaView getSlicingCriteriaView() {

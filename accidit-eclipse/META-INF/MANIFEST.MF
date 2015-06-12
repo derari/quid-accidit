@@ -19,4 +19,5 @@ Bundle-ClassPath: lib/mysql-connector-java-5.1.22-bin.jar,
  lib/ngdbc.jar,
  lib/soot-2.5.0.jar,
  .
-Export-Package: de.hpi.accidit.eclipse.properties
+Export-Package: de.hpi.accidit.eclipse,
+ de.hpi.accidit.eclipse.properties

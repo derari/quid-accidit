@@ -5,7 +5,7 @@ import java.util.concurrent.Callable;
 
 /**
  *
- * @author Arian Treffer
+ * Old version. Actual tracer generated from fmpp.
  */
 public class Tracer2 {
 

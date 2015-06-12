@@ -18,7 +18,7 @@ public class ShowFieldsHistoriesHandler extends AbstractHandler {
 		NamedValueNode node = (NamedValueNode) treeSelection.getFirstElement();
 		NamedValueNode childNode = (NamedValueNode) node.getChild(0);
 		
-		HistoryView variablesView = TraceNavigatorUI.getGlobal().getHistoryView();
+		HistoryView variablesView = TraceNavigatorUI.getGlobal().getOrOpenHistoryView();
 		HistoryContainer historyContainer = variablesView.getContainer();
 		historyContainer.updateFromContentNode(childNode);
 		historyContainer.showAll();
