@@ -1,8 +1,8 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: accidit-launcher
+Bundle-Name: Accidit Launcher
 Bundle-SymbolicName: accidit-launcher;singleton:=true
-Bundle-Version: 1.0.0.qualifier
+Bundle-Version: 0.1.0
 Bundle-Activator: de.hpi.accidit.launcher.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
@@ -15,3 +15,4 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ClassPath: lib/accidit-db-import-1.0-SNAPSHOT-standalone.jar,
  .
 Import-Package: org.eclipse.jdt.core
+Bundle-Vendor: EPIC
