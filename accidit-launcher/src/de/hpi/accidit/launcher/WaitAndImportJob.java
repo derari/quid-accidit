@@ -17,7 +17,7 @@ public class WaitAndImportJob extends Job {
 	private IProject project;
 	private File csvDir;
 	private File canaryFile;
-	private int c = 60*60*2;
+	private int c = 5*60*60*2; // 5 hours in .5 seconds
 	
 	public WaitAndImportJob(IProject project, File csvDir, File canaryFile) {
 		super("Accidit Import");

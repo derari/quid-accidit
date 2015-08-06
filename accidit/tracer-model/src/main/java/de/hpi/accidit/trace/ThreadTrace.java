@@ -3,6 +3,9 @@ package de.hpi.accidit.trace;
 import de.hpi.accidit.model.MethodDescriptor;
 import de.hpi.accidit.model.Model;
 import de.hpi.accidit.model.PrimitiveType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Stack;
 
 /**
@@ -43,6 +46,7 @@ public class ThreadTrace {
         this.model = model;
         this.id = id;
         this.endCallback = endCallback;
+        runningTraces.add(this);
     }
     
     @SuppressWarnings("CallToThreadDumpStack")
@@ -129,12 +133,14 @@ public class ThreadTrace {
 //            throw e;
             report("end", e);
         } finally {
+            runningTraces.remove(this);
             cflow = false;
         }
     }
     
     private void cancelTrace() {
 //        System.out.println("Ending trace " + id + " (" + invocation);
+        runningTraces.remove(this);
         Error e = null;
         if (invocation != null) {
             e = new Error("Trace canceled");
@@ -192,8 +198,11 @@ public class ThreadTrace {
             } else {
                 invocation = invocation.enter(method, instance);
                 if (invocation == null) {
-                    System.out.println("asdadsasd!!!");
-                    throw new AssertionError();
+                    AssertionError e = new AssertionError("`enter` did not return invocation");
+                    e.printStackTrace(System.err);
+                    //throw e;
+                    cancelTrace();
+                    return;
                 }
             }
             stack.push(invocation);
@@ -418,5 +427,21 @@ public class ThreadTrace {
     public static interface EndCallback {
         
         void ended(ThreadTrace trace);
+    }
+    
+    private static final List<ThreadTrace> runningTraces = Collections.synchronizedList(new ArrayList<ThreadTrace>());
+    
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(){
+            @Override
+            public void run() {
+                synchronized (Tracer.class) {
+                    Tracer.pauseTrace();
+                }
+                for (ThreadTrace tt: new ArrayList<>(runningTraces)) {
+                    tt.cancelTrace();
+                }
+            }
+        });
     }
 }

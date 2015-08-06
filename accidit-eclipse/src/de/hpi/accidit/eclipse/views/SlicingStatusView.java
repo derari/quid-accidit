@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.views;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,7 +16,6 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -80,38 +80,75 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 	}
 	
 	private void collectNodes(SortedSet<DynamicSlice.Node> nodes) {
-		Set<DynamicSlice.Node> currentNodes = this.currentNodes; 
 		if (nodes != SlicingStatusView.this.nodes) return;
-		for (Node n: TraceNavigatorUI.getGlobal().getSliceApi().getSlice().values()) {
-			if (n.getKey().getStep() >= step) {
-				boolean cur = n.getKey().getStep() == step;
+		Collection<Node> slice = TraceNavigatorUI.getGlobal().getSliceApi().getSlice().values();
+		Set<Node> lowerStack = new HashSet<DynamicSlice.Node>();
+		for (Node n: slice) {
+			boolean cur = n.getStep() == step;
+			if (cur) {
+				currentNodes.add(n);
+				currentNodes.addAll(n.getDependenciesInSlice());
+			} else if (n.getStep() <= step && n.isInvocation()) {
+				lowerStack.add(n);
+			}
+		}
+		nodes.addAll(currentNodes);
+		Set<DynamicSlice.Node> currentNodes = this.currentNodes;
+		for (Node n: slice) {
+			if (n.getStep() > step) {
 				boolean matched = false;
-				if (cur) {
-					currentNodes.add(n);
-					currentNodes.addAll(n.getDependenciesInSlice());
-				}
 				for (Node n2: n.getDependenciesInSlice()) {
-					if (n2.getKey().getStep() <= step) {
+					if (n2.getStep() <= step && 
+							n2.getEndStep() <= n.getStep() &&
+							!lowerStack.contains(n2)) {
 						matched = true;
 						nodes.add(n2);
-						if (n2.getKey().getStep() == step) {
+						
+//						if ((n2.getDependencyFlags() & DynamicSlice.VALUE) != 0 
+//								&& n2.getStep() == step) {
+						if (n2.getStep() == step) {
 							currentNodes.add(n);
+							currentNodes.add(n.getRepresentative());
+							currentNodes.add(n.getRepresentative().contextNode());
 						}
 					}
 				}
-				if (matched) nodes.add(n);
+				if (matched) {
+					nodes.add(n);
+					nodes.add(n.getRepresentative());
+					nodes.add(n.getRepresentative().contextNode());
+				}
 			}
 		}
 	}
 	
 	private void showNodes(SortedSet<DynamicSlice.Node> nodes) {
 		if (nodes != SlicingStatusView.this.nodes) return;
+//		Set<DynamicSlice.Node> lowerStack = new HashSet<DynamicSlice.Node>();
+		Set<DynamicSlice.Node> listedNodes = new HashSet<DynamicSlice.Node>();
+//		Set<DynamicSlice.Node> curNodesDependencies = currentNodes.stream()
+//				.flatMap(c -> c.getDependenciesInSlice().stream()).collect(Collectors.toSet());
 		clearUi();
 		int section = -1;
+		long lastStep = -1;
 		for (Node n: nodes) {
 			if (n.getFlags() <= 0) continue;
 			Node rep = n.getRepresentative();
 			if (rep != n && nodes.contains(rep)) continue;
+			
+			boolean jumpOverCurrent = !currentNodes.contains(n);
+//			if (n.getKey().getStep() <= step &&
+//					rep.getDependencyFlags() == DynamicSlice.REACH) {
+//				lowerStack.add(rep);
+//				lowerStack.add(n);
+//				if (jumpOverCurrent) continue;
+//			} else if (jumpOverCurrent && 
+//						isFromLowerStack(n, listedNodes, lowerStack)) {
+//				continue;
+//			}
+			listedNodes.add(n);
+			listedNodes.add(rep);
+			
 			if (section == -1) {
 				section++;
 				if (n.getKey().getStep() < step) {
@@ -128,12 +165,31 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 				section++;
 				addSection("Next Steps");
 			}
-			boolean jumpOverCurrent = !currentNodes.contains(n);
-			addNode(rep, jumpOverCurrent);
+			
+//			Node context = rep.contextNode();
+//			if (context != null && !listedNodes.contains(context)) {
+//				listedNodes.add(context);
+//				boolean cur = nodes.stream()
+//						.filter(n2 -> n2.getRepresentative().contextNode() == context)
+//						.anyMatch(currentNodes::contains);
+//				addNode(context, cur, false);
+//				lastStep = n.getKey().getStep();
+//			}
+			
+			addNode(rep, jumpOverCurrent, n.getKey().getStep() == lastStep);
+			lastStep = n.getKey().getStep();
 		}
 		scroll.setMinHeight(
 				parent.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).y);
 		parent.layout();
+	}
+	
+	private boolean isFromLowerStack(Node n, Set<DynamicSlice.Node> nodes, Set<DynamicSlice.Node> lowerStack) {
+		if (n.getDependenciesInSlice().isEmpty()) return false;
+		return n.getDependenciesInSlice().stream()
+			.filter(d -> d.getKey().getStep() <= step)
+			.filter(nodes::contains)
+			.allMatch(lowerStack::contains);
 	}
 
 	@Override
@@ -189,7 +245,7 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		}
 	}
 	
-	private void addNode(final Node n, boolean jumpOverCurrent) {
+	private void addNode(final Node n, boolean jumpOverCurrent, boolean isArgument) {
 		final long step = n.getKey().getStep();
 		MouseAdapter onClickGotoStep = new MouseAdapter() {
 			@Override
@@ -212,7 +268,7 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		l.addMouseListener(onClickSlice);
 		l = new Label(parent, SWT.NONE);
 		String s = n.getKey().getUserString();
-		l.setText(s.substring(s.indexOf(':') + 1));
+		l.setText((isArgument ? "   " : "") + s.substring(s.indexOf(':') + 1));
 		l.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
 		l.addMouseListener(onClickGotoStep);
 		if (jumpOverCurrent) l.setForeground(greyFont);

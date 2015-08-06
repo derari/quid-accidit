@@ -122,21 +122,25 @@ public class TypeDescriptor {
 
     private void init() throws ClassNotFoundException {
         state = State.INITIALIZING;
-        Class clazz = getClass(cl, name);
-        if (state.isInitialized()) {
-            // loading with `getClass` might trigger initialization
-            return;
-        }
-        
-        Class sup = clazz.getSuperclass();
-        if (sup != null) addSuper(className(sup));
-        for (Class iface: clazz.getInterfaces()) {
-            addSuper(className(iface));
-        }
-        
-        if (clazz.isArray()) {
-            Class comp = clazz.getComponentType();
-            component = model.getType(className(comp), cl);
+        try {
+            Class clazz = getClass(cl, name);
+            if (state.isInitialized()) {
+                // loading with `getClass` might trigger initialization
+                return;
+            }
+
+            Class sup = clazz.getSuperclass();
+            if (sup != null) addSuper(className(sup));
+            for (Class iface: clazz.getInterfaces()) {
+                addSuper(className(iface));
+            }
+
+            if (clazz.isArray()) {
+                Class comp = clazz.getComponentType();
+                component = model.getType(className(comp), cl);
+            }
+        } catch (ClassNotFoundException e) {
+            System.err.println("Class not found: " + name);
         }
         
         initCompleted();

@@ -175,7 +175,7 @@ public class HistoryContainer {
 				if (node == null || node.getDepth() != 1) return;
 				Image image = getImage(node);
 				if (image == null) return;
-				event.gc.drawImage(image, event.x + 3, event.y);
+				event.gc.drawImage(image, event.x, event.y + 2);
 			}
 		});
 	}

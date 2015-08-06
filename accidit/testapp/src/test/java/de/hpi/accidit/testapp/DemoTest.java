@@ -56,7 +56,7 @@ public class DemoTest {
     		char c = s.charAt(i);
     		l += c;
     	}
-    	return s + l;
+    	return s;
     }
     
     static void steps(int s) {

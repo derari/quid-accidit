@@ -31,6 +31,7 @@ import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationAndArgsKey;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationArgKey;
 import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
+import de.hpi.accidit.eclipse.slice.ValueKey.VariableValueKey;
 
 public class DynamicSlice {
 	
@@ -192,6 +193,8 @@ public class DynamicSlice {
 			public void run() {
 				try {
 					r.run();
+				} catch (Throwable e) {
+					e.printStackTrace(System.err);
 				} finally {
 					int c = pendingTasksCounter.decrementAndGet();
 					onUpdate.run(c == 0);
@@ -783,7 +786,31 @@ public class DynamicSlice {
 				n.dependencyFlags |= dependencyFlags;
 				return n;
 			}
+			return representative = this;
+		}
+		
+		public Node contextNode() {
+			if (key instanceof VariableValueKey) {
+				Node n = getNode(key.getInvocationKey());
+//				n.dependencyFlags |= dependencyFlags;
+				return n;
+			}
 			return this;
+		}
+		
+		public boolean isInvocation() {
+			return key instanceof InvocationKey;
+		}
+		
+		public long getStep() {
+			return getKey().getStep();
+		}
+		
+		public long getEndStep() {
+			if (key instanceof InvocationKey) {
+				return ((InvocationKey) key).getThisInvocation().exitStep;
+			}
+			return getStep();
 		}
 		
 	}

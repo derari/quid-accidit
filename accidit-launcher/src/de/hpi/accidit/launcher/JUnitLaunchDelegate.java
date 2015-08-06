@@ -18,8 +18,7 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 public class JUnitLaunchDelegate extends JUnitLaunchConfigurationDelegate
 		implements ILaunchConfigurationDelegate {
 	
-	File traceDir;
-	File tmpFile;
+	AcciditLauncher launcher;
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
@@ -27,41 +26,19 @@ public class JUnitLaunchDelegate extends JUnitLaunchConfigurationDelegate
 					ILaunchConfiguration configuration, List vmArguments,
 					List programArguments) throws CoreException {
 		super.collectExecutionArguments(configuration, vmArguments, programArguments);
-		if (!vmArguments.stream().anyMatch(s -> ((String) s).startsWith("-Xmx"))) {
-			vmArguments.add("-Xmx1G");
-		}
-		vmArguments.add("-noverify");
-		
-		File workingDir = verifyWorkingDirectory(configuration);
-		String workingDirName = workingDir.getAbsolutePath();
-		traceDir = new File(workingDir, "accidit_trace");
-		
-		String agentArg = 
-				"-javaagent:"
-				+ String.format("%s/../lib/accidit-asm-tracer-1.0-SNAPSHOT.jar", workingDirName)
-				+ String.format("=%s/../lib/accidit-tracer-model-1.0-SNAPSHOT.jar", workingDirName)
-				+ "#test#"
-				+ traceDir.getAbsolutePath()
-				+ "#n#"
-				+ tmpFile.getAbsolutePath();
-		vmArguments.add(agentArg);
+		launcher.collectExecutionArguments("test", configuration, vmArguments, programArguments);
 	}
 
 	@Override
 	public void launch(ILaunchConfiguration configuration, String mode,
 			ILaunch launch, IProgressMonitor monitor) throws CoreException {
-		try {
-			tmpFile = File.createTempFile("accidit_canary", ".log");
-			tmpFile.delete();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-		System.out.println(tmpFile);
 		
-		IJavaProject jp = getJavaProject(configuration);
+		File workingDir = verifyWorkingDirectory(configuration);
+		launcher = new AcciditLauncher(workingDir);
 		
 		super.launch(configuration, mode, launch, monitor);
-		
-		new WaitAndImportJob(jp.getProject(), traceDir, tmpFile);
+
+		IJavaProject jp = getJavaProject(configuration);
+		launcher.startImportJob(jp);
 	}	
 }

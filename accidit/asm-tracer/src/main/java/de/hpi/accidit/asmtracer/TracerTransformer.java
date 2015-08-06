@@ -129,7 +129,9 @@ public class TracerTransformer implements ClassFileTransformer {
         synchronized (Tracer.class) {
             boolean t = Tracer.pauseTrace();
             try {
-                putKnownClass(className.replace('.', '/'), classBeingRedefined);
+                if (className != null) {
+                    putKnownClass(className.replace('.', '/'), classBeingRedefined);
+                }
                 if (!circulars.isEmpty()) {
                     try {
                         Class[] moreClasses = circulars.toArray(new Class[0]);
@@ -156,9 +158,14 @@ public class TracerTransformer implements ClassFileTransformer {
     }
 
     private byte[] transformUntraced(String className, byte[] classfileBuffer, ClassLoader loader) {
-        for (String e: excludes) {
-            if (className.startsWith(e))
-                return classfileBuffer;
+        if (className != null) {
+            for (String e: excludes) {
+                if (className.startsWith(e))
+                    return classfileBuffer;
+            }
+        }
+        if (className == null) {
+            return classfileBuffer;
         }
 //        if (className.equals("org/netbeans/mdr/storagemodel/StorableObject") || 
 //                className.equals("org/argouml/configuration/ConfigurationFactory")) {
@@ -287,7 +294,7 @@ public class TracerTransformer implements ClassFileTransformer {
 //                return sup;
 //            }
             if (!hasSource) {
-                return sup;
+//                return sup;
             }
             return new MyMethodVisitor(traceFilter, filterData, access, name, desc, sup, type, model, cl, noDetails, exceptions);
         }
@@ -358,7 +365,7 @@ public class TracerTransformer implements ClassFileTransformer {
         
         public MyMethodVisitor(TraceFilter traceFilter, Object classFilterData, int access, String name, String desc, MethodVisitor mv, TypeDescriptor type, Model model, ClassLoader cl, boolean noDetails, String[] exceptions) {
             super(ASM4, mv);
-            DEBUG = type.getName().endsWith("/String;") || type.getName().endsWith(".String");
+//            DEBUG = type.getName().endsWith("/String;") || type.getName().endsWith(".String");
             this.traceFilter = traceFilter;
             this.traceFilterData = traceFilter.visitMethod(name, classFilterData);
             this.name = name;

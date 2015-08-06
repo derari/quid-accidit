@@ -17,7 +17,7 @@ Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: lib/mysql-connector-java-5.1.22-bin.jar,
  lib/miro-1.0-SNAPSHOT.jar,
  lib/ngdbc.jar,
- lib/soot-2.5.0.jar,
+ lib/soot-trunk.jar,
  .
 Export-Package: de.hpi.accidit.eclipse,
  de.hpi.accidit.eclipse.properties

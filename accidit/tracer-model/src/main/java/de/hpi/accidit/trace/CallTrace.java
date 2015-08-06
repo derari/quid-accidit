@@ -101,7 +101,7 @@ public class CallTrace {
         return traced;
     }
 
-    public CallTrace enter(MethodDescriptor method, Object instance) {
+    public final CallTrace enter(MethodDescriptor method, Object instance) {
 //        if (method.getName().equals("parseURL")) {
 //            System.out.print("");
 //        }

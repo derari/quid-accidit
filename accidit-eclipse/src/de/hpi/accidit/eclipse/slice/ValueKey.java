@@ -68,7 +68,13 @@ public class ValueKey implements Comparable<ValueKey> {
 		int c = cStep < 0 ? -1 : (cStep > 0 ? 1 : 0);
 		if (c != 0) return c;
 		c = getClass().getName().compareTo(o.getClass().getName());
-		if (c != 0) return c;
+		if (c != 0) {
+			if (this instanceof VariableValueKey) return 1;
+			if (o instanceof VariableValueKey) return -1;
+			if (this instanceof InvocationArgKey) return 1;
+			if (o instanceof InvocationArgKey) return -1;
+			return c;
+		}
 		return specificCompareTo(o);
 	}
 	
@@ -187,6 +193,10 @@ public class ValueKey implements Comparable<ValueKey> {
 				args.add(new InvocationArgKey(invD, step, args.size(), inv));
 			}
 			return args.get(index);
+		}
+		
+		public Invocation getThisInvocation() {
+			return inv;
 		}
 		
 		public InvocationThisKey getThis() {

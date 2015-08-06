@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.Test;
 
 public class ASimpleTest {
@@ -14,6 +15,7 @@ public class ASimpleTest {
 
     public String last;
     private long aLong = 1337;
+    public Supplier<Long> sup = () -> aLong;
 
     public ASimpleTest() {
         last = null;
@@ -138,7 +140,7 @@ public class ASimpleTest {
     
     public long nested2Test() {
         new PrintStream(new ByteArrayOutputStream(1024)).println(this);
-        return aLong;
+        return sup.get();
     }
     
     public int variableScope() {

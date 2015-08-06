@@ -34,6 +34,7 @@ public class AgentTest {
         AClassLoader cl = new AClassLoader(AgentTest.class.getClassLoader());
         loadClass(cl, ACLASS);
         loadClass(cl, ACLASS + "$Access");
+//        loadClass(cl, ACLASS_L);
         return Class.forName(ACLASS, true, cl);
     }
     

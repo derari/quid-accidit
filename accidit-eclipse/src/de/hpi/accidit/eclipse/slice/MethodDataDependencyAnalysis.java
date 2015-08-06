@@ -153,18 +153,19 @@ public class MethodDataDependencyAnalysis extends ForwardFlowAnalysis<Unit, Data
 	
 	private static SootClass reloadClass(String clazz) {
 		System.out.println("!!!!!!!!!!!!!!! " + clazz);
-		for (java.lang.reflect.Field f: Scene.class.getDeclaredFields()) {
-			if (f.getName().equals("doneResolving")) {
-				try {
-					f.setAccessible(true);
-					f.set(Scene.v(), false);
-				} catch (Exception e1) {
-					throw new RuntimeException(e1);
-				}
-				break;
-			}
-		}
-		SootClass sClass = Scene.v().loadClass(clazz, SootClass.BODIES); //loadClassAndSupport(clazz);
+//		for (java.lang.reflect.Field f: Scene.class.getDeclaredFields()) {
+//			if (f.getName().equals("doneResolving")) {
+//				try {
+//					f.setAccessible(true);
+//					f.set(Scene.v(), false);
+//				} catch (Exception e1) {
+//					throw new RuntimeException(e1);
+//				}
+//				break;
+//			}
+//		}
+//		SootClass sClass = Scene.v().loadClass(clazz, SootClass.BODIES); //loadClassAndSupport(clazz);
+		SootClass sClass = Scene.v().forceResolve(clazz, SootClass.BODIES);
 		sClass.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
 		return sClass;

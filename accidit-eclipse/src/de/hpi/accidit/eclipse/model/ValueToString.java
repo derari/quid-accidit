@@ -7,6 +7,10 @@ import de.hpi.accidit.eclipse.model.Value.Primitive;
 
 public class ValueToString {
 
+	public static String getLongName(ObjectSnapshot v) {
+		return getLongName(v, v.getChildren());
+	}
+	
 	public static String getLongName(ObjectSnapshot v, NamedValue[] children) {
 		String typeName = v.getTypeName();
 		if (typeName == null) return simpleLongName(v);
@@ -14,7 +18,7 @@ public class ValueToString {
 		if (aLen != null) {
 			if (aLen < 3) {
 				String s = getArrayContentString(v, children);
-				if (s != null && s.length() < 30) return s;
+				if (s != null && s.length() < 40) return s + " #" + v.getThisId();;
 			}
 			int i = typeName.indexOf('[');
 			if (i < 0) {
@@ -41,8 +45,26 @@ public class ValueToString {
 	}
 
 	private static String getArrayContentString(ObjectSnapshot v, NamedValue[] children) {
-		String s = "[";
-		return null;
+		StringBuilder sb = new StringBuilder("[");
+		int max = Math.min(3, children.length);
+		for (int i = 0; i < max; i++) {
+			if (i > 0) sb.append(",");
+			sb.append(getArrayItemString(children[i].getValue()));
+		}
+		return sb.append("]").toString();
+	}
+	
+	private static String getArrayItemString(Value v) {
+		String l = v.getLongString();
+		if (l.endsWith(")")) {
+			int i = l.lastIndexOf('(');
+			if (i > 0) l = l.substring(0, i).trim();
+		}
+		if (l.length() > 30) {
+			String s = v.getShortString();
+			if (s.length() < l.length()) l = s;
+		}
+		return l;
 	}
 
 	private static String simpleLongName(ObjectSnapshot v) {

@@ -25,4 +25,16 @@
 		<nature>org.eclipse.pde.PluginNature</nature>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>ACC_ASM_TARGET</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/accidit/asm-tracer/target</locationURI>
+		</link>
+		<link>
+			<name>ACC_MODEL_TARGET</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/accidit/tracer-model/target</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>
