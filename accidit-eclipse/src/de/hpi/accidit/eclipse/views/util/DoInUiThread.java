@@ -14,7 +14,7 @@ public abstract class DoInUiThread<T> implements MiFutureAction<MiFuture<? exten
 	public Void call(MiFuture<? extends T> param) throws Exception {
 		T value = param.getResult();
 		Throwable error = param.getException();
-		Display.getDefault().asyncExec(new UiThreadRunnable(value, error));
+		DoInUiThread.run(new UiThreadRunnable(value, error));
 		return null;
 	}
 	

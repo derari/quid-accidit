@@ -428,7 +428,7 @@ public class NamedValueDao extends ModelDaoBase {
 	private static final MappedTemplateProvider<FieldValue> OBJ_GET_HISTORY_TEMPLATE = new NameValueQueryTemplate<FieldValue>(FIELD_MAPPING) {{
 		attributes("m.`name`, m.`id`");
 		using("val")
-			.select("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, COALESCE(val.`thisId`, 0) AS `thisId`");
+			.select("val.`testId`, val.`callStep`, val.`step` AS `valueStep`, val.`step` AS `step`, COALESCE(val.`thisId`, 0) AS `thisId`");
 		
 		table("`Field` m");
 		

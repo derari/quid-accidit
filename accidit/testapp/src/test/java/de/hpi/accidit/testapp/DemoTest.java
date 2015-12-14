@@ -1,7 +1,9 @@
 package de.hpi.accidit.testapp;
 
+import static de.hpi.accidit.testapp.Geometry.coneVolume;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
-import static de.hpi.accidit.testapp.Geometry.*;
 
 public class DemoTest {
     
@@ -80,9 +82,32 @@ public class DemoTest {
         print("cone");
     }
     
+    @Test
+    public void test_geometry() {
+    	Square base = new Square(2);
+    	Pyramid shape = new Pyramid(base, 6);
+    	assertEquals(0, shape.getVolume(), 999999);
+//    	double volume = shape.getVolume();
+//    	System.out.println(volume);
+    }
+    
+    
+//    @Test
+//    public void test_geometry2() {
+//    	Square base = new Square(2);
+//    	Pyramid shape = new Pyramid(base, 6);
+//    	assertEquals(8, shape.getVolume(), 0.00001);
+////    	double volume = shape.getVolume();
+////    	System.out.println(volume);
+//    }
+    
     static {
         new Cone();
         new Geometry();
+        new Pyramid(new Square(2), 6);
+        try {
+        	assertEquals(0.1d, 0.2d, 0.1d);
+        } catch (Throwable t) {}
     }
     
     static class Cone {

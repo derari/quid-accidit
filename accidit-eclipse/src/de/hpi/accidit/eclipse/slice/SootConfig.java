@@ -18,36 +18,42 @@ import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
+import de.hpi.accidit.eclipse.slice.CodeDependency.TriDependency;
 import soot.G;
 import soot.Scene;
 import soot.options.Options;
 
+/**
+ * Manages the Soot configuration.
+ * Soot uses global state which can make things messy. 
+ * Going through this class ensures Soot is always correctly configured.
+ */
 public abstract class SootConfig {
 	
 	protected abstract List<String> getClassPath();
 	
-	private final Cache<String, Map<Token, DataDependency>> graphCache = new Cache<String, Map<Token,DataDependency>>() {
+	private final Cache<String, Map<InstructionKey, TriDependency>> graphCache = new Cache<String, Map<InstructionKey,TriDependency>>() {
 		@Override
-		protected Map<Token, DataDependency> value(String key) {
+		protected Map<InstructionKey, TriDependency> value(String key) {
 			return doAnalyse(key);
 		}
 	};
 	
-	public Map<Token, DataDependency> analyse(String methodId) {
+	public Map<InstructionKey, TriDependency> analyse(String methodId) {
 		return graphCache.get(methodId);
 	}
 	
-	private Map<Token, DataDependency> doAnalyse(String methodId) {
+	private Map<InstructionKey, TriDependency> doAnalyse(String methodId) {
 		int c = methodId.indexOf('#');
 		int s = methodId.indexOf('(');
 		return doAnalyse(methodId.substring(0, c), methodId.substring(c+1, s), methodId.substring(s));
 	}
 	
-	public Map<Token, DataDependency> doAnalyse(String clazz, String method, String signature) {
+	public Map<InstructionKey, TriDependency> doAnalyse(String clazz, String method, String signature) {
 		Lock l = lockSootFor(this);
 		if (l == null) return null;
 		try {
-			return MethodDataDependencyAnalysis.analyseMethod(clazz, method, signature);
+			return MethodDependencyAnalysis.analyseMethod(clazz, method, signature);
 		} finally {
 			l.unlock();
 		}
@@ -116,10 +122,12 @@ public abstract class SootConfig {
 		}
 	}
 	
+	/**
+	 * Configure Soot to use all open projects
+	 */
 	public static class WorkspaceConfig extends SootConfig {
 		@Override
 		protected List<String> getClassPath() {
-			System.out.println(":::::::::::::::::::::::::::::::::");
 			List<String> result = new ArrayList<>();
 			IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
 			for (IProject p: ResourcesPlugin.getWorkspace().getRoot().getProjects()) {
@@ -158,7 +166,7 @@ public abstract class SootConfig {
 	    	}
 	    }
 	    for (int i = sizeBefore; i < result.size(); i++) {
-	    	System.out.println(": " + result.get(i));
+	    	System.out.println("classpath: " + result.get(i));
 	    }
 	}
 }

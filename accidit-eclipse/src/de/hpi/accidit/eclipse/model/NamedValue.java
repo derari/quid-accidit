@@ -230,8 +230,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	@Override
 	public String toString() {
 		return getClass().getSimpleName() + " " + name + 
-				"@" + Integer.toHexString(hashCode()) +
-				(value == null ? "" : " " + Integer.toHexString(value.hashCode()));
+				(value == null ? "" : " = " + value.getLongString()) +
+				" @" + Integer.toHexString(hashCode());
 	}
 	
 	/**

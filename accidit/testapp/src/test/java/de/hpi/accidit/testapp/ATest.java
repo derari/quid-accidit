@@ -1,9 +1,15 @@
 package de.hpi.accidit.testapp;
 
-import java.util.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Test;
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
 
 public class ATest {
     
@@ -49,5 +55,12 @@ public class ATest {
             List<Integer> l = newList();
             if (l != null) l.clear();
         }
+    }
+    
+    @Test
+    public void test_parseInt() {
+    	String s = "123";
+    	int i = Integer.parseInt(s);
+    	assertEquals(123, i);
     }
 }

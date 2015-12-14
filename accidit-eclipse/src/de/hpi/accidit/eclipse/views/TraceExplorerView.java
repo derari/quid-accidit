@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.resources.IProject;
@@ -56,9 +54,6 @@ import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.slice.DynamicSlice;
-import de.hpi.accidit.eclipse.slice.ValueKey;
-import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 
 public class TraceExplorerView extends ViewPart implements ISelectionChangedListener, AcciditView {
@@ -75,6 +70,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	private IMemento memento;
 	
 	private TraceElement current;
+	private boolean isUpdatingStep = false;
 
 	public TraceExplorerView() { }
 
@@ -179,23 +175,15 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		if (current == te) {
 			return;
 		}
-		if (current == null || current.getTestId() != te.getTestId()) {
-			if (te.getTestId() == 65) {
-				System.out.println("!slicing!");
-				long callStep = 3688;
-				ValueKey key = new InvocationKey(65, callStep);
-//				DynamicSlice slice = new DynamicSlice(key);
-//				slice.processAll();
-//				SLICE.clear();
-//				for (ValueKey k: slice.getSlice().keySet()) {
-//					SLICE.add(k.getStep());
-//				}
-				System.out.println("!done!");
+		isUpdatingStep = true;
+		try {
+			if (current == null || current.getTestId() != te.getTestId()) {
+				treeViewer.setInput(new Trace(te.getTestId(), ui));
+			} else {
+				getSelectionAdapter().selectAtStep(te.getStep());
 			}
-			
-			treeViewer.setInput(new Trace(te.getTestId(), ui));
-		} else {
-			getSelectionAdapter().selectAtStep(te.getStep());
+		} finally {
+			isUpdatingStep = false;
 		}
 	}
 	
@@ -219,10 +207,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		if (selection instanceof ITreeSelection) {
 			Object obj = ((ITreeSelection) selection).getFirstElement();
 
-			if (obj instanceof TraceElement) {
+			if (!isUpdatingStep && obj instanceof TraceElement) {
 				TraceElement te = (TraceElement) obj;
 				current = te;
 				ui.setStep(te);
+			} else if (obj instanceof TraceElement) {
+				ui.showCode((TraceElement) obj);
 			}
 			setFocus();
 		}	

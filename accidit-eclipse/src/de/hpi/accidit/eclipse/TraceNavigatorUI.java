@@ -16,6 +16,7 @@ import org.eclipse.ui.PlatformUI;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
+import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.slice.SliceAPI;
 import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
@@ -170,6 +171,9 @@ public class TraceNavigatorUI {
 		IProject project = DatabaseConnector.getSelectedProject();
 		IJavaProject jp = JavaCore.create(project);
 		getSliceApi().reset(jp, testId);
+		if (getSlicingCriteriaView() != null) {
+			getSlicingCriteriaView().clear();
+		}
 		
 		if (getTraceExplorer() == null) {
 			// TODO: open trace explorer
@@ -189,10 +193,11 @@ public class TraceNavigatorUI {
 		for (AcciditView v: views) {
 			v.setStep(le);
 		}
-		if (le.parent != null) {
-			String filePath = le.parent.type;
-			srcFilesLocator.open(filePath, le.line, mainPage, getTraceExplorer());
-		}
+		showCode(le);
+	}
+	
+	public void showCode(TraceElement le) {
+		srcFilesLocator.open(le, mainPage, getTraceExplorer());
 	}
 	
 	public BreakpointsManager getBreakpointsManager() {

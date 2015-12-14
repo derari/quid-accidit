@@ -1,9 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package de.hpi.accidit.testapp;
 
 /**
@@ -44,6 +38,14 @@ public class Geometry {
 //        }
     }
     
+    static interface Shape2D {
+    	double getArea();
+    }
+    
+    static interface Shape3D {
+    	double getVolume();
+    }
+    
     static double squareArea(double width) {
         return width*width;
     }
@@ -54,6 +56,6 @@ public class Geometry {
     
     static double coneVolume(double area, double height) {
         double $h = height / 3;
-        return area * $h;
+        return area * height / 3;
     }
 }

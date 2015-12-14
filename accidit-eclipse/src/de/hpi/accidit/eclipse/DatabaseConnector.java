@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cthul.miro.MiConnection;
 import org.cthul.miro.query.QueryType;
@@ -24,6 +23,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hpi.accidit.eclipse.properties.DatabaseSettingsPreferencePage;
 import de.hpi.accidit.eclipse.properties.DatabaseSettingsRetriever;
+import de.hpi.accidit.eclipse.views.util.Timer;
 
 public class DatabaseConnector {
 	
@@ -220,12 +220,11 @@ public class DatabaseConnector {
 			
 			@Override
 			public ResultSet execute(Connection connection) throws SQLException {
-				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
-				tt.start();
+				Timer.Job tt = new Timer.Job(getQueryString(), getArguments(0).toArray());
 				try {
 					return super.execute(connection);
 				} finally {
-					tt.done = true;
+					tt.done();
 				}
 			}
 		}
@@ -279,52 +278,16 @@ public class DatabaseConnector {
 	        
 	        @Override
 			public ResultSet execute(Connection connection) throws SQLException {
-				TimerThread tt = new TimerThread(getQueryString(), getArguments(0).toArray());
-				tt.start();
+				Timer.Job tt = new Timer.Job(getQueryString(), getArguments(0).toArray());
 				try {
 					return super.execute(connection);
 				} finally {
-					tt.done = true;
+					tt.done();
 				}
 			}
 	    }
 		
-		private static final AtomicInteger count = new AtomicInteger(0);
 		
-		private static class TimerThread extends Thread {
-			
-			private final int n = count.getAndIncrement();
-			private final String query;
-			private final Object[] args;
-			private volatile boolean done = false;
-			
-			public TimerThread(String query, Object[] args) {
-				this.query = query;
-				this.args = args;
-			}
-			
-			@Override
-			public void run() {
-				boolean first = true;
-				long t = System.currentTimeMillis();
-				long w = 3500;
-				while (!done) {
-					try {
-						Thread.sleep(w);
-					} catch (InterruptedException e) {
-						return;
-					}
-					if (first) {
-						if (done) return;
-						System.out.println(n + ": " + query);
-						System.out.println(n + ": " + Arrays.toString(args));
-						w = 1000;
-						first = false;
-					}
-					System.out.println(n + ": " + (System.currentTimeMillis() - t)/1000 + "s");
-				}
-			}
-		}
 		
 	};
 }

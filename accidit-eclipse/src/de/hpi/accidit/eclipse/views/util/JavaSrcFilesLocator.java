@@ -27,6 +27,8 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import de.hpi.accidit.eclipse.model.TraceElement;
+
 public class JavaSrcFilesLocator {
 	
 	private static final String ORG_ECLIPSE_JDT_CORE_JAVANATURE = "org.eclipse.jdt.core.javanature";
@@ -62,14 +64,17 @@ public class JavaSrcFilesLocator {
 		return projects;
 	}
 	
-	public void open(final String filePath, final int line, final IWorkbenchPage dPage, final ViewPart activeView) {
-		if (dPage == null) return;
+	public void open(final TraceElement te, final IWorkbenchPage dPage, final ViewPart activeView) {
+		if (dPage == null || te == null || te.parent == null) return;
 		
 		Job job = new Job("My Job") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {
-				final IFile file = getFile(filePath);
-				if (file == null) return Status.OK_STATUS;
+				final IFile file = getFile(te.parent.type);
+				if (file == null) {
+					open(te.parent, dPage, activeView);
+					return Status.OK_STATUS;
+				}
 				
 				// Update the UI
 				Display.getDefault().asyncExec(new Runnable() {
@@ -77,8 +82,11 @@ public class JavaSrcFilesLocator {
 					public void run() {
 						try {
 							IEditorPart textEditor = IDE.openEditor(dPage, file, true);							
-							highlightLine(textEditor, line);
-							activeView.setFocus();
+							if (highlightLine(textEditor, te.line)) {
+								activeView.setFocus();
+							} else {
+								open(te.parent, dPage, activeView);
+							}
 						} catch (PartInitException e) {
 							e.printStackTrace();
 						}
@@ -112,52 +120,51 @@ public class JavaSrcFilesLocator {
 		return null;
 	}
 	
-	public void open_old(String filePath, int line, IWorkbenchPage dPage) {
-		for(IJavaProject javaProject : getProjects()) {
-			IType javaFileType;
-			try {
-				javaFileType = javaProject.findType(filePath);
-			} catch (JavaModelException e) {
-				e.printStackTrace();
-				continue;
-			}
-
-			if(javaFileType == null) continue;
-			IResource iResource = javaFileType.getResource();
-			
-			if (iResource == null) continue;
-			IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
-			
-			if (dPage != null) {
-				try {										
-					IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
-					highlightLine(textEditor, line);
-				}catch (Exception e) {
-					e.printStackTrace();
-					// log exception
-				}
-			}
-		}
-	}
+//	public void open_old(String filePath, int line, IWorkbenchPage dPage) {
+//		for(IJavaProject javaProject : getProjects()) {
+//			IType javaFileType;
+//			try {
+//				javaFileType = javaProject.findType(filePath);
+//			} catch (JavaModelException e) {
+//				e.printStackTrace();
+//				continue;
+//			}
+//
+//			if(javaFileType == null) continue;
+//			IResource iResource = javaFileType.getResource();
+//			
+//			if (iResource == null) continue;
+//			IFile iFile = ResourcesPlugin.getWorkspace().getRoot().getFile(iResource.getFullPath());
+//			
+//			if (dPage != null) {
+//				try {										
+//					IEditorPart textEditor = IDE.openEditor(dPage, iFile, true);
+//					highlightLine(textEditor, line);
+//				}catch (Exception e) {
+//					e.printStackTrace();
+//					// log exception
+//				}
+//			}
+//		}
+//	}
 	
-	private void highlightLine(IEditorPart editorPart, int lineNumber) {
-		if (!(editorPart instanceof ITextEditor) || lineNumber <= 0) return;
+	private boolean highlightLine(IEditorPart editorPart, int lineNumber) {
+		if (!(editorPart instanceof ITextEditor) || lineNumber <= 0) return false;
 		
 		ITextEditor textEditor = (ITextEditor) editorPart;
 		IDocument document = textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
-		if (document != null) {
-			IRegion lineInfo = null;
-			try {
-				// line count internally starts with 0, and not with 1 like in GUI
-				lineInfo = document.getLineInformation(lineNumber - 1);
-			} catch (BadLocationException e) {
-				// ignored because line number may not exist in document
-				e.printStackTrace();
-			}
-			if (lineInfo != null) {
-				textEditor.selectAndReveal(lineInfo.getOffset(), lineInfo.getLength());
-			}
+		if (document == null) return false;
+		IRegion lineInfo = null;
+		try {
+			// line count internally starts with 0, and not with 1 like in GUI
+			lineInfo = document.getLineInformation(lineNumber - 1);
+		} catch (BadLocationException e) {
+			// ignored because line number may not exist in document
+			// e.printStackTrace();
 		}
+		if (lineInfo == null) return false;
+		textEditor.selectAndReveal(lineInfo.getOffset(), lineInfo.getLength());
+		return true;
 	}
 
 }

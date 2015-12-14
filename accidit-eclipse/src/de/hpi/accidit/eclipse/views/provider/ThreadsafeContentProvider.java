@@ -14,6 +14,7 @@ import org.eclipse.swt.widgets.Display;
 import de.hpi.accidit.eclipse.model.ModelBase;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
+import de.hpi.accidit.eclipse.views.util.WorkPool;
 
 public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 	
@@ -232,17 +233,15 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			if (value instanceof ModelBase) {
 				((ModelBase) value).onInitialized(onValueInitialized());
 			} else {
-				new Thread() {
-					public void run() {
-						try {
-							initializeValueAsynch(value);
-							FinalFuture<Object> f = new FinalFuture<Object>(value);
-							onValueInitialized().call(f);
-						} catch (Throwable e) {
-							e.printStackTrace();
-						}
-					};
-				}.start();
+				WorkPool.execute(() -> {
+					try {
+						initializeValueAsynch(value);
+						FinalFuture<Object> f = new FinalFuture<Object>(value);
+						onValueInitialized().call(f);
+					} catch (Throwable e) {
+						e.printStackTrace();
+					}
+				});
 			}
 		}
 		

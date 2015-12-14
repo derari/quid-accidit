@@ -6,7 +6,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -34,6 +33,7 @@ public class Invocation extends TraceElement {
 	public String signature;
 	
 	private TraceElement[] children = null;
+	private Method methodObject = null;
 	
 	public Invocation() { };
 	
@@ -90,24 +90,22 @@ public class Invocation extends TraceElement {
 		Iterator<TraceElement> mnIt = minor.iterator();
 		TraceElement mn = mnIt.hasNext() ? mnIt.next() : null;
 		for (TraceElement mj: major) {
-			while (mn != null && mn.line < mj.line) {
-				if (mn.line > line) {
+			while (mn != null && mn.step < mj.step) {
+				if (mn.line != line) {
 					result.add(new LineElement(this, mn.step, mn.line));
 					line = mn.line;
 				}
-				while (mn != null && mn.line <= line) {
-					mn = mnIt.hasNext() ? mnIt.next() : null;
-				}
+				mn = mnIt.hasNext() ? mnIt.next() : null;
 			}
 			result.add(mj);
 			line = mj.line;
 		}
 		while (mn != null) {
-			if (mn.line > line) {
+			if (mn.line != line) {
 				result.add(new LineElement(this, mn.step, mn.line));
 				line = mn.line;
 			}
-			while (mn != null && mn.line <= line) {
+			while (mn != null && mn.line == line) {
 				mn = mnIt.hasNext() ? mnIt.next() : null;
 			}
 		}
@@ -118,6 +116,10 @@ public class Invocation extends TraceElement {
 	}
 
 	public Method quickGetMethod() {
-		return Method.VIEW.select().byId(methodId)._execute(cnn())._getSingle();
+		if (methodObject == null) {
+			methodObject = Method.VIEW.select()
+					.byId(methodId)._execute(cnn())._getSingle();
+		}
+		return methodObject;
 	}
 }

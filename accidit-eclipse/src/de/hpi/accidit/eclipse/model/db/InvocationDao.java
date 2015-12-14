@@ -1,6 +1,7 @@
 package de.hpi.accidit.eclipse.model.db;
 
 import org.cthul.miro.at.Impl;
+import org.cthul.miro.at.More;
 import org.cthul.miro.at.OrderBy;
 import org.cthul.miro.at.Put;
 import org.cthul.miro.at.Require;
@@ -78,6 +79,10 @@ public class InvocationDao extends TraceElementDaoBase {
 		@Require({"m", "t"})
 		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
 		Query ofMethod(String clazz, String name, String signature);
+		
+		@Require({"m"})
+		@Where("m.`name` = ? AND m.`signature` = ?")
+		Query ofMethod(String name, String signature);
 		
 		@Put("exitStep =")
 		Query atExitStep(long step);

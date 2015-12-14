@@ -2,27 +2,32 @@ package de.hpi.accidit.eclipse.slice;
 
 import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
 
-import java.lang.ref.SoftReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.cthul.miro.DSL;
 
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.Invocation;
+import de.hpi.accidit.eclipse.model.Method;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
+import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Value;
+import de.hpi.accidit.eclipse.model.ValueToString;
 
-public class ValueKey implements Comparable<ValueKey> {
+public class EventKey implements Comparable<EventKey> {
 	
 	protected final InvocationData invD;
 	protected final long step;
 	protected Value value;
+	protected Boolean isInternal = null;
 	
-	public ValueKey(InvocationData invD, long step) {
+	public EventKey(InvocationData invD, long step) {
 		this.invD = invD;
 		this.step = step;
 	}
@@ -49,7 +54,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		return step;
 	}
 	
-	protected Token asToken() {
+	protected InstructionKey getInstruction() {
 		return null;
 	}
 	
@@ -60,19 +65,35 @@ public class ValueKey implements Comparable<ValueKey> {
 	public void setValue(Value value) {
 		this.value = value;
 	}
+	
+	public boolean isInternalCode() {
+		if (isInternal == null) {
+			Method m = getInvocation().quickGetMethod();
+			isInternal = m.type.startsWith("java.") 
+					|| m.type.startsWith("javax.") 
+					|| m.type.startsWith("sun.");
+		}
+		return isInternal;
+	}
+	
+	public boolean isInternal() {
+		return isInternalCode();
+	}
 
 	@Override
-	public int compareTo(ValueKey o) {
+	public int compareTo(EventKey o) {
 		if (o == this) return 0;
 		long cStep = (step - o.step);
 		int c = cStep < 0 ? -1 : (cStep > 0 ? 1 : 0);
 		if (c != 0) return c;
 		c = getClass().getName().compareTo(o.getClass().getName());
 		if (c != 0) {
-			if (this instanceof VariableValueKey) return 1;
-			if (o instanceof VariableValueKey) return -1;
-			if (this instanceof InvocationArgKey) return 1;
-			if (o instanceof InvocationArgKey) return -1;
+			if (this instanceof InvocationKey) return -1;
+			if (o instanceof InvocationKey) return 1;
+//			if (this instanceof VariableValueKey) return 1;
+//			if (o instanceof VariableValueKey) return -1;
+//			if (this instanceof InvocationArgKey) return 1;
+//			if (o instanceof InvocationArgKey) return -1;
 			return c;
 		}
 		return specificCompareTo(o);
@@ -86,24 +107,28 @@ public class ValueKey implements Comparable<ValueKey> {
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == null) return false;
-		if (!(obj instanceof ValueKey)) return false;
-		return ((ValueKey) obj).compareTo(this) == 0;
+		if (!(obj instanceof EventKey)) return false;
+		return ((EventKey) obj).compareTo(this) == 0;
 	}
 	
-	protected int specificCompareTo(ValueKey o) {
+	protected int specificCompareTo(EventKey o) {
 		return 0; //toString().compareTo(o.toString());
 	}
 	
-	public VariableValueKey newVariableKey(String variable, int line, long step) {
-		return new VariableValueKey(invD, step, variable, line);
+	public VariableValueKey newVariableKey(String variable, CodeIndex ci, long step) {
+		return new VariableValueKey(invD, step, variable, ci);
 	}
 	
 	public ArrayItemValueKey newArrayKey(long thisId, int index, long getStep) {
 		return new ArrayItemValueKey(invD, getStep, thisId, index);
 	}
 	
-	public FieldValueKey newFieldKey(long thisId, String field, long getStep) {
-		return new FieldValueKey(invD, getStep, thisId, field);
+//	public FieldValueKey newFieldKey(long thisId, String field, long getStep) {
+//		return new FieldValueKey(invD, getStep, thisId, field);
+//	}
+	
+	public FieldValueKey newFieldKey(FieldValue fieldValue) {
+		return new FieldValueKey(invD, fieldValue);
 	}
 	
 	public MethodResultKey newResultKey(String clazz, String method, String sig, long step) {
@@ -133,7 +158,7 @@ public class ValueKey implements Comparable<ValueKey> {
 	@Override
 	public String toString() {
 		String s;
-		Token t = asToken();
+		InstructionKey t = getInstruction();
 		if (t != null) s = t.toString();
 		else s = super.toString();
 		s = getStep() + "/" + s;
@@ -155,12 +180,13 @@ public class ValueKey implements Comparable<ValueKey> {
 		return "";
 	}
 	
-	public static class InvocationKey extends ValueKey {
+	public static class InvocationKey extends EventKey {
 		
 		private List<InvocationArgKey> args = new ArrayList<>(8);
 		private InvocationThisKey thisKey = null;
 		private InvocationAndArgsKey allKey = null;
 		private Invocation inv;
+		private Boolean isUtilMethod = null;
 
 		public InvocationKey(int testId, long step) {
 			this(new InvocationData(invocationAtStep(testId, step)));
@@ -177,8 +203,8 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected Token asToken() {
-			return Token.invoke(inv.type, inv.method, inv.signature, inv.line);
+		protected InstructionKey getInstruction() {
+			return InstructionKey.invoke(inv.type, inv.method, inv.signature, CodeIndex.anyAtLine(inv.line));
 		}
 		
 		public InvocationAndArgsKey allArgs() {
@@ -202,12 +228,24 @@ public class ValueKey implements Comparable<ValueKey> {
 		public InvocationThisKey getThis() {
 			if (thisKey == null) {
 				thisKey = new InvocationThisKey(invD, step, inv);
+				thisKey.invK = this;
 			}
 			return thisKey;
 		}
 		
 		public String getMethodKey() {
-			return Token.methodKey(inv.type, inv.method, inv.signature);
+			return InstructionKey.methodKey(inv.type, inv.method, inv.signature);
+		}
+		
+		@Override
+		public boolean isInternal() {
+			if (isUtilMethod == null) {
+				Method m = inv.quickGetMethod();
+				isUtilMethod = m.type.startsWith("java.")
+						&& (m.name.equals("valueOf") || m.name.endsWith("Value"));
+			}
+			if (isUtilMethod) return true;
+			return super.isInternal();
 		}
 		
 		@Override
@@ -224,9 +262,10 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 	
-	public static class InvocationThisKey extends ValueKey {
+	public static class InvocationThisKey extends EventKey {
 		
 		private Invocation inv;
+		private InvocationKey invK = null;
 
 		public InvocationThisKey(InvocationData invD, long step) {
 			this(invD, step, invD.getInvocation());
@@ -237,9 +276,23 @@ public class ValueKey implements Comparable<ValueKey> {
 			this.inv = inv;
 		}
 		
+		public InvocationKey getThisInvocation() {
+			if (invK == null) {
+				invK = invD.getInvocationAtCall(inv.getCallStep()).invKey;
+			}
+			return invK;
+		}
+		
 		@Override
-		protected Token asToken() {
-			return Token.invokeThis(inv.type, inv.method, inv.signature, inv.line);
+		protected InstructionKey getInstruction() {
+			return InstructionKey.invokeThis(inv.type, inv.method, inv.signature, CodeIndex.anyAtLine(inv.line));
+		}
+		
+		@Override
+		public boolean isInternal() {
+			return getThisInvocation().isInternal();
+//			if (!getInvocationKey().isInternal()) return false;
+//			return super.isInternal();
 		}
 		
 		@Override
@@ -248,7 +301,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 
-	public static class InvocationArgKey extends ValueKey {
+	public static class InvocationArgKey extends EventKey {
 		
 		private int index;
 		private Invocation inv;
@@ -260,23 +313,32 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected Token asToken() {
-			return Token.invokeArg(inv.type, inv.method, inv.signature, index, inv.line);
+		protected InstructionKey getInstruction() {
+			return InstructionKey.invokeArg(inv.type, inv.method, inv.signature, index, CodeIndex.anyAtLine(inv.line));
+		}
+		
+		public InvocationKey getThisInvocation() {
+			return invD.getInvocationAtCall(inv.getStep()).getInvocationKey();
 		}
 		
 		@Override
-		protected int specificCompareTo(ValueKey o) {
+		protected int specificCompareTo(EventKey o) {
 			InvocationArgKey a = (InvocationArgKey) o;
 			return Integer.compare(index, a.index);
 		}
 		
 		@Override
+		public boolean isInternal() {
+			return getThisInvocation().isInternal();
+		}
+		
+		@Override
 		public String getUserString() {
-			return "[" + index + "] = " + getValueString();
+			return "arg" + index + " = " + getValueString();
 		}
 	}
 	
-	public static class InvocationAndArgsKey extends ValueKey {
+	public static class InvocationAndArgsKey extends EventKey {
 		
 		private final InvocationKey invKey;
 
@@ -286,18 +348,18 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected Token asToken() {
-			return invKey.asToken();
+		protected InstructionKey getInstruction() {
+			return invKey.getInstruction();
 		}
 		
 		@Override
-		protected int specificCompareTo(ValueKey o) {
+		protected int specificCompareTo(EventKey o) {
 			return invKey.compareTo(((InvocationAndArgsKey) o).invKey);
 		}
 		
 		@Override
 		public String toString() {
-			return invKey.toString() + "**";
+			return invKey.toString() + "[inv-and-args]";
 		}
 		
 		public InvocationKey getThisInvocation() {
@@ -309,7 +371,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 	
-	public static class MethodResultKey extends ValueKey {
+	public static class MethodResultKey extends EventKey {
 		
 		public MethodResultKey(int testId, long step) {
 			super(new InvocationData(invocationAtExitStep(testId, step)), step);
@@ -335,8 +397,15 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected Token asToken() {
-			return Token.result(getInvocation().exitLine);
+		protected InstructionKey getInstruction() {
+			return InstructionKey.result(CodeIndex.anyAtLine(getInvocation().exitLine));
+		}
+		
+		@Override
+		public boolean isInternal() {
+//			if (!getInvocationKey().isInternal()) return false;
+//			return super.isInternal();
+			return getInvocationKey().isInternal();
 		}
 		
 		@Override
@@ -345,7 +414,7 @@ public class ValueKey implements Comparable<ValueKey> {
 			String t = inv.type;
 			t = t.substring(t.lastIndexOf('.')+1);
 			if (inv.thisId != null) {
-				t = "<" + t + " #" + inv.thisId + ">";
+				t = "<" + invD.getObject(inv.thisId).getShortString() + ">";
 			}
 			String method = getInvocation().method;
 			method = method.substring(method.indexOf('#') + 1);
@@ -353,42 +422,50 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 	
-	public static class VariableValueKey extends ValueKey {
+	public static class VariableValueKey extends EventKey {
 		
 		private String variable;
-		private int line;
+		private CodeIndex ci;
 		
-		public VariableValueKey(InvocationData invD, long step, String variable, int line) {
+		public VariableValueKey(InvocationData invD, long step, String variable, CodeIndex ci) {
 			super(invD, step);
 			this.variable = variable;
-			if (line < 0) {
-				//invD.getInvocation().quickGetMethod().
-			}
-			this.line = line;
+//			if (line < 0) {
+//				//invD.getInvocation().quickGetMethod().
+//			}
+			this.ci = ci;
 		}
 		
 		@Override
-		protected Token asToken() {
-			return Token.variable(variable, line);
+		protected InstructionKey getInstruction() {
+			return InstructionKey.variable(variable, ci);
 		}
 		
 		@Override
-		protected int specificCompareTo(ValueKey o) {
+		protected int specificCompareTo(EventKey o) {
+			int c = ci.compareTo(((VariableValueKey) o).ci);
+			if (c != 0) return c;
 			return variable.compareTo(((VariableValueKey) o).variable);
 		}		
 	}
 	
-	public static class FieldValueKey extends ValueKey {
+	public static class FieldValueKey extends EventKey {
 		
 		private long thisId = -1;
 		private String field;
 		private int line;
 		
-		public FieldValueKey(InvocationData invD, long getStep, long thisId, String field) {
-			this(invD, fieldSetBefore(invD.getInvocation().getTestId(), thisId, field, getStep));
-		}
+//		public FieldValueKey(InvocationData invD, long getStep, long thisId, String field) {
+//			this(invD, fieldSetBefore(invD.getInvocation().getTestId(), thisId, field, getStep));
+//		}
 		
 		public FieldValueKey(InvocationData invD, FieldValue fv) {
+			this(invD, fv.isPut() ? fv : fieldSetBefore(invD.getInvocation().getTestId(), 
+										 fv.getThisId(), fv.getName(), fv.getStep()), 
+				 true);
+		}
+		
+		private FieldValueKey(InvocationData invD, FieldValue fv, boolean x) {
 			super(invD.getInvocationAtCall(fv != null ? fv.getCallStep() : 0), 
 					fv != null ? fv.getStep() : 0);
 			if (fv != null) {
@@ -401,9 +478,12 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 
 		@Override
-		protected Token asToken() {
-			if (line < 0) return null;
-			return Token.field(field, line);
+		protected InstructionKey getInstruction() {
+			if (line < 0) {
+//				System.out.println(".");
+//				return null;
+			}
+			return InstructionKey.field(field, CodeIndex.anyAtLine(line));
 		}
 		
 		@Override
@@ -414,15 +494,34 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected int specificCompareTo(ValueKey o) {
+		protected int specificCompareTo(EventKey o) {
+			if (((FieldValueKey) o).field == null) {
+				return field == null ? 0 : 1;
+			}
+			if (field == null) return -1;
 			return field.compareTo(((FieldValueKey) o).field);
 		}
 		
 		@Override
+		public boolean isInternal() {
+			if (step == 0) return true;
+			return super.isInternal();
+		}
+		
+		@Override
 		public String getUserString() {
-			String s = thisId <= 0 ? "" : "<#" + thisId + ">.";
+			
+//			String t = inv.type;
+//			t = t.substring(t.lastIndexOf('.')+1);
+			String s = "";
+			if (thisId > 0) {
+				String shortStr = invD.getObject(thisId).getShortString();
+				s = "<" + shortStr + ">";
+//				int i = shortStr.lastIndexOf('.');
+//				s = "<" + (i < 0 ? shortStr : shortStr.substring(i+1)) + ">";
+			}			
 			if (field != null) {
-				s += field + " = ";
+				s += "." + field + " = ";
 			}
 			s += getValueString();
 			return s;
@@ -430,7 +529,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 	}
 	
-	public static class ArrayItemValueKey extends ValueKey {
+	public static class ArrayItemValueKey extends EventKey {
 		
 		private long thisId;
 		private int index;
@@ -448,9 +547,9 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 
 		@Override
-		protected Token asToken() {
+		protected InstructionKey getInstruction() {
 			if (line < 0) return null;
-			return Token.array(line);
+			return InstructionKey.array(CodeIndex.anyAtLine(line));
 		}
 		@Override
 		protected String detailString(String s) {
@@ -458,7 +557,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		}
 		
 		@Override
-		protected int specificCompareTo(ValueKey o) {
+		protected int specificCompareTo(EventKey o) {
 			ArrayItemValueKey a = (ArrayItemValueKey) o;
 			int c = Long.compare(thisId, a.thisId);
 			if (c != 0) return c;
@@ -467,7 +566,7 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		@Override
 		public String getUserString() {
-			String s = "<#" + thisId + ">";
+			String s = "<" + invD.getObject(thisId).getShortString() + ">";
 			s += "[" + index + "] = " + getValueString(); // \u21A4
 			return s;
 		}
@@ -477,16 +576,20 @@ public class ValueKey implements Comparable<ValueKey> {
 		
 		private final Invocation inv;
 		private final Map<Long, InvocationData> others;
+		private final Map<Long, Value> objects;
 		private InvocationKey invKey = null;
 //		private SoftReference<Map<Token, DataDependency>> graphRef = null;
 		
 		public InvocationData(Invocation inv) {
-			this(inv, new HashMap<Long, InvocationData>());
+			this(inv, 
+					Collections.synchronizedMap(new HashMap<>()), 
+					Collections.synchronizedMap(new HashMap<>()));
 		}
 		
-		public InvocationData(Invocation inv, Map<Long, InvocationData> others) {
+		public InvocationData(Invocation inv, Map<Long, InvocationData> others, Map<Long, Value> objects) {
 			this.inv = inv;
 			this.others = others;
+			this.objects = objects;
 			others.put(inv.getStep(), this);
 		}
 		
@@ -495,12 +598,24 @@ public class ValueKey implements Comparable<ValueKey> {
 			return i.type + "#" + i.method + i.signature;
 		}
 		
+		public Value getObject(long thisId) {
+			Value os = objects.get(thisId);
+			if (os == null) {
+				os = Value
+						.object(inv.getTestId(), thisId, Long.MAX_VALUE).select()
+						._execute(cnn());
+				objects.put(thisId, os);
+				os.beInitialized();
+			}
+			return os;
+		}
+		
 		public InvocationData getInvocationAtCall(long callStep) {
 			if (callStep < 0) return null;
 			InvocationData id = others.get(callStep);
 			if (id == null) {
 				Invocation i = invocationAtStep(inv.getTestId(), callStep);
-				id = new InvocationData(i, others);
+				id = new InvocationData(i, others, objects);
 			}
 			return id;
 		}
@@ -562,7 +677,7 @@ public class ValueKey implements Comparable<ValueKey> {
 					//.ofMethod(clazz, method, sig)
 					.inTest(testId).inCall(parentCall)
 					
-					.ofMethod(clazz, method, sig)
+					.ofMethod(method, sig) //clazz, 
 				._execute(cnn())
 				._getFirst();
 //		if (inv == null) {

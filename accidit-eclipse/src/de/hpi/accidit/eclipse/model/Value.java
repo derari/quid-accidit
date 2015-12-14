@@ -222,7 +222,7 @@ public abstract class Value extends ModelBase {
 		@Override
 		public String getShortString() {
 			//beInitialized();
-			return "#" + thisId;
+			return ValueToString.getShortName(this, children);
 		}
 		
 		@Override

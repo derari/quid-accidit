@@ -24,7 +24,7 @@ import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
-import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
+import de.hpi.accidit.eclipse.slice.EventKey.InvocationData;
 import de.hpi.accidit.eclipse.views.AcciditView;
 import de.hpi.accidit.eclipse.views.SlicingFilterDialog;
 import de.hpi.accidit.eclipse.views.SlicingStatusView;
@@ -84,12 +84,12 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	
 	public void clear() {
 		TraceNavigatorUI.getGlobal().getSliceApi().clear();
-				
 		for (Control control : parent.getChildren()) {
 			if (!headlineControls.contains(control)) {
 				control.dispose();
 			}
 		}
+		criteria.clear();
 	}
 	
 	public void addVariableValue(VariableValue value) {
@@ -104,7 +104,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		}
 		
 		invD = invD.getInvocationAtCall(value.getCallStep());
-		ValueKey key = new ValueKey.VariableValueKey(invD, value.getValueStep(), value.getName(), value.getLine());
+		EventKey key = new EventKey.VariableValueKey(invD, value.getValueStep(), value.getName(), CodeIndex.anyAtLine(value.getLine()));
 		key.setValue(value.getValue());
 		addEntry(key);
 	}
@@ -121,7 +121,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		}
 		
 		invD = invD.getInvocationAtCall(value.getCallStep());
-		ValueKey key = new ValueKey.InvocationThisKey(invD, value.getValueStep());
+		EventKey key = new EventKey.InvocationThisKey(invD, value.getValueStep());
 		key.setValue(value.getValue());
 		addEntry(key);
 	}
@@ -138,7 +138,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		
 //		System.out.printf("%s %s %s %s%n", value.getCallStep(), value.getStep(), value.getThisId(), value.getName());
 //		invD = invD.getInvocationAtCall(value.getCallStep());
-		ValueKey key = new ValueKey.FieldValueKey(invD, value);
+		EventKey key = new EventKey.FieldValueKey(invD, value);
 		key.setValue(value.getValue());
 		addEntry(key);
 	}
@@ -146,7 +146,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public void addInvocation(Invocation invocation) {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 		invD = invD.getInvocationAtCall(invocation.getStep());
-		addEntry(new ValueKey.InvocationKey(invD));
+		addEntry(new EventKey.InvocationKey(invD));
 	}
 	
 	public void addInvocationArguments(Invocation invocation) {
@@ -158,7 +158,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 				.atStep(invocation.getStep())
 				._execute(DatabaseConnector.cnn())._asList();
 		
-		int i = 0;
+//		int i = 0;
 		for (VariableValue v: variables) {
 //			ValueKey arg = new ValueKey.InvocationArgKey(invD, v.getValueStep(), i++, invocation);
 //			addEntry(arg);
@@ -169,11 +169,11 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		}
 	}
 	
-	public void addEntry(final ValueKey key) {
+	public void addEntry(final EventKey key) {
 		addEntry(key, DynamicSlice.ALL_DEPS);
 	}
 	
-	private Criterion getCriterion(ValueKey key) {
+	private Criterion getCriterion(EventKey key) {
 		for (Criterion c: criteria) {
 			if (c.key.equals(key)) return c;
 		}
@@ -182,14 +182,14 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		return c;
 	}
 	
-	public void addEntry(ValueKey key, int flags) {
+	public void addEntry(EventKey key, int flags) {
 		getCriterion(key).setDependencyType(flags);
 	}
 	
 	private class Criterion {
 		Label detailsButton;
-		final ValueKey key;
-		public Criterion(ValueKey key) {
+		final EventKey key;
+		public Criterion(EventKey key) {
 			this.key = key;
 			init();
 		}

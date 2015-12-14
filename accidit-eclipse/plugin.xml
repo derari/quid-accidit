@@ -39,7 +39,7 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.VariablesView"
-            icon="icons/a_logo.png"
+            icon="icons/vars.png"
             id="de.hpi.accidit.eclipse.views.VariablesView"
             name="Variables"
             restorable="true">
@@ -72,7 +72,7 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
-            icon="icons/a_logo.png"
+            icon="icons/slice_view.png"
             id="de.hpi.accidit.eclipse.slice.SlicingCriteriaView"
             name="Slicing Criteria"
             restorable="true">
@@ -80,7 +80,7 @@
       <view
             category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.views.SlicingStatusView"
-            icon="icons/a_logo.png"
+            icon="icons/slice_view.png"
             id="de.hpi.accidit.eclipse.views.SlicingStatusView"
             name="Slicing Step"
             restorable="true">

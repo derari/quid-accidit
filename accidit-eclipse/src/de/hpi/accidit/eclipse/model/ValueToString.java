@@ -43,14 +43,61 @@ public class ValueToString {
 		}
 		return simpleLongName(v);
 	}
+	
+	public static String getShortName(ObjectSnapshot v) {
+		return getShortName(v, v.getChildren());
+	}
+	
+	public static String getShortName(ObjectSnapshot v, NamedValue[] children) {
+		String typeName = v.getTypeName();
+		if (typeName == null) return simpleShortName(v);
+		Integer aLen = v.getArrayLength();
+		if (aLen != null) {			
+			int i;
+			i = typeName.lastIndexOf('.');
+			if (i > 0) typeName = typeName.substring(i+1);
+			i = typeName.indexOf('[');
+			if (i < 0) {
+				return typeName + "[" + aLen + "] #" + v.getThisId();
+			}
+			return typeName.substring(0,i+1)
+					+ aLen
+					+ typeName.substring(i+1)
+					+ " #" + v.getThisId();
+		}
+		if (children == null) return simpleShortName(v);
+		switch (typeName) {
+		case "java.lang.Byte":
+		case "java.lang.Integer":
+		case "java.lang.Long":
+		case "java.lang.Short":
+			return integerValue(v, children);
+		case "java.lang.String":
+			String s = stringValue(v, children);
+			if (s.length() > 40) return simpleShortName(v);
+			return s;
+		}
+//		if (typeName.startsWith("java.util")) {
+//			return javaUtilName(v, children);
+//		}
+		return simpleShortName(v);
+	}
 
 	private static String getArrayContentString(ObjectSnapshot v, NamedValue[] children) {
 		StringBuilder sb = new StringBuilder("[");
 		int max = Math.min(3, children.length);
+		boolean match = false;
 		for (int i = 0; i < max; i++) {
 			if (i > 0) sb.append(",");
-			sb.append(getArrayItemString(children[i].getValue()));
+			String item = getArrayItemString(children[i].getValue());
+			if (item.startsWith("-->")) {
+				sb.append("(null)");
+			} else {
+				match = true;
+				sb.append(item);
+			}
 		}
+		if (!match) return "[" + children.length + "]";
 		return sb.append("]").toString();
 	}
 	
@@ -68,13 +115,21 @@ public class ValueToString {
 	}
 
 	private static String simpleLongName(ObjectSnapshot v) {
-		return v.getTypeName() + " #" + v.getThisId();
+		String t = v.getTypeName();
+		String n = "";
+		int i = t.length();
+		while (n.length() < 25 && i > 0) {
+			i = t.lastIndexOf('.', i-1);
+			n = i < 0 ? t : t.substring(i+1);
+		}
+		return n + " #" + v.getThisId();
 	}
 	
-	private static String simpleShortName(ObjectSnapshot v) {
+	public static String simpleShortName(ObjectSnapshot v) {
 		String s = v.getTypeName();
 		int d = s.lastIndexOf('.');
 		if (d >= 0) s = s.substring(d+1);
+		if (s.isEmpty()) return "#" + v.getThisId();
 		return s + " #" + v.getThisId();
 	}
 
@@ -100,22 +155,25 @@ public class ValueToString {
 			}
 		}
 		if (vValue == null) {
-			return simpleLongName(v);
+			return simpleShortName(v);
 		}
+		boolean anyMatch = false;
 		int len = vValue.getArrayLength();
 		char[] array = new char[len];
-		Arrays.fill(array, '?');
+		Arrays.fill(array, '\u00B7');
 		for (NamedValue c: vValue.getChildren()) {
 			int i = Integer.parseInt(c.getName());
 			array[i] = c.getValue().getShortString().charAt(0);
+			anyMatch = true;
 		}
+		if (!anyMatch) return simpleShortName(v);
 		
 		int offset = vOffset != null ? (int) vOffset.getValueId() : 0;
 		int count = vCount != null ? (int) vCount.getValueId() : (len - offset);
 		
 		String s = new String(array, offset, count);
 		if (s.length() > 35) s = s.substring(0, 32) + "...";
-		return "\"" + s + "\" (" + simpleShortName(v) + ")";
+		return "\"" + s + "\" #" + v.getThisId();// simpleShortName(v) + ")";
 	}
 	
 	private static String integerValue(ObjectSnapshot v, NamedValue[] children) {

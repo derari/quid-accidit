@@ -5,6 +5,11 @@ import java.lang.ref.SoftReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Utility class for lazily caching objects.
+ * @param <K>
+ * @param <V>
+ */
 public abstract class Cache<K, V> {
 	
 	private final ConcurrentMap<K, Reference<V>> map = new ConcurrentHashMap<>();

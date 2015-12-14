@@ -1,11 +1,12 @@
 package de.hpi.accidit.eclipse.slice;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
@@ -15,11 +16,14 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.slice.DynamicSlice.Node;
 import de.hpi.accidit.eclipse.slice.DynamicSlice.OnSliceUpdate;
+import de.hpi.accidit.eclipse.slice.EventKey.InvocationData;
+import de.hpi.accidit.eclipse.slice.EventKey.InvocationKey;
 import de.hpi.accidit.eclipse.slice.SootConfig.JavaProjectConfig;
 import de.hpi.accidit.eclipse.slice.SootConfig.WorkspaceConfig;
-import de.hpi.accidit.eclipse.slice.ValueKey.InvocationData;
-import de.hpi.accidit.eclipse.slice.ValueKey.InvocationKey;
 
+/**
+ * The Eclipse plugin interacts with the slicing component through this API.
+ */
 public class SliceAPI {
 	
 	private final Runnable onUpdate;
@@ -27,13 +31,13 @@ public class SliceAPI {
 	private IJavaProject project = null;
 	private SootConfig sootConfig = null;
 	private DynamicSlice dynamicSlice = null;
-	private Set<ValueKey> slicingCritera = new LinkedHashSet<>();
+	private Set<EventKey> slicingCritera = new LinkedHashSet<>();
 	private SortedSet<Long> sliceSteps = null;
 	private long lastUpdate = 0;
 	private final Object updateGuard = new Object();
 	
 	private int testId = -1;
-	private ValueKey rootInvocation;
+	private EventKey rootInvocation;
 	
 	public SliceAPI(Runnable onUpdate) {
 		this.onUpdate = onUpdate;
@@ -86,9 +90,9 @@ public class SliceAPI {
 			lastUpdate = System.currentTimeMillis();
 		}
 		synchronized (this) {
-			SortedMap<ValueKey, Node> result = dynamicSlice().getSlice();
+			SortedMap<EventKey, Node> result = dynamicSlice().getSlice();
 			sliceSteps = new TreeSet<>();
-			for (ValueKey k: result.keySet()) {
+			for (EventKey k: result.keySet()) {
 				sliceSteps.add(k.getStep());
 			}
 			onUpdate.run();			
@@ -96,6 +100,7 @@ public class SliceAPI {
 	}
 	
 	public void clear() {
+		dynamicSlice().clear();
 		slicingCritera.clear();
 		onUpdate.run();
 	}
@@ -110,25 +115,36 @@ public class SliceAPI {
 		return testId;
 	}
 	
-	private static final Timer time = new Timer();
+//	private static final Timer time = new Timer();
 	
 	public SortedSet<Long> getSliceSteps() {
 		return sliceSteps;
 	}
 
-	public void setCriterion(ValueKey key, int flags) {
+	public void setCriterion(EventKey key, int flags) {
 		dynamicSlice().setCriterion(key, flags);
 	}
 	
-	public void removeCriterion(ValueKey key) {
+	public void removeCriterion(EventKey key) {
 		setCriterion(key, -1);
 	}
 
-	public int getFlags(ValueKey key) {
+	public int getFlags(EventKey key) {
 		return dynamicSlice().getNode(key).getFlags();
 	}
 
-	public SortedMap<ValueKey, Node> getSlice() {
+	public SortedMap<EventKey, Node> getSlice() {
 		return dynamicSlice().getSlice();
+	}
+	
+	public Collection<Node> getFilteredSlice() {
+		Collection<Node> result = new ArrayList<>();
+		Collection<Node> slice = getSlice().values();
+		for (Node n: slice) {
+			if (!n.isInternal()) {
+				result.add(n);
+			}
+		}
+		return result;
 	}
 }
