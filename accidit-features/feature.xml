@@ -1,33 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="accidit_features"
-      label="Accidit-features"
-      version="1.0.0.qualifier">
+      id="de.hpi.accidit.eclipse.features"
+      label="Quid Accidit? Omniscient Debugger"
+      version="0.1.0">
 
-   <description url="http://www.example.com/description">
-      [Enter Feature Description here.]
+   <description>
+      This Plug-in provides the Quid Accidit? Omniscient Debugger.
    </description>
 
-   <copyright url="http://www.example.com/copyright">
-      [Enter Copyright Description here.]
+   <copyright>
+      Copyright (C) 2015 Arian Treffer
    </copyright>
 
-   <license url="http://www.example.com/license">
-      [Enter License Description here.]
-   </license>
+   <license url="">
+      Quid Accidit Omniscient Debugger
+Copyright (C) 2015 Arian Treffer
 
-   <plugin
-         id="accidit-launcher"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   </license>
 
    <plugin
          id="de.hpi.accidit.eclipse"
          download-size="0"
          install-size="0"
-         version="0.0.0"
+         version="0.1.0"
+         unpack="false"/>
+
+   <plugin
+         id="de.hpi.accidit.eclipse.launcher"
+         download-size="0"
+         install-size="0"
+         version="0.1.0"
          unpack="false"/>
 
 </feature>

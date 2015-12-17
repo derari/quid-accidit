@@ -19,6 +19,9 @@ public class TracingJarManager {
 	public synchronized File getTracerJar() {
 		if (fTracer == null || !fTracer.exists()) {
 			fTracer = cpFile(fTracer, "/accidit-asm-tracer-1.0-SNAPSHOT-jar-with-dependencies.jar");
+			if (fTracer == null) {
+				fTracer = cpFile(fTracer, "/lib/accidit-asm-tracer-1.0-SNAPSHOT-jar-with-dependencies.jar");
+			}
 		}
 		return fTracer;
 	}
@@ -26,6 +29,9 @@ public class TracingJarManager {
 	public synchronized File getModelJar() {
 		if (fModel == null || !fModel.exists()) {
 			fModel = cpFile(fModel, "/accidit-tracer-model-1.0-SNAPSHOT.jar");
+			if (fModel == null) {
+				fModel = cpFile(fModel, "/lib/accidit-tracer-model-1.0-SNAPSHOT.jar");
+			}
 		}
 		return fModel;
 	}
@@ -34,11 +40,13 @@ public class TracingJarManager {
 		try {
 			if (target == null) {
 				int i = name.lastIndexOf('.');
-				target = File.createTempFile(name.substring(0, i+1), name.substring(i));
+				int d = name.lastIndexOf('/');
+				target = File.createTempFile(name.substring(d+1, i+1), name.substring(i));
 				target.delete();
 				target.deleteOnExit();
 			}
 			try (InputStream is = getClass().getResourceAsStream(name)) {
+				if (is == null) return null;
 				Path pTarget = Paths.get(target.toURI());
 				Files.copy(is, pTarget);
 			}

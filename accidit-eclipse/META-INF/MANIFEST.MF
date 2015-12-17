@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Accidit Eclipse Plugin
+Bundle-Name: Quid Accidit? Eclipse Plugin
 Bundle-SymbolicName: de.hpi.accidit.eclipse; singleton:=true
 Bundle-Version: 0.1.0
 Bundle-Activator: de.hpi.accidit.eclipse.Activator
@@ -12,7 +12,7 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.debug.ui;bundle-version="3.8.1",
  org.eclipse.ui.editors;bundle-version="3.8.0",
  org.eclipse.jdt.core;bundle-version="3.8.3"
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: lib/mysql-connector-java-5.1.22-bin.jar,
  lib/miro-1.0-SNAPSHOT.jar,

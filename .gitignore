@@ -12,3 +12,7 @@
 **/bin/
 .project
 .classpath
+/accidit-update-site/content.jar
+/accidit-update-site/artifacts.jar
+/accidit-update-site/features
+/accidit-update-site/plugins

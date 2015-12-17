@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import org.cthul.miro.DSL;
@@ -31,6 +32,7 @@ import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.CodeDependency.CVDependency;
 import de.hpi.accidit.eclipse.slice.CodeDependency.TriDependency;
 import de.hpi.accidit.eclipse.slice.CodeDependency.ValueDependency;
+import de.hpi.accidit.eclipse.slice.DynamicSlice.DependencySet;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationAndArgsKey;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationArgKey;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationKey;
@@ -99,23 +101,18 @@ public class DynamicSlice {
 	public static int CONTROL = 4;
 	public static int ALL_DEPS = VALUE + REACH + CONTROL;
 	
-	private final Cache<String, MethodSlicer> methodSlicers = new Cache<String, DynamicSlice.MethodSlicer>() {
-		@Override
-		protected MethodSlicer value(String key) {
-			return new MethodSlicer(key);
-		}
-	};
+	private final Cache<EventKey, Node> nodes = new Cache<>(Node::new);
+	private final Cache<String, MethodSlicer> methodSlicers = new Cache<>(MethodSlicer::new);
+	private final Cache<Invocation, Map<String, List<VariableValue>>> variableHistories = new Cache<>(this::fetchVariableHistories);
+	private final Cache<Invocation, List<ItemValue>> aryElementGetHistories = new Cache<>(this::fetchAryElementHistories);
+	private final Cache<Invocation, List<FieldValue>> fieldGetHistories = new Cache<>(this::fetchFieldHistories);
 	
 	private final SootConfig cfg;
 //	private final Set<ValueKey> guardSet = new ConcurrentSkipListSet<>();
 	
 	private final Set<Node> criteria = new ConcurrentSkipListSet<>();
 	private volatile ConcurrentNavigableMap<EventKey, Node> slice = null;
-	private final ConcurrentNavigableMap<EventKey, Node> nodes = new ConcurrentSkipListMap<>();
-	private final SortedMap<EventKey, DependencySet> internalSlice = new TreeMap<>();
-	private final Map<Invocation, Map<String, List<VariableValue>>> variableHistories = new ConcurrentHashMap<>();
-	private final Map<Invocation, List<ItemValue>> aryElementGetHistories = new ConcurrentHashMap<>();
-	private final Map<Invocation, List<FieldValue>> fieldGetHistories = new ConcurrentHashMap<>();
+	private final SortedMap<EventKey, DependencySet> internalVariables = new TreeMap<>();
 	
 	private final AtomicInteger pendingTasksCounter = new AtomicInteger(0);
 	private final OnSliceUpdate onUpdate;
@@ -127,29 +124,33 @@ public class DynamicSlice {
 	}
 	
 	public synchronized void clear() {
-		for (Node n: criteria) {
-			n.setFlags(-1);
-		}
-		criteria.clear();
-		newSlice();
+		execute(() -> {
+			synchronized (DynamicSlice.this) {
+				for (Node n: criteria) {
+					n.setFlags(-1);
+				}
+				criteria.clear();
+				newSlice();
+			}
+		});
 	}
 	
-	public synchronized void setCriterion(EventKey key, int flags) {
-		Node n = getNode(key);
-		if (flags == -1) {
-			criteria.remove(n);
-		} else {
-			criteria.add(n);
-		}
-		n.setFlags(flags);
-		newSlice();
+	public void setCriterion(EventKey key, int flags) {
+		execute(() -> {
+			synchronized (DynamicSlice.this) {
+				Node n = getNode(key);
+				if (flags == -1) {
+					criteria.remove(n);
+				} else {
+					criteria.add(n);
+				}
+				n.setFlags(flags);
+				newSlice();
+			}
+		});
 	}
 	
 	public Node getNode(EventKey vk) {
-		Node n = nodes.get(vk);
-		if (n != null) return n;
-		n = new Node(vk);
-		nodes.putIfAbsent(vk, n);
 		return nodes.get(vk);
 	}
 	
@@ -157,27 +158,23 @@ public class DynamicSlice {
 		return criteria.isEmpty();
 	}
 	
-	private void newSlice() {
-		execute(new Runnable() {
-			@Override
-			public void run() {
-				createNewSlice();
-			}
-		});
+	private synchronized void newSlice() {
+		slice = new ConcurrentSkipListMap<>();
+		execute(() -> createNewSlice(slice));
 	}
 	
-	private synchronized void createNewSlice() {
+	private synchronized void createNewSlice(ConcurrentNavigableMap<EventKey, Node> slice) {
+		if (slice != this.slice) return;
 		if (criteria.isEmpty()) {
 			nodes.clear();
 		}
-		slice = new ConcurrentSkipListMap<>();
 		for (Node n: nodes.values()) {
 			n.clearInheritedFlags();
 		}
 		for (Node n: criteria) {
 			n.fillSlice(slice);
 		}
-		internalSlice.clear(); // most of the data is redundant by now
+		internalVariables.clear(); // most of the data is redundant by now
 	}
 	
 	public SortedMap<EventKey, Node> getSlice() {
@@ -187,18 +184,15 @@ public class DynamicSlice {
 	
 	protected void execute(final Runnable r) {
 		pendingTasksCounter.incrementAndGet();
-		WorkPool.execute(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					r.run();
-				} catch (Throwable e) {
-					e.printStackTrace(System.err);
-				} finally {
-					int c = pendingTasksCounter.decrementAndGet();
-					updateId++;
-					onUpdate.run(c == 0);
-				}
+		WorkPool.execute(() -> {
+			try {
+				r.run();
+			} catch (Throwable e) {
+				e.printStackTrace(System.err);
+			} finally {
+				int c = pendingTasksCounter.decrementAndGet();
+				updateId++;
+				onUpdate.run(c == 0);
 			}
 		});
 	}
@@ -308,13 +302,13 @@ public class DynamicSlice {
 	}
 	
 	/** Collect dependencies for internal variable */
-	protected boolean collectInternalDependencies(DependencySet bag, EventKey key, InstructionKey t) {
+	protected synchronized boolean collectInternalDependencies(DependencySet bag, EventKey key, InstructionKey t) {
 		EventKey intVarKey = key.newVariableKey(t.getVar(), t.getCodeIndex(), key.getStep());
-		DependencySet depSet = internalSlice.get(intVarKey);
+		DependencySet depSet = internalVariables.get(intVarKey);
 		if (depSet == null) {
 			depSet = new DependencySet();
 			depSet.codeDependencies.addAll(bag.codeDependencies);
-			internalSlice.put(intVarKey, depSet);
+			internalVariables.put(intVarKey, depSet);
 			Map<InstructionKey, TriDependency> graph = methodSlicers.get(key.getMethodId()).dependencyGraph();
 			for (TriDependency td: t.getValuesFrom(graph)) {
 				collectDependencies(depSet, key, td);
@@ -358,34 +352,24 @@ public class DynamicSlice {
 	
 	private List<VariableValue> getVariableHistory(Invocation inv, String var) {
 		Map<String, List<VariableValue>> variables = variableHistories.get(inv);
-		if (variables == null) {
-			lock_time.enter();
-			try {
-				synchronized (this) {
-					variables = variableHistories.get(inv);
-					if (variables != null) return variables.get(var);
-					db_time.enter();
-					variables = new HashMap<>();
-					List<VariableValue> list = DSL
-								.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-								.inCall(inv.getTestId(), inv.getStep())
-							._execute(cnn())._asList();
-					for (VariableValue vv: list) {
-						List<VariableValue> history = variables.get(vv.getName());
-						if (history == null) {
-							history = new ArrayList<>();
-							variables.put(vv.getName(), history);
-						}
-						history.add(vv);
-					}
-					variableHistories.put(inv, variables);
-					db_time.exit();
-				}
-			} finally {
-				lock_time.exit();
-			}
-		}
 		return variables.get(var);
+	}
+	
+	private Map<String, List<VariableValue>> fetchVariableHistories(Invocation inv) {
+		Map<String, List<VariableValue>> variables = new HashMap<>();
+		List<VariableValue> list = DSL
+					.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+					.inCall(inv.getTestId(), inv.getStep())
+				._execute(cnn())._asList();
+		for (VariableValue vv: list) {
+			List<VariableValue> history = variables.get(vv.getName());
+			if (history == null) {
+				history = new ArrayList<>();
+				variables.put(vv.getName(), history);
+			}
+			history.add(vv);
+		}
+		return variables;
 	}
 	
 	private boolean collectArrayItem(DependencySet bag, EventKey key, int line) {
@@ -413,25 +397,14 @@ public class DynamicSlice {
 	}
 	
 	private List<ItemValue> getAryElementHistory(Invocation inv) {
-		List<ItemValue> items = aryElementGetHistories.get(inv);
-		if (items == null) {
-			lock_time.enter();
-			try {
-				synchronized (this) {
-					items = aryElementGetHistories.get(inv);
-					if (items != null) return items;
-					db_time.enter();
-					items = DSL
-								.select().from(NamedValue.ARRAY_GET_HISTORY_VIEW)
-								.inCall(inv.getTestId(), inv.getStep())
-							._execute(cnn())._asList();
-					aryElementGetHistories.put(inv, items);
-					db_time.exit();
-				}
-			} finally {
-				lock_time.exit();
-			}
-		}
+		return aryElementGetHistories.get(inv);
+	}
+	
+	private List<ItemValue> fetchAryElementHistories(Invocation inv) {
+		List<ItemValue> items = DSL
+				.select().from(NamedValue.ARRAY_GET_HISTORY_VIEW)
+				.inCall(inv.getTestId(), inv.getStep())
+			._execute(cnn())._asList();
 		return items;
 	}
 	
@@ -462,25 +435,14 @@ public class DynamicSlice {
 	}
 	
 	private List<FieldValue> getFieldHistory(Invocation inv) {
-		List<FieldValue> items = fieldGetHistories.get(inv);
-		if (items == null) {
-			lock_time.enter();
-			try {
-				synchronized (this) {
-					items = fieldGetHistories.get(inv);
-					if (items != null) return items;
-					db_time.enter();
-					items = DSL
-								.select().from(NamedValue.OBJECT_GET_HISTORY_VIEW)
-								.inCall(inv.getTestId(), inv.getStep())
-							._execute(cnn())._asList();
-					fieldGetHistories.put(inv, items);
-					db_time.exit();
-				}
-			} finally {
-				lock_time.exit();
-			}
-		}
+		return fieldGetHistories.get(inv);
+	}
+	
+	private List<FieldValue> fetchFieldHistories(Invocation inv) {
+		List<FieldValue> items = DSL
+				.select().from(NamedValue.OBJECT_GET_HISTORY_VIEW)
+				.inCall(inv.getTestId(), inv.getStep())
+			._execute(cnn())._asList();
 		return items;
 	}
 	
@@ -599,10 +561,10 @@ public class DynamicSlice {
 		private final Set<EventKey> values;
 		private final Set<EventKey> reach;
 		private final Set<EventKey> control;
-		private final Set<EventKey> all = new TreeSet<>();;
+//		private final Set<EventKey> all = new TreeSet<>();;
 		private final Set<ValueDependency> codeDependencies;
 		private long lastValueStep = 0;
-		private boolean allDirty = true;
+//		private boolean allDirty = true;
 //		private final Set<InstructionKey> instructionGuard;
 		
 		public DependencySet() {
@@ -654,7 +616,7 @@ public class DynamicSlice {
 
 		public boolean addValue(EventKey key) {
 			if (values.add(key)) {
-				allDirty = true;
+//				allDirty = true;
 				if (values != control) control.remove(key);
 				lastValueStep = Math.max(lastValueStep, key.getStep());
 //				InstructionKey t = key.getInstruction();
@@ -666,7 +628,7 @@ public class DynamicSlice {
 		
 		public void addControl(EventKey key) {
 			if (!values.contains(key)) {
-				allDirty = true;
+//				allDirty = true;
 				control.add(key);
 //				InstructionKey t = key.getInstruction();
 //				if (t != null) instructionGuard.add(t);
@@ -674,7 +636,7 @@ public class DynamicSlice {
 		}
 		
 		public void addReach(EventKey key) {
-			allDirty = true;
+//			allDirty = true;
 			reach.add(key);
 		}
 		
@@ -751,7 +713,7 @@ public class DynamicSlice {
 			dependencies = new DependencySet();
 			MethodSlicer slicer = methodSlicers.get(key.getMethodId());
 			slicer.fillDependencies(this);
-			logDependencies();
+//			logDependencies();
 		}
 		
 		public int getFlags() {
@@ -764,13 +726,8 @@ public class DynamicSlice {
 			return dependencyFlags;
 		}
 		
-		public void fillSlice(final ConcurrentNavigableMap<EventKey, Node> slice) {
-			execute(new Runnable() {
-				@Override
-				public void run() {
-					updateSlice(slice);
-				}
-			});
+		public void fillSlice(ConcurrentNavigableMap<EventKey, Node> slice) {
+			execute(() -> updateSlice(slice));
 		}
 
 		private synchronized void updateSlice(ConcurrentNavigableMap<EventKey, Node> slice) {

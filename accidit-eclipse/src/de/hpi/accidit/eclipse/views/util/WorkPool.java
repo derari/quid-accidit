@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 
 public class WorkPool {
 	
-	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(1);
+	private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(8);
 	
 	static {
 		Runtime.getRuntime().addShutdownHook(new Thread() {

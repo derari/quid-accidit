@@ -47,6 +47,7 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 	private Font boldFont;
 	private Color greyFont;
 	private boolean stepLabelExists = false;
+//	private boolean isSettingStep = false;
 	
 	public SlicingStatusView() {
 		removeImage = Activator.getImageDescriptor("icons/remove_breakpoint_2.png").createImage();
@@ -59,6 +60,7 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 
 	@Override
 	public void setStep(TraceElement te) {
+//		if (isSettingStep) return;
 		this.step = te.getStep();
 		scheduleUpdate();
 	}
@@ -196,13 +198,13 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		parent.layout();
 	}
 	
-	private boolean isFromLowerStack(Node n, Set<DynamicSlice.Node> nodes, Set<DynamicSlice.Node> lowerStack) {
-		if (n.getDependenciesInSlice().isEmpty()) return false;
-		return n.getDependenciesInSlice().stream()
-			.filter(d -> d.getKey().getStep() <= step)
-			.filter(nodes::contains)
-			.allMatch(lowerStack::contains);
-	}
+//	private boolean isFromLowerStack(Node n, Set<DynamicSlice.Node> nodes, Set<DynamicSlice.Node> lowerStack) {
+//		if (n.getDependenciesInSlice().isEmpty()) return false;
+//		return n.getDependenciesInSlice().stream()
+//			.filter(d -> d.getKey().getStep() <= step)
+//			.filter(nodes::contains)
+//			.allMatch(lowerStack::contains);
+//	}
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -266,16 +268,25 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		MouseAdapter onClickGotoStep = new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
-				TraceNavigatorUI.getGlobal().setStep(gotoStep);
+//				isSettingStep = true;
+				try {
+					TraceNavigatorUI.getGlobal().setStep(gotoStep);
+				} finally {
+//					isSettingStep = false;
+				}
 			}
 		};
 		
 		MouseAdapter onClickSlice = new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
-				SlicingFilterDialog dlg = new SlicingFilterDialog(parent.getShell(), n.getFlags());
-				if (dlg.open() == SWT.OK) {
-					TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView().addEntry(n.getKey(), dlg.getFlags());
+				if (e.button == 3) {
+					TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView().addEntry(n.getKey(), 0);
+				} else {
+					SlicingFilterDialog dlg = new SlicingFilterDialog(parent.getShell(), n.getFlags());
+					if (dlg.open() == SWT.OK) {
+						TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView().addEntry(n.getKey(), dlg.getFlags());
+					}
 				}
 			}
 		};

@@ -253,7 +253,7 @@ public class EventKey implements Comparable<EventKey> {
 			String t = inv.type;
 			t = t.substring(t.lastIndexOf('.')+1);
 			if (inv.thisId != null) {
-				t = "<" + t + " #" + inv.thisId + ">";
+				t = "<" + invD.getObject(inv.thisId).getShortString() + ">";
 			}
 			String m = inv.method;
 			String sig = inv.signature;

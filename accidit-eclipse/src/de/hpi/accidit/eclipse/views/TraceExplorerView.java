@@ -178,10 +178,9 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		isUpdatingStep = true;
 		try {
 			if (current == null || current.getTestId() != te.getTestId()) {
-				treeViewer.setInput(new Trace(te.getTestId(), ui));
-			} else {
-				getSelectionAdapter().selectAtStep(te.getStep());
+				treeViewer.setInput(ui.getTrace());
 			}
+			getSelectionAdapter().selectAtStep(te.getStep());
 		} finally {
 			isUpdatingStep = false;
 		}
@@ -189,11 +188,6 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	
 	public void refresh() {
 		treeViewer.refresh();
-	}
-	
-	public TraceElement[] getRootElements() {
-		Trace trace = (Trace) treeViewer.getInput();
-		return trace.getRootElements();
 	}
 	
 	/** Returns a TreeViewerSelectionAdapter instance to manipulate the treeViewer selection. */
@@ -321,38 +315,44 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		
 		/** Selects the calling trace element of certain trace element that is identified by its step. */
 		public void selectAtStep(long step) {
-			TraceElement[] elements = TraceExplorerView.this.getRootElements();
-			List<Object> pathSegments = new ArrayList<Object>();
+			List<TraceElement> stack = ui.getTrace().getStack(step);
 			
-			while (true) {
-				TraceElement currentElement = null;
-				for (int i = 0; i < elements.length; i++) {
-					currentElement = elements[i];
-					
-					if (currentElement.getStep() == step) {
-						pathSegments.add(currentElement);
-						treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray())));
-						return;
-					}
-
-					// Too far in the tree - go back to previous element. 
-					if (currentElement.getStep() > step) {
-						if (i >= 1) currentElement = elements[i - 1];
-						break;
-					}
-				}
-				
-				if (currentElement == null) return;
-				pathSegments.add(currentElement);
-				
-				if (currentElement instanceof Invocation) {
-					treeViewer.expandToLevel(new TreePath(pathSegments.toArray()), 1);
-					elements = ((Invocation) currentElement).getChildren();
-				} else {
-					treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray()).getParentPath()));
-					return;
-				}			
+			for (int i = 1; i < stack.size(); i++) {
+				treeViewer.expandToLevel(new TreePath(stack.subList(0, i).toArray()), 1);
 			}
+			
+			TreePath tp = new TreePath(stack.toArray());
+			treeViewer.setSelection(new TreeSelection(tp));
+			
+//			while (true) {
+//				TraceElement currentElement = null;
+//				for (int i = 0; i < elements.length; i++) {
+//					currentElement = elements[i];
+//					
+//					if (currentElement.getStep() == step) {
+//						pathSegments.add(currentElement);
+//						
+//						return;
+//					}
+//
+//					// Too far in the tree - go back to previous element. 
+//					if (currentElement.getStep() > step) {
+//						if (i >= 1) currentElement = elements[i - 1];
+//						break;
+//					}
+//				}
+//				
+//				if (currentElement == null) return;
+//				pathSegments.add(currentElement);
+//				
+//				if (currentElement instanceof Invocation) {
+//					treeViewer.expandToLevel(new TreePath(pathSegments.toArray()), 1);
+//					elements = ((Invocation) currentElement).getChildren();
+//				} else {
+//					treeViewer.setSelection(new TreeSelection(new TreePath(pathSegments.toArray()).getParentPath()));
+//					return;
+//				}			
+//			}
 		}
 		
 		private void collapseSubElements(TreeItem element) {
@@ -473,7 +473,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		private static void addImage(String s) {
 			Display d = Display.getDefault();
-			Image img = new Image(d, TraceLabelProvider.class.getResourceAsStream("/" + s));
+			Image img = new Image(d, TraceLabelProvider.class.getResourceAsStream("/icons/" + s));
 			images.put(s, img);
 		}
 

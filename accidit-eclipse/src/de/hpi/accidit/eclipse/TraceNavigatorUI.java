@@ -16,7 +16,7 @@ import org.eclipse.ui.PlatformUI;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
-import de.hpi.accidit.eclipse.model.Invocation;
+import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.slice.SliceAPI;
 import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
@@ -25,6 +25,7 @@ import de.hpi.accidit.eclipse.views.TraceExplorerView;
 import de.hpi.accidit.eclipse.views.VariablesView;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.JavaSrcFilesLocator;
+import de.hpi.accidit.eclipse.views.util.WorkPool;
 
 // TODO rename
 
@@ -46,6 +47,7 @@ public class TraceNavigatorUI {
 	
 	// Trace
 	private int testId;
+	private Trace trace;
 	private TraceElement current;
 	
 	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
@@ -91,6 +93,7 @@ public class TraceNavigatorUI {
 		return null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public <T> T findOrOpenView(Class<T> type, String id) {
 		T t = findView(type);
 		if (t != null) return t;
@@ -101,6 +104,13 @@ public class TraceNavigatorUI {
 			e.printStackTrace();
 		}
 		return t;
+	}
+	
+	public Trace getTrace() {
+		if (trace == null || trace.id != testId) {
+			trace = new Trace(testId, this);
+		}
+		return trace;
 	}
 	
 	public TraceExplorerView getTraceExplorer() {
@@ -182,10 +192,10 @@ public class TraceNavigatorUI {
 	}
 	
 	public void setStep(final long newStep) {
-		setStep(new TraceElement() {{
-			this.testId = TraceNavigatorUI.this.testId;
-			this.step = newStep;
-		}});
+		WorkPool.execute(() -> {
+			TraceElement te = getTrace().getStep(newStep);
+			DoInUiThread.run(() -> setStep(te));
+		});
 	}
 	
 	public void setStep(TraceElement le) {

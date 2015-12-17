@@ -3,6 +3,9 @@
 	<name>accidit-update-site</name>
 	<comment></comment>
 	<projects>
+		<project>accidit-eclipse</project>
+		<project>accidit-features</project>
+		<project>accidit-launcher</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
