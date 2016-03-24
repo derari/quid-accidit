@@ -138,16 +138,17 @@ public class TraceNavigatorUI {
 	}
 	
 	public SlicingCriteriaView getOrOpenSlicingCriteriaView() {
-		SlicingCriteriaView slicingCriteriaView = getSlicingCriteriaView();
-		if (slicingCriteriaView == null) {
-			try {
-				slicingCriteriaView = (SlicingCriteriaView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(SlicingCriteriaView.ID);
-			} catch (PartInitException e) {
-				// TODO:: decide: print stack trace or raise exception
-				e.printStackTrace();
-			}
-		}
-		return slicingCriteriaView;
+		return findOrOpenView(SlicingCriteriaView.class, SlicingCriteriaView.ID);
+//		SlicingCriteriaView slicingCriteriaView = getSlicingCriteriaView();
+//		if (slicingCriteriaView == null) {
+//			try {
+//				slicingCriteriaView = (SlicingCriteriaView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(SlicingCriteriaView.ID);
+//			} catch (PartInitException e) {
+//				// TODO:: decide: print stack trace or raise exception
+//				e.printStackTrace();
+//			}
+//		}
+//		return slicingCriteriaView;
 	}
 	
 	public MiConnection cnn() {

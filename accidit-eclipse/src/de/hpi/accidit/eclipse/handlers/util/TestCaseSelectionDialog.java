@@ -96,22 +96,22 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 		private String getTestCaseQuery() {
 			StringBuilder query = new StringBuilder();
 			query.append("SELECT `id`, `name` ");
-			query.append("FROM `TestTrace` ");
+			query.append("FROM `SCHEMA`.`TestTrace` ");
 			query.append("ORDER BY `id`");
 			return query.toString();
 		}
 		
 		private ResultSet executeQuery(String query) throws SQLException {
-			String preProcessedQuery = DatabaseConnector.cnn().preProcess(query);
-			Connection dbConnection = DatabaseConnector.getValidConnection();
 			ResultSet result = null;
-			try {
-				Statement statement = dbConnection.createStatement();
-				result = statement.executeQuery(preProcessedQuery);
-			} catch (SQLException e) {
-				System.err.println("Variables not retrievable.");
-				e.printStackTrace();
-			}
+//			try {
+//				Statement statement = dbConnection.createStatement();
+//				result = statement.executeQuery(preProcessedQuery);
+//				statement.closeOnCompletion();
+				result = DatabaseConnector.cnn().prepare(query).executeQuery(new Object[0]);
+//			} catch (SQLException e) {
+//				System.err.println("Variables not retrievable.");
+//				e.printStackTrace();
+//			}
 			return result;
 		}
 		

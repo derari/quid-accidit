@@ -46,23 +46,6 @@
       </view>
       <view
             category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.views.NavigatorView"
-            fastViewWidthRatio="0.3"
-            icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.NavigatorView"
-            name="Navigator"
-            restorable="true">
-      </view>
-      <view
-            category="de.hpi.accidit.eclipse"
-            class="de.hpi.accidit.eclipse.breakpoints.BreakpointsView"
-            icon="icons/a_logo.png"
-            id="de.hpi.accidit.eclipse.views.BreakpointsView"
-            name="Breakpoints"
-            restorable="true">
-      </view>
-      <view
-            category="de.hpi.accidit.eclipse"
             class="de.hpi.accidit.eclipse.history.HistoryView"
             icon="icons/a_logo.png"
             id="de.hpi.accidit.eclipse.history.HistoryView"

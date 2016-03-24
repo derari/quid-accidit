@@ -16,5 +16,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/accidit-eclipse/lib/sootjavadoc-trunk.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/hsqldb-2.2.9.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

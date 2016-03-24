@@ -52,7 +52,8 @@ public class DatabaseSettingsPreferencePage extends FieldEditorOverlayPage
 	    		1, 
 	    		new String [][] {
 	    			{"Orcale MySQL", "mysql"},
-	    			{"SAP HANA", "hana"}
+	    			{"SAP HANA", "hana"},
+//	    			{"HSQLDB", "hsqldb"},
 	    		},
 	    		getFieldEditorParent(), 
 	    		true));

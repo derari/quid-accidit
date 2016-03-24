@@ -1,6 +1,7 @@
 package de.hpi.accidit.launcher;
 
 import java.io.File;
+import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.eclipse.core.resources.IProject;
@@ -38,12 +39,15 @@ public class WaitAndImportJob extends Job {
 		canaryFile.delete();
 		monitor.beginTask("Importing Trace Data", 2);
 		
-		DatabaseConnector.setSelectedProject(project);
-		String dbString = DatabaseConnector.getDBString();
-		
-		monitor.worked(1);
 		try {
-			new Import(dbString, csvDir.getAbsolutePath(), true).run();
+			DatabaseConnector.setSelectedProject(project);
+			String dbType = DatabaseConnector.getDBType();
+			String dbSchema = DatabaseConnector.getSchema();
+			Connection cnn = DatabaseConnector.newConnection();
+			
+			monitor.worked(1);
+
+			new Import(dbType, cnn, dbSchema, csvDir.getAbsolutePath(), true).run();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

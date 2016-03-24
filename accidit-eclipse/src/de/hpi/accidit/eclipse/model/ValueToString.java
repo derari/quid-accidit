@@ -162,9 +162,11 @@ public class ValueToString {
 		char[] array = new char[len];
 		Arrays.fill(array, '\u00B7');
 		for (NamedValue c: vValue.getChildren()) {
-			int i = Integer.parseInt(c.getName());
-			array[i] = c.getValue().getShortString().charAt(0);
-			anyMatch = true;
+			try {
+				int i = Integer.parseInt(c.getName());
+				array[i] = c.getValue().getShortString().charAt(0);
+				anyMatch = true;
+			} catch (NumberFormatException e) { }
 		}
 		if (!anyMatch) return simpleShortName(v);
 		

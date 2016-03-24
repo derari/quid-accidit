@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.cthul.miro.MiConnection;
+import org.cthul.miro.MiConnection.QueryPreProcessor;
 import org.cthul.miro.query.QueryType;
 import org.cthul.miro.query.adapter.AbstractQueryBuilder;
 import org.cthul.miro.query.adapter.JdbcAdapter;
@@ -27,29 +28,26 @@ import de.hpi.accidit.eclipse.views.util.Timer;
 
 public class DatabaseConnector {
 	
-	private final static String MYSQL_DATABASE_DRIVER = "com.sap.db.jdbc.Driver";
-//	private final static String MYSQL_DATABASE_DRIVER = "com.mysql.jdbc.Driver";
-	
 	private volatile static boolean initialized = false;
 	private static String overrideDBString = null;
 	private static String overrideSchema = null;
 	
-	/**
-	 * The function to create a database connection.
-	 * 
-	 * @param dbAddress The IP address of the database.
-	 * @param dbUser The user that should be used to connect to the database.
-	 * @param dbPassword The password associated with the user.
-	 * @return The database connection.
-	 */
-	public static Connection getTestConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
-		if (!initialized) {
-			initializeDriver();
-		}
-		
-		String dbString = String.format("jdbc:mysql://%s/%s", dbAddress, dbSchema);
-		return DriverManager.getConnection(dbString, dbUser, dbPassword);
-	}
+//	/**
+//	 * The function to create a database connection.
+//	 * 
+//	 * @param dbAddress The IP address of the database.
+//	 * @param dbUser The user that should be used to connect to the database.
+//	 * @param dbPassword The password associated with the user.
+//	 * @return The database connection.
+//	 */
+//	public static Connection getTestConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) throws SQLException {
+//		if (!initialized) {
+//			initializeDriver();
+//		}
+//		
+//		String dbString = String.format("jdbc:mysql://%s/%s", dbAddress, dbSchema);
+//		return DriverManager.getConnection(dbString, dbUser, dbPassword);
+//	}
 	
 	private static IProject selectedProject = null;
 	
@@ -69,28 +67,41 @@ public class DatabaseConnector {
 		overrideSchema = string;
 	}
 
-	public static String getDBString() {
-		return getDBString(selectedProject);
+	public static String getSchema() {
+		if (overrideSchema != null) return overrideSchema;
+		IProject project = selectedProject;
+		return DatabaseSettingsRetriever
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);		
 	}
-
-	public static String getDBString(IProject project) {
+	
+	public static String getDBType() {
+		IProject project = selectedProject;
+		return DatabaseSettingsRetriever
+				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_TYPE);		
+	}
+	
+	public static String getDBString() {
 		if (overrideDBString != null) return overrideDBString;
+		IProject project = selectedProject;
 		
 		String dbAddress = DatabaseSettingsRetriever
 				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_ADDRESS);
-		String dbSchema	= DatabaseSettingsRetriever
-				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
+		String dbSchema	= getSchema();
+		String dbType = getDBType();
+		if (dbType.equals("hsqldb")) {
+			return String.format("jdbc:hsqldb:%s;default_schema=%s", dbAddress, dbSchema);
+		}
+		return String.format("jdbc:%s://%s/%s?currentschema=%s", dbType, dbAddress, dbSchema, dbSchema);
+	}
+	
+	public static Connection newConnection() throws SQLException {
+		IProject project = selectedProject;
+		String dbString = getDBString();
 		String dbUser = DatabaseSettingsRetriever
 				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_USER);
 		String dbPassword = DatabaseSettingsRetriever
 				.getPreferenceValue(project, DatabaseSettingsPreferencePage.CONNECTION_PASSWORD);
-		
-		return String.format("jdbc:mysql://%s/%s?user=%s&password=%s&currentschema=%s", dbAddress, dbSchema, dbUser, dbPassword, dbSchema);
-	}
-	
-	public static Connection getValidConnection() throws SQLException {
-		String dbString = getDBString();
-		return DriverManager.getConnection(dbString);
+		return DriverManager.getConnection(dbString, dbUser, dbPassword);
 	}
 	
 	private static String lastDbString = null;
@@ -105,22 +116,19 @@ public class DatabaseConnector {
 				}
 				
 				
-				JdbcAdapter adapter = null;
-				String dbSchema;
-				if (overrideSchema == null) {
-					IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-					dbSchema = store.getString(DatabaseSettingsPreferencePage.CONNECTION_SCHEMA);
-				} else {
-					dbSchema = overrideSchema;
-				}
+				CustomDialect adapter = null;
+				String dbSchema = getSchema();
 				if (dbString.startsWith("jdbc:sap")) {
 					adapter = new HanaDialect(dbSchema);
 				} else if (dbString.startsWith("jdbc:mysql")) {
 					adapter = new MySqlDialect(dbSchema);
+				} else {
+					adapter = new AnsiSqlDialect(dbSchema);
 				}
 				
 				lastDbString = dbString;
-				cnn = new MiConnection(adapter, getValidConnection());
+				cnn = new MiConnection(adapter, newConnection());
+				cnn.addPreProcessor(adapter);
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -132,37 +140,65 @@ public class DatabaseConnector {
 		return getValidOConnection();
 	}
 	
-	/**
-	 * Returns whether the database connection parameters allow to create a database connection.
-	 * 
-	 * @param dbAddress The IP address of the database.
-	 * @param dbUser The user that should be used to connect to the database.
-	 * @param dbPassword The password associated with the user.
-	 * @return true if it is possible to establish a database connection using the given parameters, and false otherwise.
-	 */
-	public static boolean testConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) {
-		try {
-			Connection c = getTestConnection(dbAddress, dbSchema, dbUser, dbPassword);
-			c.close();
-		} catch (SQLException e) {
-			e.printStackTrace(System.err);
-			return false;
-		}
-		return true;
-	}
-	
-	private static void initializeDriver() {
+//	/**
+//	 * Returns whether the database connection parameters allow to create a database connection.
+//	 * 
+//	 * @param dbAddress The IP address of the database.
+//	 * @param dbUser The user that should be used to connect to the database.
+//	 * @param dbPassword The password associated with the user.
+//	 * @return true if it is possible to establish a database connection using the given parameters, and false otherwise.
+//	 */
+//	public static boolean testConnection(String dbAddress, String dbSchema, String dbUser, String dbPassword) {
 //		try {
-//			Class.forName(MYSQL_DATABASE_DRIVER);
-//		} catch (ClassNotFoundException e) {
-//			e.printStackTrace();
+//			Connection c = getTestConnection(dbAddress, dbSchema, dbUser, dbPassword);
+//			c.close();
+//		} catch (SQLException e) {
+//			e.printStackTrace(System.err);
+//			return false;
 //		}
-		initialized = true;
-	}
+//		return true;
+//	}
+	
+//	private static void initializeDriver() {
+////		try {
+////			Class.forName(MYSQL_DATABASE_DRIVER);
+////		} catch (ClassNotFoundException e) {
+////			e.printStackTrace();
+////		}
+//		initialized = true;
+//	}
 
 	/* private classes for query preprocessing. */
 	
-	private static class HanaDialect extends AnsiSql {
+	private static class CustomDialect extends AnsiSql implements QueryPreProcessor {
+
+		@Override
+		public String apply(String sql) {
+			return postProcess(sql);
+		}
+	}
+	
+	private static class AnsiSqlDialect extends CustomDialect {
+		
+		private final String schema;
+		
+		public AnsiSqlDialect(String schema) {
+			super();
+			this.schema = schema;
+		}
+		
+		@Override
+		protected String postProcess(String sql) {
+			sql = sql.replaceAll("\\s`(\\w+Trace|Type|Method|Variable|Field)`", " `SCHEMA`.`$1`")
+					.replace("`SCHEMA`", "`" + schema + "`")
+					  .replace("`", "\"")
+					  .replaceAll("__ISNOTNULL\\{(.*?)\\}", "($1 IS NOT NULL)");
+			System.out.println(sql);
+			return sql;
+		}
+	};
+	
+	private static class HanaDialect extends CustomDialect {
 		
 		private final String schema;
 		
@@ -181,7 +217,7 @@ public class DatabaseConnector {
 		}
 	};
 	
-	private static class MySqlDialect extends AnsiSql {
+	private static class MySqlDialect extends CustomDialect {
 		
 		private final String schema;
 		

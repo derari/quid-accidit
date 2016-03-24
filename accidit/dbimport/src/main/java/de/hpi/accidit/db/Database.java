@@ -27,6 +27,7 @@ public class Database {
         this.dbSchema = schema;
         replace.put("$SCHEMA$", schema);
         switch (dbType) {
+            case "hsqldb":
             case "hana":
                 batchImport = new InsertScriptImport(insertIntoString(), fieldString());
                 break;
@@ -97,7 +98,7 @@ public class Database {
     }
     
     public int getMaxId(String table) throws SQLException {
-        String sql = toSql("SELECT MAX(id) FROM `$SCHEMA$`." + table + "`");
+        String sql = toSql("SELECT MAX(`id`) FROM `$SCHEMA$`.`" + table + "`");
         try (Statement stmt = cnn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             rs.next();
@@ -267,6 +268,9 @@ public class Database {
                     } catch (Exception ex) {
                         ex.printStackTrace(System.out);
                     }
+                    synchronized (rows) {
+                        rows.notifyAll();
+                    }
                     closed = true;
                 }
             };
@@ -339,6 +343,10 @@ public class Database {
 
         private void submitData() {
             if (rows.isEmpty() || closed) return;
+            if (!thread.isAlive()) {
+                System.out.printf("Skipping %d rows%n", rows.size());
+                rows.clear();
+            }
             synchronized (rows) {
                 submitted = true;
                 rows.notifyAll();
@@ -377,6 +385,12 @@ public class Database {
             synchronized (rows) {
                 closed = true;
                 rows.notifyAll();
+            }
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }

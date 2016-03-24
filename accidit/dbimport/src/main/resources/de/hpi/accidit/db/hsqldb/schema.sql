@@ -7,7 +7,7 @@ CREATE SCHEMA "$SCHEMA$"
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."TestTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."TestTrace" (
+CREATE TABLE "$SCHEMA$"."TestTrace" (
   "id" INT NOT NULL ,
   "name" VARCHAR(255) NOT NULL ,
   PRIMARY KEY ("id") )
@@ -15,7 +15,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."TestTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."Type"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."Type" (
+CREATE TABLE "$SCHEMA$"."Type" (
   "id" INT NOT NULL ,
   "name" VARCHAR(255) NOT NULL ,
   "file" VARCHAR(255) NULL ,
@@ -25,7 +25,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."Type" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."Method"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."Method" (
+CREATE TABLE "$SCHEMA$"."Method" (
   "id" INT NOT NULL ,
   "declaringTypeId" INT NOT NULL ,
   "name" VARCHAR(255) NOT NULL ,
@@ -37,7 +37,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."Method" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ObjectTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."ObjectTrace" (
+CREATE TABLE "$SCHEMA$"."ObjectTrace" (
   "testId" INT NOT NULL ,
   "id" BIGINT NOT NULL ,
   "typeId" INT NOT NULL ,
@@ -47,9 +47,9 @@ CREATE COLUMN TABLE "$SCHEMA$"."ObjectTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."CallTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."CallTrace" (
+CREATE TABLE "$SCHEMA$"."CallTrace" (
   "testId" INT NOT NULL ,
-  "parentStep" BIGINT NOT NULL ,
+  "parentStep" BIGINT NULL ,
   "step" BIGINT NULL ,
   "exitStep" BIGINT NOT NULL ,
   "methodId" INT NOT NULL ,
@@ -61,7 +61,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."CallTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."Extends"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."Extends" (
+CREATE TABLE "$SCHEMA$"."Extends" (
   "subId" INT NOT NULL ,
   "superId" INT NOT NULL ,
   PRIMARY KEY ("subId", "superId") )
@@ -69,7 +69,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."Extends" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."Field"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."Field" (
+CREATE TABLE "$SCHEMA$"."Field" (
   "id" INT NOT NULL ,
   "declaringTypeId" INT NOT NULL ,
   "name" VARCHAR(255) NOT NULL ,
@@ -79,7 +79,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."Field" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."Variable"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."Variable" (
+CREATE TABLE "$SCHEMA$"."Variable" (
   "methodId" INT NOT NULL ,
   "id" INT NOT NULL ,
   "name" VARCHAR(255) NOT NULL ,
@@ -90,7 +90,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."Variable" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."VariableTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."VariableTrace" (
+CREATE TABLE "$SCHEMA$"."VariableTrace" (
   "testId" INT NOT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -104,7 +104,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."VariableTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."PutTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."PutTrace" (
+CREATE TABLE "$SCHEMA$"."PutTrace" (
   "testId" INT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -118,7 +118,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."PutTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ThrowTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."ThrowTrace" (
+CREATE TABLE "$SCHEMA$"."ThrowTrace" (
   "testId" INT NOT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -129,7 +129,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."ThrowTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."CatchTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."CatchTrace" (
+CREATE TABLE "$SCHEMA$"."CatchTrace" (
   "testId" INT NOT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -140,7 +140,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."CatchTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ExitTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."ExitTrace" (
+CREATE TABLE "$SCHEMA$"."ExitTrace" (
   "testId" INT NOT NULL ,
   "step" BIGINT NOT NULL ,
   "returned" INT NOT NULL ,
@@ -152,7 +152,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."ExitTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."GetTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."GetTrace" (
+CREATE TABLE "$SCHEMA$"."GetTrace" (
   "testId" INT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -166,7 +166,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."GetTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ArrayPutTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."ArrayPutTrace" (
+CREATE TABLE "$SCHEMA$"."ArrayPutTrace" (
   "testId" INT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,
@@ -180,7 +180,7 @@ CREATE COLUMN TABLE "$SCHEMA$"."ArrayPutTrace" (
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ArrayGetTrace"
 -- -----------------------------------------------------
-CREATE COLUMN TABLE "$SCHEMA$"."ArrayGetTrace" (
+CREATE TABLE "$SCHEMA$"."ArrayGetTrace" (
   "testId" INT NULL ,
   "callStep" BIGINT NOT NULL ,
   "step" BIGINT NOT NULL ,

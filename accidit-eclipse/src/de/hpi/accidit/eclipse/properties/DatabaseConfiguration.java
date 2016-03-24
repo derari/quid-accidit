@@ -11,7 +11,7 @@ public class DatabaseConfiguration extends AbstractPreferenceInitializer {
 	public void initializeDefaultPreferences() {
 		IPreferenceStore store = Activator.getDefault().getPreferenceStore();
 		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_ADDRESS,	 "localhost");
-		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_SCHEMA,	 "Accidit");
+		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_SCHEMA,	 "accidit");
 		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_USER,	 "root");
 		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_PASSWORD, "");
 		store.setDefault(DatabaseSettingsPreferencePage.CONNECTION_TYPE,	 "mysql");

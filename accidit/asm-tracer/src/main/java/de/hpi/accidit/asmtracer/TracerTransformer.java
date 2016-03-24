@@ -13,7 +13,11 @@ import org.objectweb.asm.util.CheckClassAdapter;
 @SuppressWarnings("CallToThreadDumpStack")
 public class TracerTransformer implements ClassFileTransformer {
     
+    public static boolean fullTracingEnabled = true;
+    
     private static class DoNotInstrumentException extends RuntimeException { }
+    
+    private static final String AtTraced = "Lde/hpi/accidit/asmtracer/Traced;";
     
     private static final String[] excludes = {
         // tracing infrastructure
@@ -32,6 +36,8 @@ public class TracerTransformer implements ClassFileTransformer {
         "java/util/security",
         "java/security",
         "sun",
+        "org/h2",
+//        "org/camunda/bpm/engine/impl/juel/Parser",
         
         // excluded for performance reasons
 //        "java.io",
@@ -40,14 +46,16 @@ public class TracerTransformer implements ClassFileTransformer {
 //        "com/sun",
         "org/eclipse",
         "org/drools/rule/GroupElement",
-        "org/apache/maven/surefire/util"
+        "org/apache/maven/surefire/util",
     };
     
     private static final String[] no_details = {
         "java",
+        "jdk",
         "sun",
         "com/sun",
         "org/mvel2/asm",
+        "org/apache/ibatis",
     };
     
     private static final String[] do_details = {
@@ -132,6 +140,7 @@ public class TracerTransformer implements ClassFileTransformer {
                 if (className != null) {
                     putKnownClass(className.replace('.', '/'), classBeingRedefined);
                 }
+                PreMain.Init.TO_BE_REDEFINED.remove(classBeingRedefined);
                 if (!circulars.isEmpty()) {
                     try {
                         Class[] moreClasses = circulars.toArray(new Class[0]);
@@ -172,25 +181,37 @@ public class TracerTransformer implements ClassFileTransformer {
 //            System.out.println(">> " + className + "     " + loader);
 //            return classfileBuffer;
 //        }
-//        System.out.println(">> " + className + "     " + loader);
-        if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
-        return transform(classfileBuffer, loader);
+        if (fullTracingEnabled) {
+            if (++classCounter % 1000 == 0) System.out.println(" >> traced classes: " + classCounter);
+            System.out.print(">> " + className + "     " + loader);
+//            if (className.equals("java/lang/invoke/MemberName$Factory")) {
+//                System.out.println("--");
+//            }
+        }
+        try {
+            return transform(className, classfileBuffer, loader);
+        } finally {
+            System.out.println(" ok");
+        }
     }
 
-    public static byte[] transform(byte[] classfileBuffer, ClassLoader cl) {
+    public static byte[] transform(String className, byte[] classfileBuffer, ClassLoader cl) {
         try {
-            return transform(classfileBuffer, Tracer.model, cl);
+            return transform(className, classfileBuffer, Tracer.model, cl);
         } catch (Throwable e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
     
-    public static byte[] transform(byte[] classfile, Model model, ClassLoader cl) throws Exception {
+    public static byte[] transform(String className, byte[] classfile, Model model, ClassLoader cl) throws Exception {
         try {
             if (cl instanceof NoTraceClassLoader) return classfile;
             ClassReader cr = new ClassReader(classfile);
-            ClassWriter cw = new MyClassWriter(cl, ClassWriter.COMPUTE_FRAMES|ClassWriter.COMPUTE_MAXS);
+//            int flags = (className.contains("Parser") || className.contains("XSDHandler")) 
+//                    ? 0 : ClassWriter.COMPUTE_FRAMES;
+            int flags = 0;
+            ClassWriter cw = new MyClassWriter(cl, flags);
             CheckClassAdapter cca = new CheckClassAdapter(cw, false);
             ClassVisitor transform = new MyClassVisitor(TRACE_FILTER, cca, model, cl);
             cr.accept(transform, 0);
@@ -204,8 +225,6 @@ public class TracerTransformer implements ClassFileTransformer {
     }
     
     static class MyClassVisitor extends ClassVisitor implements Opcodes {
-
-        private static final String AtTraced = "Lde/hpi/accidit/asmtracer/Traced;";
         
         final TraceFilter traceFilter;
         Object filterData;
@@ -272,7 +291,7 @@ public class TracerTransformer implements ClassFileTransformer {
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
             MethodVisitor sup = super.visitMethod(access, name, desc, signature, exceptions);
             if (isAlreadyTraced) return sup;
-            if (!isTracedFlagSet) {
+            if (!isTracedFlagSet && fullTracingEnabled) {
                 isTracedFlagSet = true;
                 super.visitAnnotation(AtTraced, false).visitEnd();
                 
@@ -351,7 +370,9 @@ public class TracerTransformer implements ClassFileTransformer {
         private final boolean isInit;
         private final boolean traceDetails;
         private String[] exceptions;
-        private boolean test;
+        private boolean isTraceEntry;
+        private boolean tracingEnabled = true;
+        private boolean forceTracing = false;
         private final TypeDescriptor type;
         private final MethodDescriptor me;
         private boolean methodLineSet = false;
@@ -373,7 +394,7 @@ public class TracerTransformer implements ClassFileTransformer {
             this.model = model;
             this.cl = cl;
             this.traceDetails = !noDetails;
-            test = traceFilter.isTraceEntry(name, traceFilterData);
+            isTraceEntry = traceFilter.isTraceEntry(name, traceFilterData);
             //System.out.println("- " + name + " " + (test ? "t" : ""));
             this.type = type;
             this.me = type.getMethod(name, desc);
@@ -381,18 +402,30 @@ public class TracerTransformer implements ClassFileTransformer {
             isStatic = (access & ACC_STATIC) != 0;
             isInit = name.equals("<init>");
             this.exceptions = exceptions;
+            this.forceTracing = type.getName().startsWith("java");
         }
 
         @Override
         public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-            test = traceFilter.isTraceEntryAt(desc, visible, test, traceFilterData);
+            isTraceEntry |= traceFilter.isTraceEntryAt(desc, visible, isTraceEntry, traceFilterData);
+            if (desc.equals(AtTraced)) {
+                tracingEnabled = false;
+            }
             return super.visitAnnotation(desc, visible);
         }
         
         @Override
         public void visitCode() {
+            if (isTraceEntry) {
+                if (tracingEnabled) {
+                    super.visitAnnotation(AtTraced, false).visitEnd();
+                }
+            } else {
+                tracingEnabled = fullTracingEnabled || forceTracing;
+            }
             super.visitCode();
-            if (test) {
+            if (!tracingEnabled) return;
+            if (isTraceEntry) {
                 System.out.println("- " + name);
                 superVisitMethodInsn(INVOKESTATIC, TRACER, BEGIN, BEGIN_DESC);
             }
@@ -421,6 +454,7 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public void visitLabel(Label label) {
             super.visitLabel(label);
+            if (!tracingEnabled) return;
             if (DEBUG) System.out.println("L " + label.getOffset());
             if (exHandlers.remove(label)) {
                 traceCatch();
@@ -430,12 +464,14 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitLineNumber(int line, Label start) {
-            if (DEBUG) System.out.println("# " + line);
-            if (!methodLineSet) {
-                methodLineSet = true;
-                me.setLine(line);
+            if (tracingEnabled) {
+                if (DEBUG) System.out.println("# " + line);
+                if (!methodLineSet) {
+                    methodLineSet = true;
+                    me.setLine(line);
+                }
+                lastLine = line;
             }
-            lastLine = line;
             super.visitLineNumber(line, start);
         }
         
@@ -451,6 +487,10 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
             visitMethodInsnGuard = true;
             try {
+                if (!tracingEnabled) {
+                    superVisitMethodInsn(opcode, owner, name, desc, itf);
+                    return;
+                }
                 if (owner.equals(TRACER)) {
                     throw new DoNotInstrumentException();
                 }
@@ -497,6 +537,7 @@ public class TracerTransformer implements ClassFileTransformer {
         @Override
         public void visitIincInsn(int var, int increment) {
             super.visitIincInsn(var, increment);
+            if (!tracingEnabled) return;
             traceInc(ArgumentType.INT, var);
         }
 
@@ -504,12 +545,12 @@ public class TracerTransformer implements ClassFileTransformer {
         public void visitEnd() {
             super.visitEnd();
             
-            if (me.variablesAreInitialized()) return;
-            
-            if (!exHandlers.isEmpty()) {
+            if (tracingEnabled && !exHandlers.isEmpty()) {
                 System.out.println(name + " " + exHandlers);
                 System.out.println("\n------------------");
             }
+            
+            if (me.variablesAreInitialized()) return;
             
             for (int i = 0; i < argTypes.size(); i++) {
                 String argType = argTypes.get(i);
@@ -546,7 +587,7 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLdcInsn(lastLine);
             superVisitMethodInsn(INVOKESTATIC, TRACER, method, desc);
 
-            if (test) {
+            if (isTraceEntry) {
                 superVisitMethodInsn(INVOKESTATIC, TRACER, END, END_DESC);
             }
         }
@@ -663,6 +704,10 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitInsn(int opcode) {
+            if (!tracingEnabled) {
+                super.visitInsn(opcode);
+                return;
+            }
             switch (opcode) {
                 case RETURN: traceReturn(ArgumentType.VOID); break;
                 case IRETURN: traceReturn(ArgumentType.INT); break;
@@ -705,6 +750,10 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitVarInsn(int opcode, int var) {
+            if (!tracingEnabled) {
+                super.visitVarInsn(opcode, var);
+                return;
+            }
             switch (opcode) {
                 case ISTORE: traceStore(ArgumentType.INT, var); break;
                 case LSTORE: traceStore(ArgumentType.LONG, var); break;
@@ -717,6 +766,10 @@ public class TracerTransformer implements ClassFileTransformer {
 
         @Override
         public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+            if (!tracingEnabled) {
+                super.visitFieldInsn(opcode, owner, name, desc);
+                return;
+            }
             TypeDescriptor tOwner = model.getType(owner.replace('/', '.'), cl);
             FieldDescriptor f = tOwner.getField(name, desc);
             ArgumentType t = ArgumentType.getByDescriptor(desc);
@@ -777,9 +830,17 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLdcInsn(lastLine);
             superVisitMethodInsn(INVOKESTATIC, TRACER, CATCH, CATCH_DESC);            
         }
-        
+
+        @Override
+        public void visitMaxs(int maxStack, int maxLocals) {
+            super.visitMaxs(maxStack+6, maxLocals);
+        }
+
+        @Override
+        public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
+            super.visitFrame(type, nLocal, local, nStack, stack);
+        }
     }
-    
     
     static enum ArgumentType {
         

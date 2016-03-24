@@ -19,6 +19,8 @@ public class Import {
     
     // jdbc:mysql://localhost:3306/acc2?user=root&password=root&currentschema=acc2 C:/trace -n
     // jdbc:sap://VM-APM-HIWI.EAALAB.HPI.UNI-POTSDAM.DE:30015/ACC2?user=SYSTEM&password=manager&currentschema=ACC2 C:/trace -n
+    // jdbc:mysql://localhost:3306/accidit ../testapp/target/trace/_
+    // jdbc:hsqldb:mem?user=sa&password= -s test ../testapp/target/trace/_
     
     public static void main(String... args) throws Exception {
         if (args.length == 0 || Arrays.asList(args).contains("-?")) {
@@ -103,9 +105,15 @@ public class Import {
         System.out.printf("Using Password: %s%n", dbPassword != null ?  "yes" : "no");
         System.out.printf("Clear Schema: %s%n", newSchema ?  "yes" : "no");
         
-        Connection cnn = getConnection(dbString, dbSchema, p);
-        
-        new Import(dbType, cnn, dbSchema, csvDir, newSchema).run();
+        try (Connection cnn = getConnection(dbString, dbSchema, p)) {
+            new Import(dbType, cnn, dbSchema, csvDir, newSchema).run();
+            System.out.println(".");
+        } catch (SQLException e) {
+            e.printStackTrace(System.err);
+            System.exit(1);
+        } finally {
+            System.exit(0);
+        }
     }
     
 
@@ -115,6 +123,9 @@ public class Import {
         }
         if (dbString.startsWith("jdbc:sap")) {
             return "hana";
+        }
+        if (dbString.startsWith("jdbc:hsqldb")) {
+            return "hsqldb";
         }
         throw new IllegalArgumentException("Unknown database type: " + dbString);
     }
@@ -221,7 +232,7 @@ public class Import {
                     return pathname.isDirectory();
                 }
             });
-            
+            // TODO
         } else {
             singleRun();
         }
@@ -359,7 +370,9 @@ public class Import {
         public Iterator<String[]> iterator() {
             try {
                 if (r != null) throw new IllegalStateException("iterator exists");
-                r = new CSVReader(new InputStreamReader(new FileInputStream(csvDir + "/" + file + ".csv"), "utf-8"), ';');
+                File f = new File(csvDir, file + ".csv");
+                f = f.getAbsoluteFile();
+                r = new CSVReader(new InputStreamReader(new FileInputStream(f), "utf-8"), ';');
                 fetch();
             } catch (FileNotFoundException | UnsupportedEncodingException ex) {
                 throw new RuntimeException(ex);

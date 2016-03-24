@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.*;
 public class AgentTest {
     
     static {
+        TracerTransformer.fullTracingEnabled = true;
         TracerSetup.setTraceSet(new TraceSet(new Model(new PrintStreamOut())));
     }
     
@@ -173,7 +174,7 @@ public class AgentTest {
         ClassReader cr = new ClassReader(clazz);        
         byte[] data1 = transform(cr, model);
         
-        byte[] data2 = TracerTransformer.transform(data1, model, getClass().getClassLoader());
+        byte[] data2 = TracerTransformer.transform(clazz, data1, model, getClass().getClassLoader());
         
         assertArrayEquals(data1, data2);
     }

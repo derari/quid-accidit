@@ -13,6 +13,8 @@
         <module>asm-tracer</module>
         <module>testapp</module>
         <module>dbimport</module>
+        
+        <module>js-backend</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

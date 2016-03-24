@@ -8,10 +8,12 @@ import java.io.*;
 import java.lang.instrument.Instrumentation;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.GregorianCalendar;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.jar.JarFile;
 
 public class PreMain {
@@ -74,28 +76,51 @@ public class PreMain {
             Init.init(inst);
             
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(System.err);
         }
     }
     
     public static Instrumentation inst;
     
     public static class Init {
+        
+        public static final Set<Class> TO_BE_REDEFINED = new LinkedHashSet<>();
 
         private static void init(final Instrumentation inst) throws Exception {
             TracerSetup.setTraceSet(new TraceSet(new Model(createOut())));
-            Tracer.setup(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        List<Class> classes = new ArrayList<>();
-                        for (Class c: inst.getAllLoadedClasses()) {
-                            if (inst.isModifiableClass(c)) classes.add(c);
+            Tracer.setup(() -> {
+                try {
+                    TracerTransformer.fullTracingEnabled = true;
+                    for (Class c: inst.getAllLoadedClasses()) {
+                        if (inst.isModifiableClass(c) && 
+                                !c.getName().startsWith("java")) {
+                            TO_BE_REDEFINED.add(c);
                         }
-                        inst.retransformClasses(classes.toArray(new Class[classes.size()]));
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
+                    final int step = 64;
+                    final Class[] ary = new Class[step];
+                    while (TO_BE_REDEFINED.size() > 0) {
+                        System.out.println(TO_BE_REDEFINED.size() + " remaining ~~~~~~");
+                        int len = Math.min(step, TO_BE_REDEFINED.size());
+                        Arrays.fill(ary, len, ary.length, null);
+                        Iterator<Class> it = TO_BE_REDEFINED.iterator();
+                        for (int i = 0; i < len; i++) {
+                            ary[i] = it.next();
+                        }
+                        try {
+                            inst.retransformClasses(ary);
+                        } catch (Throwable t) {
+                            t.printStackTrace(System.err);
+                            Arrays.asList(ary).forEach(c -> {
+                                System.err.println(c);
+                                TO_BE_REDEFINED.remove(c);
+                            });
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace(System.err);
+                } finally {
+                    System.out.println("---------------- DONE");
                 }
             });
 
