@@ -1,24 +1,18 @@
 package de.hpi.accidit.eclipse.slice;
 
-import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.cthul.miro.DSL;
-
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Method;
-import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
-import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Value;
-import de.hpi.accidit.eclipse.model.ValueToString;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public class EventKey implements Comparable<EventKey> {
 	
@@ -390,9 +384,8 @@ public class EventKey implements Comparable<EventKey> {
 		private MethodResultKey(InvocationData invD) {
 			super(invD, invD.getInvocation().exitStep);
 			Invocation inv = getInvocation();
-			Value v = DSL.select()
-					.from(Value.result_ofInvocation(inv.getTestId(), inv.getStep()))
-					._execute(cnn());
+			Value v = db().values().result_ofInvocation(inv.getTestId(), inv.getStep())
+					.result()._getSingle();
 			setValue(v);
 		}
 		
@@ -601,9 +594,8 @@ public class EventKey implements Comparable<EventKey> {
 		public Value getObject(long thisId) {
 			Value os = objects.get(thisId);
 			if (os == null) {
-				os = Value
-						.object(inv.getTestId(), thisId, Long.MAX_VALUE).select()
-						._execute(cnn());
+				os = db().values().ofObject(inv.getTestId(), thisId, Long.MAX_VALUE)
+						.result()._getSingle();
 				objects.put(thisId, os);
 				os.beInitialized();
 			}
@@ -671,15 +663,11 @@ public class EventKey implements Comparable<EventKey> {
 //	}
 	
 	private static Invocation invocationBefore(int testId, long parentCall, String clazz, String method, String sig, long exitStep) {
-		Invocation inv = DSL
-					.select().from(Invocation.VIEW)
-					.beforeExit(exitStep)
-					//.ofMethod(clazz, method, sig)
-					.inTest(testId).inCall(parentCall)
-					
-					.ofMethod(method, sig) //clazz, 
-				._execute(cnn())
-				._getFirst();
+		Invocation inv = db().invocations()
+				.beforeExit(exitStep)
+				.inTest(testId).inCall(parentCall)
+				.ofMethod(method, sig) //clazz, 
+				.result()._getFirst();
 //		if (inv == null) {
 //			throw new IllegalArgumentException(
 //					testId + ":" + exitStep + " " + Token.methodKey(clazz, method, sig));
@@ -688,13 +676,9 @@ public class EventKey implements Comparable<EventKey> {
 	}
 	
 	private static Invocation invocationAtExitStep(int testId, long step) {
-		Invocation inv = DSL
-					.select("*","signature","methodId").from(Invocation.VIEW)
-					//.ofMethod(clazz, method, sig)
-					.inTest(testId)
-					.atExitStep(step)
-				._execute(cnn())
-				._getSingle();
+		Invocation inv = db().invocations() //"*","signature","methodId"
+				.inTest(testId).atExitStep(step)
+				.result()._getSingle();
 		if (inv == null) {
 			throw new IllegalArgumentException(
 					//clazz + "#" + method + sig + " @ " + 
@@ -704,30 +688,25 @@ public class EventKey implements Comparable<EventKey> {
 	}
 	
 	private static Invocation invocationAtStep(int testId, long step) {
-		Invocation inv = DSL
-				.select("*","signature","methodId").from(Invocation.VIEW)
-				.inTest(testId)
-				.atStep(step)
-			._execute(cnn())
-			._getSingle();
+		Invocation inv = db().invocations() //"*","signature","methodId"
+				.inTest(testId).atStep(step)
+				.result()._getSingle();
 		return inv;
 	}
 	
 	private static ItemValue arraySetBefore(int testId, long thisId, int index, long getStep) {
-		ItemValue iv = DSL
-				.select().from(NamedValue.ARRAY_SET_ITEM_VIEW)
-				.beforeStep(testId, thisId, getStep)
+		ItemValue iv = db().arrayValues()
+				.setBeforeStep(testId, thisId, getStep)
 				.atIndex(index)
-			._execute(cnn())._getFirst();
+				.result()._getFirst();
 		return iv;
 	}
 	
 	private static FieldValue fieldSetBefore(int testId, long thisId, String field, long getStep) {
-		FieldValue iv = DSL
-				.select().from(NamedValue.OBJECT_SET_FIELD_VIEW)
-				.beforeStep(testId, thisId, getStep)
+		FieldValue iv = db().fieldValues()
+				.setBeforeStep(testId, thisId, getStep)
 				.ofField(field)
-			._execute(cnn())._getFirst();
+				.result()._getFirst();
 		return iv;
 	}
 	
@@ -740,17 +719,19 @@ public class EventKey implements Comparable<EventKey> {
 	private static Invocation parentOf(Invocation inv) {
 		if (inv.depth < 1) return null;
 		if (inv.parent != null) return inv.parent;
-		List<Invocation> parents = DSL
-					.select("*","signature","methodId").from(Invocation.VIEW)
+		List<Invocation> parents = db().invocations() // "*","signature","methodId"
 					.parentOf(inv)
-				._execute(cnn())
-				._asList();
+					.result()._asList();
 //		if (parents.size()  == 0) {
 //			return null;
 //		}
 		Invocation parent = parents.get(0);
 		inv.parent = parent;
 		return parent;
+	}
+	
+	private static TraceDB db() {
+		return TraceNavigatorUI.getGlobal().db();
 	}
 
 }

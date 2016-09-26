@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.slice;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.cthul.miro.DSL;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
@@ -17,7 +16,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hpi.accidit.eclipse.Activator;
-import de.hpi.accidit.eclipse.DatabaseConnector;
+import static de.hpi.accidit.eclipse.DatabaseConnector.getTraceDB;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
@@ -94,12 +93,13 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	
 	public void addVariableValue(VariableValue value) {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
-		
 		if (value.getLine() < 0 || value.getCallStep() < 0) {
-			VariableValue newValue = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-						.inTest(value.getTestId())
-						.atStep(value.getValueStep())
-						.byId(value.getId())._execute(DatabaseConnector.cnn())._getSingle();
+			VariableValue newValue = getTraceDB().variableValues()
+					.history()
+					.inTest(value.getTestId())
+					.atStep(value.getValueStep())
+					.byId(value.getId())
+					.result()._getSingle();
 			if (newValue != null) value = newValue;
 		}
 		
@@ -113,10 +113,12 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 
 		if (value.getLine() < 0 || value.getCallStep() < 0) {
-			VariableValue newValue = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+			VariableValue newValue = getTraceDB().variableValues()
+						.history()
 						.inTest(value.getTestId())
 						.atStep(value.getValueStep())
-						.byId(value.getId())._execute(DatabaseConnector.cnn())._getSingle();
+						.byId(value.getId())
+						.result()._getSingle();
 			if (newValue != null) value = newValue;
 		}
 		
@@ -130,9 +132,10 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 		
 		if (value.getLine() < 0 || value.getCallStep() < 0) {
-			FieldValue newValue = DSL.select().from(NamedValue.OBJECT_SET_FIELD_VIEW)
-						.atStep(value.getTestId(), value.getValueStep())
-						._execute(DatabaseConnector.cnn())._getSingle();
+			FieldValue newValue = getTraceDB()
+						.fieldValues()
+						.writesAtStep(value.getTestId(), value.getValueStep())
+						.result()._getSingle();
 			if (newValue != null) value = newValue;
 		}
 		
@@ -153,10 +156,11 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 		InvocationData invD = TraceNavigatorUI.getGlobal().getSliceApi().getInvocationData();
 		invD = invD.getInvocationAtCall(invocation.getStep());
 		
-		List<VariableValue> variables = DSL.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
+		List<VariableValue> variables = getTraceDB().variableValues()
+				.history()
 				.inTest(invocation.getTestId())
 				.atStep(invocation.getStep())
-				._execute(DatabaseConnector.cnn())._asList();
+				.result()._asList();
 		
 //		int i = 0;
 		for (VariableValue v: variables) {

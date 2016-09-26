@@ -3,13 +3,12 @@ package de.hpi.accidit.eclipse.views.provider;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
-import org.cthul.miro.util.FinalFuture;
+import org.cthul.miro.function.MiFunction;
+import org.cthul.miro.futures.MiFuture;
+import org.cthul.miro.futures.MiFutures;
 import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
-import org.eclipse.swt.widgets.Display;
 
 import de.hpi.accidit.eclipse.model.ModelBase;
 import de.hpi.accidit.eclipse.model.NamedValue;
@@ -231,13 +230,12 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			valueIsInitialized = false;
 			final Object value = getValue();
 			if (value instanceof ModelBase) {
-				((ModelBase) value).onInitialized(onValueInitialized());
+				((ModelBase) value).onInitComplete(onValueInitialized());
 			} else {
 				WorkPool.execute(() -> {
 					try {
 						initializeValueAsynch(value);
-						FinalFuture<Object> f = new FinalFuture<Object>(value);
-						onValueInitialized().call(f);
+						onValueInitialized().call(MiFutures.value(value));
 					} catch (Throwable e) {
 						e.printStackTrace();
 					}
@@ -306,7 +304,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 //			});			
 		}
 		
-		public MiFutureAction<MiFuture<?>, ?> onValueInitialized() {
+		public MiFunction<MiFuture<?>, ?> onValueInitialized() {
 			return onValueInitialized;
 		}
 	}

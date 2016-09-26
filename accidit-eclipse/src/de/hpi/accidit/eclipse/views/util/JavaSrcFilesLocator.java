@@ -41,6 +41,7 @@ public class JavaSrcFilesLocator {
 		List<IJavaProject> projects = new LinkedList<IJavaProject>();
 		IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
 		for(IProject project : workspaceProjects) {
+			if (!project.isOpen()) continue;
 			try {
 				boolean isJavaProject = false;
 				String[] natureIds = project.getDescription().getNatureIds();

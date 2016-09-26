@@ -1,36 +1,50 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.From;
-import org.cthul.miro.at.Join;
-import org.cthul.miro.at.Require;
-import org.cthul.miro.at.Select;
-import org.cthul.miro.at.Where;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.QueryWithResult;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.template.TemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlSchema;
+import org.cthul.miro.sql.set.SqlEntitySet;
+import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
+import de.hpi.accidit.eclipse.model.Field;
 import de.hpi.accidit.eclipse.model.Method;
 
-public class MethodDao {
+public class MethodDao extends SqlEntitySet<Method, MethodDao> {
 	
-	public static final Mapping<Method> MAPPING = new ReflectiveMapping<>(Method.class);
-
-	public static final ViewR<Query> VIEW = Views.build(MAPPING).r(Query.class);
-	
-	@Select("m.`id`, m.`name`, m.`signature`, t.`name` AS `type`")
-	@From("`Method` m")
-	@Join("`Type` t ON m.`declaringTypeId` = t.`id`")
-	public static interface Query extends QueryWithResult<Results<Method>> {
-		
-		@Require("t")
-		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
-		Query declaredAs(String type, String name, String signature);
-		
-		@Where("m.`id` = ?")
-		Query byId(long id);
+	public static void init(MappedSqlSchema schema) {
+		SqlTemplatesBuilder<?> sql = schema.getMappingBuilder(Method.class);
+		sql.attributes("m.`id`, m.`name`, m.`signature`, t.`name` AS `type`")
+			.from("`Method` m")
+			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
 	}
+	
+	public MethodDao(MethodDao source) {
+		super(source);
+	}
+
+	
+	public MethodDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Method.class));
+	}
+
+	@Override
+	protected void initialize() {
+		super.initialize();
+		setUp(MappingKey.FETCH, "id", "name", "signature", "type");
+	}
+	
+	public MethodDao byId(long id) {
+		if (id < 0)  {
+			throw new IllegalArgumentException(String.valueOf(id));
+		}
+		return setUp(MappingKey.PROPERTY_FILTER, "id", id);
+	}
+	
+//		@Require("t")
+//		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
+//		Query declaredAs(String type, String name, String signature);
 	
 }

@@ -3,7 +3,7 @@ package de.hpi.accidit.eclipse.views;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.cthul.miro.MiConnection;
+import org.cthul.miro.db.MiConnection;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
@@ -29,6 +29,7 @@ import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
@@ -144,8 +145,8 @@ public class VariablesView extends ViewPart implements AcciditView {
 
 		public void setStep(int testId, long call, long step) {
 //			if (testId != this.testId || call != this.callStep) {
-				MiConnection cnn = DatabaseConnector.cnn();
-				root = new NamedValue.MethodFrameValue(cnn, testId, call, step);
+				TraceDB db = TraceNavigatorUI.getGlobal().db();
+				root = new NamedValue.MethodFrameValue(db, testId, call, step);
 				setValueSoftUpdate(root);
 				
 //			} else if (step != this.step) {

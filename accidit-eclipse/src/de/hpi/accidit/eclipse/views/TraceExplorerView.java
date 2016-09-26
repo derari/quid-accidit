@@ -1,6 +1,5 @@
 package de.hpi.accidit.eclipse.views;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -443,7 +442,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 				} else {
 					viewer.setChildCount(inv, 1);
 					viewer.replace(inv, 0, new Pending());
-					inv.onInitialized( updateInvocation);
+					inv.onInitComplete(updateInvocation);
 				}
 			}
 		}

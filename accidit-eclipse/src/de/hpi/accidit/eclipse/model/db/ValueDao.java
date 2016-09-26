@@ -1,132 +1,142 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 
-import org.cthul.miro.map.MappedQueryStringView;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.EntityInitializer;
-import org.cthul.miro.result.ResultBuilders;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.db.MiException;
+import org.cthul.miro.db.MiResultSet;
+import org.cthul.miro.entity.EntityConfiguration;
+import org.cthul.miro.entity.EntityInitializer;
+import org.cthul.miro.entity.InitializationBuilder;
+import org.cthul.miro.entity.map.EntityProperties;
+import org.cthul.miro.graph.GraphApi;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.sql.set.MappedSqlSchema;
+import org.cthul.miro.sql.set.MappedSqlType;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
-import de.hpi.accidit.eclipse.model.Value.Primitive;
 
-public class ValueDao extends ModelDaoBase {
+public class ValueDao extends ModelDaoBase<Value, ValueDao> {
 	
-	public static MappedQueryStringView<Value> this_inInvocation(int testId, long callStep, long step) {
-		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class), 
-					"SELECT t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
-					"FROM `CallTrace` t " +
-					"LEFT OUTER JOIN `ObjectTrace` o " +
-					  "ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`" +
-					"LEFT OUTER JOIN `Type` y " +
-					  "ON y.`id` = o.`typeId` " +
-					"WHERE t.`testId` = ? AND t.`step` = ?", 
-					testId, callStep)
-			.configure(SET_CONNECTION)
-			.configure(new SetStepAdapter(step));
+	public static void init(MappedSqlSchema schema) {
+//		MappedSqlBuilder<?,?> sql = schema.getMappingBuilder(ObjectOccurranceDao.class);
+//		ModelDaoBase.init(sql);
+//		sql.attributes("`thisId`, MIN(`step`) AS `first`, MAX(`step`) AS `last`");
 	}
 	
-	public static MappedQueryStringView<Value> result_ofInvocation(int testId, long callStep) {
-		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class), 
-					"SELECT t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
-					"FROM `CallTrace` t " +
-					"JOIN `ExitTrace` e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep` " +
-					"LEFT OUTER JOIN `ObjectTrace` o " +
-					  "ON t.`testId` = o.`testId` AND e.`valueId` = o.`id` AND e.`primType` = 'L'" +
-					"LEFT OUTER JOIN `Type` y " +
-					  "ON y.`id` = o.`typeId` " +
-					"WHERE t.`testId` = ? AND t.`step` = ?", 
-					testId, callStep)
-			.configure(SET_CONNECTION);
-	}
-	
-	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
-		return new ValueQuery("VariableTrace", "variableId", varId, testId, valueStep)
-					.configure(new SetStepAdapter(step));
+	public ValueDao(ValueDao source) {
+		super(source);
 	}
 
-	public static MappedQueryStringView<Value> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
-		return new ValueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep)
-					.configure(new SetStepAdapter(step));
+	public ValueDao(MiConnection cnn) {
+		super(cnn, TYPE.getSelectLayer());
 	}
 	
-	public static MappedQueryStringView<Value> ofArray(boolean put, int index, int testId, long valueStep, long step) {
-		return new ValueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep)
-					.configure(new SetStepAdapter(step));
+	@Override
+	protected void initialize() {
+		super.initialize();
+		withConnection(DatabaseConnector.cnn());
+		configureWith(TYPE.getAttributeReader(null, Arrays.asList("arrayLength", "typeName")));
+//		setUp(MappingKey.FETCH, "testId");
+	}
+	
+	protected ValueDao valueQuery(String table, String idField, int id, int testId, long step) {
+		return sql	(sql -> sql
+				.select().sql("t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName`")
+				.from().id(table).ql(" t")
+				.leftJoin().id("ObjectTrace").sql(" o ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id`")
+				.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
+				.where().ql("t.").id(idField).sql(" = ? AND t.`testId` = ? AND t.`step` = ?", id, testId, step))
+			.loadObjectAttributes();
+	}
+	
+	protected ValueDao setStep(long step) {
+		return initializeWith(injectField(ObjectSnapshot.class, "step", step));
+	}
+	
+	protected ValueDao loadObjectAttributes() {
+		return this;
+//		return configureWith((EntityConfiguration) ATTRIBUTES.newConfiguration(Arrays.asList("arrayLength", "typeName")));
+	}
+	
+	public ValueDao ofVariable(int varId, int testId, long valueStep, long step) {
+		return valueQuery("VariableTrace", "variableId", varId, testId, valueStep).setStep(step);
+	}
+	
+	public ValueDao ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
+		return valueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep).setStep(step);
 	}
 
-	public static MappedQueryStringView<Value> object(int testId, long thisId, long step) {
-		return Views.query(MAPPING, ResultBuilders.getSingleResult(Value.class),
-					"SELECT o.`testId`, 'L' AS `primType`, o.`id` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
-					"FROM `ObjectTrace` o " +
-					"LEFT OUTER JOIN `Type` y " +
-					  "ON y.`id` = o.`typeId` " +
-					"WHERE o.`testId` = ? AND o.`id` = ?", 
-					testId, thisId)
-			.configure(SET_CONNECTION)
-			.configure(new SetStepAdapter(step));
+	public ValueDao ofArray(boolean put, int index, int testId, long valueStep, long step) {
+		return valueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep).setStep(step);
+	}
+
+	public ValueDao ofObject(int testId, long thisId, long step) {
+		return sql(sql -> sql
+				.select().sql("o.`testId`, 'L' AS `primType`, o.`id` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
+				.from().id("ObjectTrace").ql(" o")
+				.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
+				.where().sql("o.`testId` = ? AND o.`id` = ?", testId, thisId))
+			.setStep(step)
+			.loadObjectAttributes();
 	}
 	
-	private static final String[] C_PARAMS = {"testId", "primType", "valueId"};
+	public ValueDao this_inInvocation(int testId, long callStep, long step) {
+		return sql(sql -> sql
+			.select()
+				.sql("t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
+			.from().id("CallTrace").ql(" t")
+			.leftJoin().id("ObjectTrace").sql(" o ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`")
+			.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
+			.where().sql("t.`testId` = ? AND t.`step` = ?", testId, callStep))
+		.setStep(step)
+		.loadObjectAttributes();
+	}
+
+	public ValueDao result_ofInvocation(int testId, long callStep) {
+		return sql(sql -> sql
+			.select()
+				.sql("t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
+			.from().id("CallTrace").ql(" t")
+			.join().id("ExitTrace").sql("e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep`")
+			.leftJoin().id("ObjectTrace").sql(" o ON t.`testId` = o.`testId` AND e.`valueId` = o.`id` AND e.`primType` = 'L'")
+			.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
+			.where().sql("t.`testId` = ? AND t.`step` = ?", testId, callStep))
+		.loadObjectAttributes();
+	}
 	
-	private static final Mapping<Value> MAPPING = new ReflectiveMapping<Value>(Value.class, ObjectSnapshot.class, null) {
-		
-		protected String[] getConstructorParameters() {
-			return C_PARAMS;
-		};
-		protected Value newRecord(Object[] args) {
-			int testId = (Integer) args[0];
-			char primType = ((String) args[1]).charAt(0);
-			long valueId = (Long) args[2];
-			return Value.newValue(testId, primType, valueId);
+	
+	private static final MappedSqlType<Value> TYPE = new MappedSqlType<Value>(Value.class) {
+		{
+			ModelDaoBase.init(this);
+			Arrays.asList("testId", "primType", "valueId").forEach(k -> {
+				key(k).require(k).readOnly();
+			});
+			constructor(args -> {
+				int testId = (Integer) args[0];
+				char primType = ((String) args[1]).charAt(0);
+				long valueId = (Long) args[2];
+				return Value.newValue(testId, primType, valueId);				
+			});
 		}
-		protected void injectField(Value record, String field, Object value) {
-			if (record instanceof Primitive) return;
-			for (String s: C_PARAMS) {
-				if (field.equals(s)) return;
-			}
-			super.injectField(record, field, value);
+		@Override
+		protected EntityConfiguration<Value> createAttributeReader(GraphApi graph, List<?> attributes) {
+			return (rs, b) -> this.newInitializer(rs, b, attributes);
+		}
+		protected void newInitializer(MiResultSet rs, InitializationBuilder<? extends Value> builder, List<?> attributes) throws MiException {
+			EntityInitializer<ObjectSnapshot> ei = builder.nestedInitializer(b -> ATTRIBUTES.newInitializer(rs, null, flattenStr(attributes), b));
+			builder.addName("Init ObjectSnapshot")
+				.addInitializer(v -> {
+					if (v instanceof ObjectSnapshot) ei.apply((ObjectSnapshot) v);
+				}); 
 		};
 	};
 	
-	protected static class ValueQuery extends MappedQueryStringView<Value> {
-
-		public ValueQuery(String table, String idField, int id, int testId, long step) {
-			super(MAPPING, ResultBuilders.getSingleResult(Value.class),
-					"SELECT t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName` " +
-					"FROM `" + table + "` t " +
-					"LEFT OUTER JOIN `ObjectTrace` o " +
-					"ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id` " +
-					"LEFT OUTER JOIN `Type` y " +
-					"ON y.`id` = o.`typeId` " +
-					"WHERE t.`" + idField + "` = ? " +
-					  "AND t.`testId` = ? AND t.`step` = ?", 
-				id, testId, step);
-			configure(SET_CONNECTION);
-		}
-	}
-	
-	private static class SetStepAdapter implements EntityInitializer<Value> {
-		
-		private final long step;
-		
-		public SetStepAdapter(long step) {
-			this.step = step;
-		}
-
-		@Override
-		public void apply(Value entity) throws SQLException {
-			MAPPING.setField(entity, "step", step);
-		}
-
-		@Override
-		public void complete() throws SQLException { }
-
-		@Override
-		public void close() throws SQLException { }		
-	}
+	private static final EntityProperties<ObjectSnapshot,?> ATTRIBUTES = EntityProperties
+			.build(ObjectSnapshot.class)
+			.require("arrayLength").field("arrayLength")
+			.require("typeName").field("typeName");
 }

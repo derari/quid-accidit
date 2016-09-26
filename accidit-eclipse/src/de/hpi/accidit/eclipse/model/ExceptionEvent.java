@@ -1,16 +1,9 @@
 package de.hpi.accidit.eclipse.model;
 
-import org.cthul.miro.view.ViewR;
-
-import de.hpi.accidit.eclipse.model.db.ExceptionEventDao;
-import de.hpi.accidit.eclipse.model.db.ExceptionEventDao.CatchQuery;
-import de.hpi.accidit.eclipse.model.db.ExceptionEventDao.ThrowQuery;
-
-
 public class ExceptionEvent extends TraceElement {
 	
-	public static ViewR<ThrowQuery> THROW_VIEW = ExceptionEventDao.THROW;
-	public static ViewR<CatchQuery> CATCH_VIEW = ExceptionEventDao.CATCH;
+//	public static ViewR<ThrowQuery> THROW_VIEW = ExceptionEventDao.THROW;
+//	public static ViewR<CatchQuery> CATCH_VIEW = ExceptionEventDao.CATCH;
 
 	public boolean isThrow;
 	

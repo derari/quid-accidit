@@ -1,48 +1,62 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.OrderBy;
-import org.cthul.miro.at.Put;
-import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
-import org.cthul.miro.map.MappedTemplateProvider;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.QueryWithResult;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.impl.SnippetTemplateLayer;
+import org.cthul.miro.request.template.TemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlSchema;
+import org.cthul.miro.sql.set.SqlEntitySet;
+import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
 import de.hpi.accidit.eclipse.model.Field;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 
-public class FieldDao {
+public class FieldDao extends SqlEntitySet<Field, FieldDao> {
 	
-	public static final Mapping<Field> MAPPING = new ReflectiveMapping<>(Field.class);
-	
-	private static final MappedTemplateProvider<Field> TEMPLATE = new MappedDataQueryTemplateProvider<Field>(MAPPING) {{
-		attributes("f.`id`, f.`name`");
-		table("`Field` f");
-//		join("`Type` t ON f.`declaringTypeId` = t.`id`");
-		join("evt", "JOIN " +
-				"(SELECT `fieldId` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId` " +
-				" UNION " +
-				" SELECT `fieldId` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId`) " +
-			"evt ON f.`id` = evt.`fieldId`");
-		always().groupBy("f.`id`, f.`name`");
-		always().orderBy("f.`name`");
-	}};
-	
-	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
-	
-	public static interface Query extends QueryWithResult<Results<Field>> {
-		
-//		@Require("t")
-//		@Where("t.`id` = ?")
-//		Query ofType(long tId);
-		
-		@Put(value="evt", mapArgs={0, 1, 0, 1})
-		Query ofObject(long testId, long thisId);
-		
-		@OrderBy("f.`id`")
-		Query orderById();
+	public static void init(MappedSqlSchema schema) {
+		SqlTemplatesBuilder<?> sql = schema.getMappingBuilder(Field.class);
+		sql.attributes("m.`name`, m.`id`")
+			.from("`Field` m");
 	}
 	
+	protected FieldDao(FieldDao source) {
+		super(source);
+	}
+
+	public FieldDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Field.class));
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		sql(sql -> sql
+				.groupBy().sql("f.`id`, f.`name`")
+				.orderBy().sql("f.`name`"));
+//		compose(c -> c.require(MappingKey.MKey.LOAD_ALL));
+	}
+	
+	@Override
+	protected void initializeSnippetLayer(SnippetTemplateLayer<MappedQuery<Field, SelectQuery>> snippetLayer) {
+		super.initializeSnippetLayer(snippetLayer);
+		snippetLayer.setUp("evt", (qry, a) -> qry.getStatement().join().sql(
+				"(SELECT `fieldId` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId` " +
+				" UNION " +
+				" SELECT `fieldId` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId`)", a)
+			.on().sql("f.`id` = evt.`fieldId`"));
+	}
+	
+	public FieldDao ofType(long tId) {
+		return sql(sql -> sql.where().sql("t.`id` = ?", tId));
+	}
+	
+	public FieldDao ofObject(int testId, long thisId) {
+		return snippet("evt", testId, thisId, testId, thisId);
+	}
+	
+	public FieldDao orderById() {
+		return sql(sql -> sql.orderBy().sql("f.`id`"));
+	}
 }

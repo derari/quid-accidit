@@ -1,36 +1,12 @@
 package de.hpi.accidit.eclipse.model;
 
-import static org.cthul.miro.DSL.select;
-
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.view.ViewR;
+import org.cthul.miro.db.MiConnection;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayGetHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.FieldQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ItemQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjGetHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.SetFieldQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.SetItemQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarQuery;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public class NamedValue extends ModelBase implements NamedEntity {
 	
-	public static final ViewR<VarQuery> VARIABLE_VIEW = NamedValueDao.VARIABLE_VIEW;
-	public static final ViewR<FieldQuery> FIELD_VIEW = NamedValueDao.FIELD_VIEW;
-	public static final ViewR<ItemQuery> ARRAY_ITEM_VIEW = NamedValueDao.ARRAY_ITEM_VIEW;
-	public static final ViewR<VarHistoryQuery> VARIABLE_HISTORY_VIEW = NamedValueDao.VARIABLE_HISTORY_VIEW;
-	public static final ViewR<ObjHistoryQuery> OBJECT_HISTORY_VIEW = NamedValueDao.OBJECT_HISTORY_VIEW;
-	public static final ViewR<SetFieldQuery> OBJECT_SET_FIELD_VIEW = NamedValueDao.OBJECT_SET_FIELD_VIEW;
-	public static final ViewR<ObjGetHistoryQuery> OBJECT_GET_HISTORY_VIEW = NamedValueDao.OBJECT_GET_HISTORY_VIEW;
-	public static final ViewR<ArrayHistoryQuery> ARRAY_HISTORY_VIEW = NamedValueDao.ARRAY_HISTORY_VIEW;
-	public static final ViewR<SetItemQuery> ARRAY_SET_ITEM_VIEW = NamedValueDao.ARRAY_SET_ITEM_VIEW;
-	public static final ViewR<ArrayGetHistoryQuery> ARRAY_GET_HISTORY_VIEW = NamedValueDao.ARRAY_GET_HISTORY_VIEW;
-
 	protected int testId;
 	protected long step;
 	protected long callStep;
@@ -50,8 +26,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	
 	public NamedValue() { }
 	
-	public NamedValue(MiConnection cnn) {
-		super(cnn);
+	public NamedValue(TraceDB db) {
+		super(db);
 	}
 
 	public NamedValue(String name) {
@@ -242,8 +218,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 
 		private long call;
 		
-		public MethodFrameValue(MiConnection cnn, int testId, long call, long step) {
-			super(cnn);
+		public MethodFrameValue(TraceDB db, int testId, long call, long step) {
+			super(db);
 			this.testId = testId;
 			this.call = call;
 			this.step = step;
@@ -253,7 +229,7 @@ public class NamedValue extends ModelBase implements NamedEntity {
 
 		@Override
 		protected Value fetchValue() throws Exception {
-			return new Value.MethodSnapshot(cnn(), testId, call, step);
+			return new Value.MethodSnapshot(db(), testId, call, step);
 		}	
 	}
 	
@@ -264,9 +240,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 			if (valueStep == -1) {
 				return new Value.Primitive("--> " + nextChangeStep);
 			}
-			return select()
-					.from(Value.ofVariable(id, testId, valueStep, step))
-					.execute(DatabaseConnector.cnn());
+			return db().values().ofVariable(id, testId, valueStep, step)
+					.result().getFirst();
 		}
 		
 		@Override
@@ -313,15 +288,13 @@ public class NamedValue extends ModelBase implements NamedEntity {
 				}
 			}
 			
-			Value v = select()
-				.from(Value.ofField(valueIsPut, id, testId, valueStep, step))
-				.execute(DatabaseConnector.cnn());
+			Value v = db().values().ofField(valueIsPut, id, testId, valueStep, step)
+						.result().getFirst();
 			if (v != null) return v;
 			
-			System.err.println("TODO: fix this");
-			v = select()
-				.from(Value.ofField(!valueIsPut, id, testId, valueStep, step))
-				.execute(DatabaseConnector.cnn());
+			System.err.println("TODO - FieldValue::fetchValue: fix this");
+			v = db().values().ofField(!valueIsPut, id, testId, valueStep, step)
+					.result().getFirst();
 			if (v != null) return v;
 			
 			return null;
@@ -359,8 +332,8 @@ public class NamedValue extends ModelBase implements NamedEntity {
 					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
-			return select().from(Value.ofArray(valueIsPut, id, testId, valueStep, step))
-					.execute(DatabaseConnector.cnn());
+			return db().values().ofArray(valueIsPut, id, testId, valueStep, step)
+					.result().getSingle();
 		}
 		
 		@Override
@@ -370,20 +343,20 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	}
 	
 	public static class VariableHistory extends NamedValue {
-		public VariableHistory(MiConnection cnn, int testId, long callStep, int varId) {
-			super("-", new Value.VariableHistory(cnn, testId, callStep, varId));
+		public VariableHistory(TraceDB db, int testId, long callStep, int varId) {
+			super("-", new Value.VariableHistory(db, testId, callStep, varId));
 		}
 	}
 
 	public static class ObjectHistory extends NamedValue {
-		public ObjectHistory(MiConnection cnn, int testId, long callStep, int thisId) {
-			super("-", new Value.ObjectHistory(cnn, testId, callStep, thisId));
+		public ObjectHistory(TraceDB db, int testId, long callStep, int thisId) {
+			super("-", new Value.ObjectHistory(db, testId, callStep, thisId));
 		}
 	}
 	
 	public static class ArrayHistory extends NamedValue {
-		public ArrayHistory(MiConnection cnn, int testId, long callStep, int thisId) {
-			super("-", new Value.ArrayHistory(cnn, testId, callStep, thisId));
+		public ArrayHistory(TraceDB db, int testId, long callStep, int thisId) {
+			super("-", new Value.ArrayHistory(db, testId, callStep, thisId));
 		}
 	}
 }

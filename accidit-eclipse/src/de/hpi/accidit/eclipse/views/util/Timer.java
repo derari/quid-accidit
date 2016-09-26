@@ -38,17 +38,17 @@ public class Timer {
 		}
 		
 		private void initial() {
-			EXECUTOR.schedule(this::update, 3, TimeUnit.SECONDS);
-		}
-		
-		private void update() {
-			if (done) return;
 			if (first) {
 				if (done) return;
 				System.out.println(n + ": " + query);
 				System.out.println(n + ": " + Arrays.toString(args));
 				first = false;
 			}
+			EXECUTOR.schedule(this::update, 3, TimeUnit.SECONDS);
+		}
+		
+		private void update() {
+			if (done) return;
 			System.out.println(n + ": " + (System.currentTimeMillis() - start)/1000 + "s");
 			EXECUTOR.schedule(this::update, 1, TimeUnit.SECONDS);
 		}

@@ -1,32 +1,51 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.From;
-import org.cthul.miro.at.Join;
-import org.cthul.miro.at.Require;
-import org.cthul.miro.at.Select;
-import org.cthul.miro.at.Where;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.QueryWithResult;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.impl.SnippetTemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlSchema;
+import org.cthul.miro.sql.set.SqlEntitySet;
+import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
 import de.hpi.accidit.eclipse.model.Type;
 
-public class TypeDao {
+public class TypeDao extends SqlEntitySet<Type, TypeDao> {
 
-	private static final Mapping<Type> MAPPING = new ReflectiveMapping<>(Type.class);
+	public static void init(MappedSqlSchema schema) {
+		SqlTemplatesBuilder<?> sql = schema.getMappingBuilder(Type.class);
+		sql.attributes("t.`name`")
+			.from("`Type` t");
+	}
 	
-	public static final ViewR<Query> VIEW = Views.build(MAPPING).r(Query.class);
-	 
-	@Select("t.`name`")
-	@From("`Type` t")
-	@Join("`ObjectTrace` o ON t.`id` = o.`typeId`")
-	public static interface Query extends QueryWithResult<Results<Type>> {
-		
-		@Require("o")
-		@Where("o.`testId` = ? AND o.`thisId`= ?")
-		public Query ofObject(long testId, long thisId);
+	protected TypeDao(TypeDao source) {
+		super(source);
+	}
+
+	public TypeDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Type.class));
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		setUp(MappingKey.FETCH, "name");
+	}
+	
+	@Override
+	protected void initializeSnippetLayer(SnippetTemplateLayer<MappedQuery<Type, SelectQuery>> snippetLayer) {
+		super.initializeSnippetLayer(snippetLayer);
+		snippetLayer.once("ObjectTrace", qry -> qry.getStatement()
+				.join().id("ObjectTrace").ql(" o")
+					.on().sql("t.`id` = o.`typeId`"));
+		snippetLayer.setUp("ofObject", (qry, a) -> qry.getStatement()
+				.where().sql("o.`testId` = ? AND o.`thisId`= ?", a));
+	}
+	
+	public TypeDao ofObject(int testId, long thisId) {
+		return doSafe(me -> me
+				.snippet("ObjectTrace")
+				.snippet("ofObject", testId, thisId));
 	}
 }

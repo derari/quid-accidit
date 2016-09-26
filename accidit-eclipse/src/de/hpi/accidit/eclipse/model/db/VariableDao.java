@@ -1,44 +1,56 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.OrderBy;
-import org.cthul.miro.at.Require;
-import org.cthul.miro.at.Where;
-import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
-import org.cthul.miro.map.MappedTemplateProvider;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.QueryWithResult;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.impl.SnippetTemplateLayer;
+import org.cthul.miro.request.template.TemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlSchema;
+import org.cthul.miro.sql.set.SqlEntitySet;
+import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
+import de.hpi.accidit.eclipse.model.Method;
 import de.hpi.accidit.eclipse.model.Variable;
 
-public class VariableDao {
+public class VariableDao extends SqlEntitySet<Variable, VariableDao> {
 
-private static final Mapping<Variable> MAPPING = new ReflectiveMapping<>(Variable.class);
+	public static void init(MappedSqlSchema schema) {
+		SqlTemplatesBuilder<?> sql = schema.getMappingBuilder(Variable.class);
+		sql.attributes("v.`id`, v.`name`")
+			.from("`Variable` v");
+	}
 	
-	private static final MappedTemplateProvider<Variable> TEMPLATE = new MappedDataQueryTemplateProvider<Variable>(MAPPING) {{
-		attributes("v.`id`, v.`name`");
-		table("`Variable` v");
-		join("`Method` m ON v.`methodId` = m.`id`");
-		using("m")
-			.join("`CallTrace` c ON m.`id` = c.`methodId`");
-	}};
+	public VariableDao(VariableDao source) {
+		super(source);
+	}
+
 	
-	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
+	public VariableDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Variable.class));
+	}
 	
-	public static interface Query extends QueryWithResult<Results<Variable>> {
-		
-		@Require("m")
-		@Where("m.`id` = ?")
-		Query inMethod(long mId);
-		
-		@Require("c")
-		@Where("c.`testId` = ? AND c.`step` = ?")
-		Query inCall(long testId, long callStep);
-		
-		@OrderBy("id")
-		Query orderById();
+	@Override
+	protected void initialize() {
+		super.initialize();
+		setUp(MappingKey.FETCH, "id", "name");
+	}
+	
+	@Override
+	protected void initializeSnippetLayer(SnippetTemplateLayer<MappedQuery<Variable, SelectQuery>> snippetLayer) {
+		super.initializeSnippetLayer(snippetLayer);
+		snippetLayer.once("Method", qry -> qry.getStatement().join().id("Method").sql(" m ON v.`methodId` = m.`id`"));
+		snippetLayer.once("CallTrace", qry -> qry.getStatement().join().id("CallTrace").sql(" c ON m.`id` = c.`methodId`"));
+	}
+	
+	public VariableDao inCall(int testId, long callStep) {
+		return doSafe(me -> me
+				.snippet("Method")
+				.snippet("CallTrace")
+				.sql(sql -> sql.where().sql("c.`testId` = ? AND c.`step` = ?", testId, callStep)));
+	}
+	
+	public VariableDao orderById() {
+		return sql(sql -> sql.orderBy().sql("v.`id`"));
 	}
 }

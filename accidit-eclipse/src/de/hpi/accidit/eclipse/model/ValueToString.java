@@ -117,6 +117,7 @@ public class ValueToString {
 	private static String simpleLongName(ObjectSnapshot v) {
 		String t = v.getTypeName();
 		String n = "";
+		if (t == null) return "?#" + v.getThisId();
 		int i = t.length();
 		while (n.length() < 25 && i > 0) {
 			i = t.lastIndexOf('.', i-1);

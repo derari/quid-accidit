@@ -1,26 +1,29 @@
 package de.hpi.accidit.eclipse.model;
 
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
-import org.cthul.miro.util.LazyAction;
+import org.cthul.miro.function.MiConsumer;
+import org.cthul.miro.function.MiFunction;
+import org.cthul.miro.futures.MiFuture;
+import org.cthul.miro.futures.MiFutures;
+import org.cthul.miro.futures.MiResettableFuture;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public class ModelBase {
 	
-	private final LazyAction<ModelBase> fInit = new LazyAction<ModelBase>(DatabaseConnector.cnn(), this, A_INIT);
-	private MiConnection cnn = null;
+	private final MiResettableFuture<ModelBase> fInit = MiFutures
+			.action(A_INIT.curry(this)).getTrigger();
+	
+	private TraceDB db = null;
 	
 	public ModelBase() {
 	}
 	
-	public ModelBase(MiConnection cnn) {
-		this.cnn = cnn;
+	public ModelBase(TraceDB db) {
+		this.db = db;
 	}
 
-	protected MiConnection cnn() {
-		return cnn;
+	public TraceDB db() {
+		return db;
 	}
 	
 	public boolean isInitialized() {
@@ -28,11 +31,16 @@ public class ModelBase {
 	}
 	
 	public boolean beInitialized() {
-		return fInit.beDoneNow();
+		return fInit.beDone();
 	}
 	
-	public <T> MiFuture<T> onInitialized(MiFutureAction<?, T> action) {
-		return fInit.onComplete((MiFutureAction) action); 
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public <T> MiFuture<T> onInitialized(MiFunction<? extends ModelBase, T> action) {
+		return fInit.andThen((MiFunction) action);
+	}
+	
+	public <T> MiFuture<T> onInitComplete(MiFunction<? extends MiFuture<?>, T> action) {
+		return fInit.andDo((MiFunction) action);
 	}
 	
 	protected boolean isInitSuccess() {
@@ -44,24 +52,11 @@ public class ModelBase {
 	}
 	
 	protected void reInitialize() {
-		fInit.cancel(true);
 		fInit.reset();
 	}
 
 	protected void lazyInitialize() throws Exception {
 	}
 	
-	private static final MiFutureAction<ModelBase, ModelBase> A_INIT = new MiFutureAction<ModelBase, ModelBase>() {
-		@Override
-		public ModelBase call(ModelBase arg) throws Exception {
-			try {
-				arg.lazyInitialize();
-				return arg;
-			} catch (Exception e) {
-				e.printStackTrace(System.err);
-				throw e;
-			}
-		}
-	};
-	
+	private static final MiConsumer<ModelBase> A_INIT = ModelBase::lazyInitialize;
 }

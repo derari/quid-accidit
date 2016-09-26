@@ -1,66 +1,55 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.Impl;
-import org.cthul.miro.at.MiQuery;
-import org.cthul.miro.at.OrderBy;
-import org.cthul.miro.at.Where;
-import org.cthul.miro.map.MappedInternalQueryBuilder;
-import org.cthul.miro.result.QueryWithResult;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.util.CfgSetField;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.impl.SnippetTemplateLayer;
+import org.cthul.miro.request.template.TemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlBuilder;
 
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.TraceElement;
 
-public class TraceElementDaoBase extends ModelDaoBase {
+public abstract class TraceElementDaoBase<Entity extends TraceElement, This extends TraceElementDaoBase<Entity, This>> extends ModelDaoBase<Entity, This> {
 	
-	@MiQuery(
-	attributes = "e.`testId`, e.`line`, e.`step`",
-	where = @Where(key="callStep_EQ", value="e.`callStep` = ?")
-	)
-	public static interface QueryAttributes extends ModelDaoBase.Query {
+	protected static void init(MappedSqlBuilder<?,?> sql) {
+		ModelDaoBase.init(sql);
+		sql.attributes("e.`testId`, e.`line`, e.`step`");
 	}
 	
-	public static interface Query<E extends TraceElement, This extends Query<E, This>> extends QueryWithResult<Results<E>>, ModelDaoBase.Query, QueryAttributes {
-		
-		This where();
-		
-		@Impl(QueryImpl.class)
-		This inInvocation(Invocation inv);
-		
-		This orderBy();
-		
-		@OrderBy("step")
-		This step_asc(); 
+	protected TraceElementDaoBase(ModelDaoBase<Entity, This> source) {
+		super(source);
 	}
 	
-	static class QueryImpl {
-		
-		public static void inInvocation(MappedInternalQueryBuilder query, Invocation inv) {
-			query.configure(CfgSetField.newInstance("parent", inv));
-			query.put("testId =", inv.getTestId());
-			query.put("callStep_EQ", inv.getStep());
-		}
+	public TraceElementDaoBase(MiConnection cnn, TemplateLayer<MappedQuery<Entity, SelectQuery>> queryLayer) {
+		super(cnn, queryLayer);
 	}
-//	
-//	protected static class InitParent 
-//					implements EntityInitializer<TraceElement> {
-//		
-//		private final Invocation parent;
-//		
-//		public InitParent(Invocation parent) {
-//			this.parent = parent;
-//		}
-//
-//		@Override
-//		public void apply(TraceElement entity) throws SQLException {
-//			entity.parent = parent;
-//		}
-//
-//		@Override
-//		public void complete() throws SQLException { }
-//
-//		@Override
-//		public void close() throws SQLException { }
-//	}
+
+	@Override
+	protected void initializeSnippetLayer(SnippetTemplateLayer<MappedQuery<Entity, SelectQuery>> snippetLayer) {
+		super.initializeSnippetLayer(snippetLayer);
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		setUp(MappingKey.FETCH, "testId", "line", "step", "callStep");
+	}
+	
+	public This callStep(long callStep) {
+		return setUp(MappingKey.PROPERTY_FILTER, "callStep", callStep);
+	}
+	
+	public This inInvocation(Invocation inv) {
+		return doSafe(me -> {
+			me.initializeWith(te -> te.parent = inv);
+			me.setUp(MappingKey.PROPERTY_FILTER, 
+					"testId", inv.getTestId(), "callStep", inv.getStep());
+		});
+	}
+	
+	public This orderByStep() {
+		return sql(sql -> sql.orderBy().sql("e.`step`"));
+	}
 }

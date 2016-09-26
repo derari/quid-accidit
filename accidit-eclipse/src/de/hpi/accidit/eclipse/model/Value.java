@@ -1,45 +1,18 @@
 package de.hpi.accidit.eclipse.model;
 
-import static org.cthul.miro.DSL.select;
-
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.map.MappedQueryStringView;
-
-import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ArrayHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.ObjHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.NamedValueDao.VarHistoryQuery;
-import de.hpi.accidit.eclipse.model.db.ValueDao;
+import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
+import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
+import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
+import de.hpi.accidit.eclipse.model.db.ArrayItemDao;
+import de.hpi.accidit.eclipse.model.db.FieldValueDao;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
+import de.hpi.accidit.eclipse.model.db.VariableValueDao;
 
 
 public abstract class Value extends ModelBase {
 	
-	public static MappedQueryStringView<Value> this_inInvocation(int testId, long callStep, long step) {
-		return ValueDao.this_inInvocation(testId, callStep, step);
-	}
-	
-	public static MappedQueryStringView<Value> result_ofInvocation(int testId, long callStep) {
-		return ValueDao.result_ofInvocation(testId, callStep);
-	}
-	
-	public static MappedQueryStringView<Value> ofVariable(int varId, int testId, long valueStep, long step) {
-		return ValueDao.ofVariable(varId, testId, valueStep, step);
-	}
-
-	public static MappedQueryStringView<Value> ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
-		return ValueDao.ofField(put, fieldId, testId, valueStep, step);
-	}
-	
-	public static MappedQueryStringView<Value> ofArray(boolean put, int index, int testId, long valueStep, long step) {
-		return ValueDao.ofArray(put, index, testId, valueStep, step);
-	}
-	
-	public static MappedQueryStringView<Value> object(int testId, long thisId, long step) {
-		return ValueDao.object(testId, thisId, step);
-	}
-	
-	public Value(MiConnection cnn) {
-		super(cnn);
+	public Value(TraceDB db) {
+		super(db);
 	}
 	
 	public Value() {
@@ -119,8 +92,8 @@ public abstract class Value extends ModelBase {
 		public ValueWithChildren() {
 		}
 		
-		public ValueWithChildren(MiConnection cnn) {
-			super(cnn);
+		public ValueWithChildren(TraceDB db) {
+			super(db);
 		}
 		
 		protected NamedValue[] children;
@@ -199,8 +172,8 @@ public abstract class Value extends ModelBase {
 			this.thisId = id;
 		}
 		
-		public ObjectSnapshot(MiConnection cnn, int testId, long id, long step, String typeName) {
-			super(cnn);
+		public ObjectSnapshot(TraceDB db, int testId, long id, long step, String typeName) {
+			super(db);
 			this.testId = testId;
 			this.thisId = id;
 			this.step = step;
@@ -243,13 +216,11 @@ public abstract class Value extends ModelBase {
 		protected NamedValue[] fetchChildren() throws Exception {
 			NamedValue[] c;
 			if (arrayLength == null) {
-				c = select().from(NamedValue.FIELD_VIEW)
-					.where().atStep(testId, thisId, step)
-					.execute(DatabaseConnector.cnn()).asArray();
+				c = db().fieldValues().atStep(testId, thisId, step)
+						.result().asArray(FieldValue.class);
 			} else {
-				c = select().from(NamedValue.ARRAY_ITEM_VIEW)
-					.where().atStep(testId, thisId, step)
-					.execute(DatabaseConnector.cnn()).asArray();
+				c = db().arrayValues().atStep(testId, thisId, step)
+						.result().asArray(ItemValue.class);
 			}
 			for (NamedValue n: c) {
 				n.setOwner(this);
@@ -283,8 +254,8 @@ public abstract class Value extends ModelBase {
 		private long callStep;
 		private long step;
 		
-		public MethodSnapshot(MiConnection cnn, int testId, long callStep, long step) {
-			super(cnn);
+		public MethodSnapshot(TraceDB db, int testId, long callStep, long step) {
+			super(db);
 			this.testId = testId;
 			this.callStep = callStep;
 			this.step = step;
@@ -302,13 +273,12 @@ public abstract class Value extends ModelBase {
 
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			Value thisValue = select()
-					.from(this_inInvocation(testId, callStep, step))
-					.execute(cnn());
-			NamedValue[] c = select()
-					.from(NamedValue.VARIABLE_VIEW)
-					.where().atStep(testId, callStep, step)
-					.execute(cnn()).asArray();
+			Value thisValue = db().values()
+					.this_inInvocation(testId, callStep, step)
+					.result().getFirst();
+			NamedValue[] c = db().variableValues()
+					.atStep(testId, callStep, step)
+					.result().asArray(VariableValue.class);
 			if (!(thisValue instanceof ObjectSnapshot)) {
 				// static method: `this` is null
 				return c;
@@ -344,8 +314,8 @@ public abstract class Value extends ModelBase {
 		private long callStep;
 		private int varId;
 		
-		public VariableHistory(MiConnection cnn, int testId, long callStep, int varId) {
-			super(cnn);
+		public VariableHistory(TraceDB db, int testId, long callStep, int varId) {
+			super(db);
 			this.testId = testId;
 			this.callStep = callStep;
 			this.varId = varId;
@@ -363,13 +333,12 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			VarHistoryQuery qry = 
-					select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-					.where().inCall(testId, callStep);
+			VariableValueDao qry = db().variableValues()
+					.history().inCall(testId, callStep);
 			if (varId > -1) {
-				qry.byId(varId);
+				qry = qry.byId(varId);
 			}
-			return qry.execute(cnn()).asArray();
+			return qry.result().asArray(VariableValue.class);
 		}
 	}
 	
@@ -379,8 +348,8 @@ public abstract class Value extends ModelBase {
 		private long thisId;
 		private int fieldId;
 		
-		public ObjectHistory(MiConnection cnn, int testId, long thisId, int fieldId) {
-			super(cnn);
+		public ObjectHistory(TraceDB db, int testId, long thisId, int fieldId) {
+			super(db);
 			this.testId = testId;
 			this.thisId = thisId;
 			this.fieldId = fieldId;
@@ -398,13 +367,12 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			ObjHistoryQuery qry = 
-					select().from(NamedValue.OBJECT_HISTORY_VIEW)
-					.where().ofObject(testId, thisId);
+			FieldValueDao qry = db().fieldValues()
+					.historyOfObject(testId, thisId);
 			if (fieldId > -1) {
-				qry.byId(fieldId);
+				qry = qry.byId(fieldId);
 			}
-			return qry.execute(cnn()).asArray();
+			return qry.result().asArray(FieldValue.class);
 		}
 	}
 	
@@ -414,8 +382,8 @@ public abstract class Value extends ModelBase {
 		private long thisId;
 		private int index;
 		
-		public ArrayHistory(MiConnection cnn, int testId, long thisId, int index) {
-			super(cnn);
+		public ArrayHistory(TraceDB db, int testId, long thisId, int index) {
+			super(db);
 			this.testId = testId;
 			this.thisId = thisId;
 			this.index = index;
@@ -433,13 +401,12 @@ public abstract class Value extends ModelBase {
 		
 		@Override
 		protected NamedValue[] fetchChildren() throws Exception {
-			ArrayHistoryQuery qry = 
-					select().from(NamedValue.ARRAY_HISTORY_VIEW)
-					.where().ofObject(testId, thisId);
+			ArrayItemDao qry = db().arrayValues()
+					.historyOfObject(testId, thisId);
 			if (index > -1) {
-				qry.byId(index);
+				qry = qry.byId(index);
 			}
-			return qry.execute(cnn()).asArray();
+			return qry.result().asArray(ItemValue.class);
 		}
 	}
 

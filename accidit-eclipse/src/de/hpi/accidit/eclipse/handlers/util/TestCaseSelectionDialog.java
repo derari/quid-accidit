@@ -1,12 +1,11 @@
 package de.hpi.accidit.eclipse.handlers.util;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.cthul.miro.db.MiException;
+import org.cthul.miro.db.MiResultSet;
+import org.cthul.miro.sql.SelectQuery;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ColumnPixelData;
 import org.eclipse.jface.viewers.ColumnWeightData;
@@ -79,43 +78,25 @@ public class TestCaseSelectionDialog extends ElementTreeSelectionDialog {
 //				return null;
 //			}
 			if (testCases == null) {
-				String query = getTestCaseQuery();
-				ResultSet resultSet;
-	
 				try {
-					resultSet = executeQuery(query);
+					MiResultSet resultSet = executeQuery();
 					testCases = buildFromResultSet(resultSet);
-				} catch (SQLException e) {
-					e.printStackTrace();
-					return null;
+				} catch(MiException e) {
+					throw new RuntimeException(e);
 				}
 			}
 			return testCases.toArray();
 		}
 		
-		private String getTestCaseQuery() {
-			StringBuilder query = new StringBuilder();
-			query.append("SELECT `id`, `name` ");
-			query.append("FROM `SCHEMA`.`TestTrace` ");
-			query.append("ORDER BY `id`");
-			return query.toString();
+		private MiResultSet executeQuery() throws MiException {
+			SelectQuery sq = SelectQuery.create(DatabaseConnector.cnn());
+			sq.select().sql("`id`, `name`")
+			  .from().id(DatabaseConnector.getSchema(), "TestTrace")
+			  .orderBy().id("id");
+			return sq.execute();
 		}
 		
-		private ResultSet executeQuery(String query) throws SQLException {
-			ResultSet result = null;
-//			try {
-//				Statement statement = dbConnection.createStatement();
-//				result = statement.executeQuery(preProcessedQuery);
-//				statement.closeOnCompletion();
-				result = DatabaseConnector.cnn().prepare(query).executeQuery(new Object[0]);
-//			} catch (SQLException e) {
-//				System.err.println("Variables not retrievable.");
-//				e.printStackTrace();
-//			}
-			return result;
-		}
-		
-		private List<TestCase> buildFromResultSet(ResultSet resultSet) throws SQLException {
+		private List<TestCase> buildFromResultSet(MiResultSet resultSet) throws MiException {
 			List<TestCase> testCases = new LinkedList<TestCase>();
 			while(resultSet.next()) {
 				TestCase testCase = new TestCase();

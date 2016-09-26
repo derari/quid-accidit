@@ -1,13 +1,24 @@
 package de.hpi.accidit.eclipse.views.util;
 
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
+import java.util.function.BiConsumer;
+
+import org.cthul.miro.function.MiFunction;
+import org.cthul.miro.futures.MiFuture;
 import org.eclipse.swt.widgets.Display;
 
-public abstract class DoInUiThread<T> implements MiFutureAction<MiFuture<? extends T>, Void> {
+public abstract class DoInUiThread<T> implements MiFunction<MiFuture<? extends T>, Void> {
 
 	public static void run(Runnable r) {
 		Display.getDefault().asyncExec(r);
+	}
+	
+	public static <T> DoInUiThread<T> run(BiConsumer<T, ? super Throwable> action) {
+		return new DoInUiThread<T>() {
+			@Override
+			protected void run(T value, Throwable error) {
+				action.accept(value, error);
+			}
+		};
 	}
 	
 	@Override

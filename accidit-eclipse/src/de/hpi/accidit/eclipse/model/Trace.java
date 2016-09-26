@@ -1,15 +1,9 @@
 package de.hpi.accidit.eclipse.model;
 
-import static org.cthul.miro.DSL.*;
-
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.jface.viewers.TreePath;
-import org.eclipse.jface.viewers.TreeSelection;
-
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
-import de.hpi.accidit.eclipse.views.TraceExplorerView;
 
 public class Trace {
 
@@ -22,10 +16,9 @@ public class Trace {
 		this.id = id;
 		this.ui = ui;
 		try {
-			root = select()
-				.from(Invocation.VIEW)
-				.where().rootOfTest(id)
-				.execute(ui.cnn()).asArray();
+			root = ui.db().invocations()
+					.rootOfTest(id)
+					.result().asArray(Invocation.class);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 			root = new TraceElement[0];

@@ -1,11 +1,8 @@
 package de.hpi.accidit.eclipse.history;
 
-import static org.cthul.miro.DSL.select;
-
 import java.util.LinkedList;
 import java.util.List;
 
-import org.cthul.miro.MiConnection;
 import org.eclipse.jface.layout.TreeColumnLayout;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ColumnWeightData;
@@ -49,6 +46,7 @@ import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.Variable;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider;
 import de.hpi.accidit.eclipse.views.provider.ThreadsafeContentProvider.NamedValueNode;
 import de.hpi.accidit.eclipse.views.provider.VariablesLabelProvider;
@@ -187,9 +185,11 @@ public class HistoryContainer {
 	public void updateFromStep(int currentTestId, long currentCallStep) {
 		this.source = new MethodCallSource(currentTestId, currentCallStep);
 		
-		NamedEntity[] options = select().from(Variable.VIEW)
-				.inCall(currentTestId, currentCallStep).orderById()
-				._execute(DatabaseConnector.cnn())._asArray();
+		NamedEntity[] options = TraceNavigatorUI.getGlobal()
+				.db().variables()
+					.inCall(currentTestId, currentCallStep)
+					.orderById()
+				.result()._asArray(Variable.class);
 		setComboViewerOptions(options);
 		setComboViewerSelection(-1);
 		
@@ -209,17 +209,17 @@ public class HistoryContainer {
 		
 		if (namedValue instanceof NamedValue.VariableValue) {
 			src = new MethodCallSource(currentTestId, currentCallStep);
-			options = select().from(Variable.VIEW)
-					.inCall(currentTestId, currentCallStep).orderById()
-					._execute(DatabaseConnector.cnn())._asArray();
+			options = TraceNavigatorUI.getGlobal()
+					.db().variables().inCall(currentTestId, currentCallStep).orderById()
+					.result()._asArray(Variable.class);
 		} else if (namedValue instanceof NamedValue.FieldValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
 			
 			src = new ObjectSource(currentTestId, thisId, false);
-			options = select().from(Field.VIEW)
-					.ofObject(currentTestId, thisId).orderById()
-					._execute(DatabaseConnector.cnn())._asArray();
+			options = TraceNavigatorUI.getGlobal()
+					.db().fields().ofObject(currentTestId, thisId).orderById()
+					.result()._asArray(Field.class);
 		} else if (namedValue instanceof NamedValue.ItemValue) {
 			ObjectSnapshot owner = (ObjectSnapshot) namedValue.getOwner();
 			long thisId = owner.getThisId();
@@ -280,16 +280,14 @@ public class HistoryContainer {
 		if (source == null) return;
 		
 		final long step = currentStep;
-		source.getTitle(DatabaseConnector.cnn(), step).onComplete(new DoInUiThread<String>() {
-			@Override
-			protected void run(String value, Throwable error) {
+		source.getTitle(DatabaseConnector.getTraceDB(), step)
+			.andDo(DoInUiThread.run((value, error) -> {
 				if (step != currentStep) return;
 				if (error != null) error.printStackTrace(System.err);
 				String title = "History of " + (value != null ? value : error);
 				titleLabel.setText(title);
 				titleLabel.getParent().layout();
-			}
-		});
+			}));
 	}
 	
 	private Image getImage(NamedValueNode node) {
@@ -423,17 +421,17 @@ public class HistoryContainer {
 			super(viewer);
 		}
 		
-		public void showVariables(long testId, long callStep, long variableId) {
-			MiConnection cnn = DatabaseConnector.cnn();
-			setValue(new NamedValue.VariableHistory(cnn, (int) testId, callStep, (int) variableId));
+		public void showVariables(int testId, long callStep, int variableId) {
+			TraceDB db = DatabaseConnector.getTraceDB();
+			setValue(new NamedValue.VariableHistory(db, testId, callStep, variableId));
 		}
 		
-		public void showFields(long testId, long callStep, long thisId, boolean isArray) {
-			MiConnection cnn = DatabaseConnector.cnn();
+		public void showFields(int testId, long callStep, int thisId, boolean isArray) {
+			TraceDB db = DatabaseConnector.getTraceDB();
 			if (isArray) {
-				setValue(new NamedValue.ArrayHistory(cnn, (int) testId, callStep, (int) thisId));
+				setValue(new NamedValue.ArrayHistory(db, testId, callStep, thisId));
 			} else {
-				setValue(new NamedValue.ObjectHistory(cnn, (int) testId, callStep, (int) thisId));
+				setValue(new NamedValue.ObjectHistory(db, testId, callStep, thisId));
 			}
 		}
 	}

@@ -152,18 +152,18 @@ public class NavigatorView extends ViewPart implements AcciditView {
 			currentCall = te.getCallStep();
 			if (te.parent != null) {
 				sideEffects = new SideEffects(
-						TraceNavigatorUI.getGlobal().cnn(), 
+						TraceNavigatorUI.getGlobal().db(), 
 						te.getTestId(), te.parent.getStep(), te.parent.exitStep);
 			} else if (te instanceof Invocation) {
 				Invocation root = (Invocation) te;
 				sideEffects = new SideEffects(
-						TraceNavigatorUI.getGlobal().cnn(), 
+						TraceNavigatorUI.getGlobal().db(), 
 						te.getTestId(), root.getStep(), root.exitStep,
 						root.getStep(), root.exitStep);
 			} else {
 				currentCall = -1;
 				sideEffects = new SideEffects(
-						TraceNavigatorUI.getGlobal().cnn(), 
+						TraceNavigatorUI.getGlobal().db(), 
 						te.getTestId(), 0, 0, 0, 0);
 			}
 		}

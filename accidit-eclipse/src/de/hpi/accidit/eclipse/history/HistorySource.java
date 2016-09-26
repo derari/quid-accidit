@@ -1,51 +1,50 @@
 package de.hpi.accidit.eclipse.history;
 
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.MiFuture;
-import org.cthul.miro.MiFutureAction;
-import org.cthul.miro.util.FinalFuture;
-import static org.cthul.miro.DSL.*;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.futures.MiFuture;
+import org.cthul.miro.futures.MiFutures;
 
 import de.hpi.accidit.eclipse.history.HistoryContainer.HistoryNode;
 import de.hpi.accidit.eclipse.model.Value;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public abstract class HistorySource {
 
 	public abstract void show(HistoryNode content, long id);
 
-	public abstract MiFuture<String> getTitle(MiConnection cnn, long step);
+	public abstract MiFuture<String> getTitle(TraceDB db, long step);
 
 	/* Implementations */
 	
 	public static class MethodCallSource extends HistorySource {
 
-		private final long testId;
+		private final int testId;
 		private final long callStep;
 
-		public MethodCallSource(long testId, long callStep) {
+		public MethodCallSource(int testId, long callStep) {
 			this.testId = testId;
 			this.callStep = callStep;
 		}
 
 		@Override
 		public void show(HistoryNode content, long id) {
-			content.showVariables(testId, callStep, id);
+			content.showVariables(testId, callStep, (int) id);
 		}
 
 		@Override
-		public MiFuture<String> getTitle(MiConnection cnn, long step) {
+		public MiFuture<String> getTitle(TraceDB db, long step) {
 			String s = String.valueOf("#" + callStep);
-			return new FinalFuture<String>(s);
+			return MiFutures.value(s);
 		}
 	}
 
 	public static class ObjectSource extends HistorySource {
 
-		private final long testId;
+		private final int testId;
 		private final long thisId;
 		private final boolean isArray;
 
-		public ObjectSource(long testId, long thisId, boolean isArray) {
+		public ObjectSource(int testId, long thisId, boolean isArray) {
 			this.testId = testId;
 			this.thisId = thisId;
 			this.isArray = isArray;
@@ -53,21 +52,18 @@ public abstract class HistorySource {
 
 		@Override
 		public void show(HistoryNode content, long id) {
-			content.showFields(testId, thisId, id, isArray);
+			content.showFields(testId, thisId, (int) id, isArray);
 		}
 
 		@Override
-		public MiFuture<String> getTitle(MiConnection cnn, long step) {
-			return select().from(Value.object((int) testId, thisId, step))
-					.submit(cnn).onComplete(new MiFutureAction<MiFuture<Value>, String>() {
-						@Override
-						public String call(MiFuture<Value> arg) throws Exception {
-							if (arg.hasFailed()) {
-								arg.getException().printStackTrace(System.err);
-								return arg.getException().getMessage();
-							}
-							return arg.getResult().getLongString();
+		public MiFuture<String> getTitle(TraceDB db, long step) {
+			return db.values().ofObject((int) testId, thisId, step)
+					.result().andDo(f -> {
+						if (f.hasFailed()) {
+							f.getException().printStackTrace(System.err);
+							return f.getException().getMessage();
 						}
+						return f.getResult().getSingle().getLongString();
 					});
 		}
 	}

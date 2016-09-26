@@ -1,7 +1,5 @@
 package de.hpi.accidit.eclipse.model;
 
-import static org.cthul.miro.DSL.select;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,11 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.cthul.miro.MiConnection;
-
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
-import de.hpi.accidit.eclipse.model.db.ObjectOccurranceDao;
-import de.hpi.accidit.eclipse.model.db.SideEffectsDao;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public class SideEffects extends Value.ValueWithChildren {
 
@@ -23,8 +18,8 @@ public class SideEffects extends Value.ValueWithChildren {
 	private final long targetStart;
 	private final long targetEnd;
 	
-	public SideEffects(MiConnection cnn, int testId, long start, long end) {
-		super(cnn);
+	public SideEffects(TraceDB db, int testId, long start, long end) {
+		super(db);
 		this.testId = testId;
 		this.captureStart = start;
 		this.captureEnd = end;
@@ -32,8 +27,8 @@ public class SideEffects extends Value.ValueWithChildren {
 		this.targetEnd = Long.MAX_VALUE;
 	}
 
-	public SideEffects(MiConnection cnn, int testId, long captureStart, long captureEnd, long targetStart, long targetEnd) {
-		super(cnn);
+	public SideEffects(TraceDB db, int testId, long captureStart, long captureEnd, long targetStart, long targetEnd) {
+		super(db);
 		this.testId = testId;
 		this.captureStart = captureStart;
 		this.captureEnd = captureEnd;
@@ -54,12 +49,11 @@ public class SideEffects extends Value.ValueWithChildren {
 	@Override
 	protected NamedValue[] fetchChildren() throws Exception {
 		Map<Long, InstanceEffects> instances = new HashMap<>();
-		List<FieldEffect> fields = select()
-			.from(SideEffectsDao.FIELDS)
+		List<FieldEffect> fields = db().sideEffects()
 			.inTest(testId)
 			.captureBetween(captureStart, captureEnd)
 			.targetBetween(targetStart, targetEnd)
-			._execute(cnn()).asList();
+			.result().asList();
 		for (FieldEffect fe: fields) {
 			long thisId = fe.getThisId();
 			InstanceEffects inst = instances.get(thisId);
@@ -69,10 +63,7 @@ public class SideEffects extends Value.ValueWithChildren {
 			}
 			inst.events.add(fe);
 		}
-//			select().from(ObjectOccurranceDao.OBJECTS)
-//			.inTest(testId)
-//			.beforeStep(captureEnd);
-//		
+
 		System.out.println(instances.size() + " instances with SEs");
 		Set<NamedValue> children = new TreeSet<>();
 		children.addAll(instances.values());
@@ -92,8 +83,9 @@ public class SideEffects extends Value.ValueWithChildren {
 		
 		private Value getObject() {
 			if (object == null) {
-				object = Value.object(SideEffects.this.testId, thisId, SideEffects.this.captureEnd)
-						.select()._execute(SideEffects.this.cnn());
+				object = db().values()
+						.ofObject(SideEffects.this.testId, thisId, SideEffects.this.captureEnd)
+						.result()._getSingle();
 			}
 			return object;
 		}

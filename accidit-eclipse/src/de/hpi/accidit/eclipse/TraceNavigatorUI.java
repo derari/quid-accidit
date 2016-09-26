@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
 
-import org.cthul.miro.MiConnection;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
@@ -18,6 +17,7 @@ import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
+import de.hpi.accidit.eclipse.model.db.TraceDB;
 import de.hpi.accidit.eclipse.slice.SliceAPI;
 import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
 import de.hpi.accidit.eclipse.views.AcciditView;
@@ -151,8 +151,8 @@ public class TraceNavigatorUI {
 //		return slicingCriteriaView;
 	}
 	
-	public MiConnection cnn() {
-		return DatabaseConnector.getValidOConnection();
+	public TraceDB db() {
+		return DatabaseConnector.getTraceDB();
 	}
 	
 //	public void refresh() {

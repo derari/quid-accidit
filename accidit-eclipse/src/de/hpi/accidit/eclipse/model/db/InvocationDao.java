@@ -1,124 +1,106 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import org.cthul.miro.at.Impl;
-import org.cthul.miro.at.More;
-import org.cthul.miro.at.OrderBy;
-import org.cthul.miro.at.Put;
-import org.cthul.miro.at.Require;
-import org.cthul.miro.at.Where;
-import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
-import org.cthul.miro.map.MappedInternalQueryBuilder;
-import org.cthul.miro.map.MappedTemplateProvider;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.util.CfgSetField;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.impl.SnippetTemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.MappedSqlBuilder;
+import org.cthul.miro.sql.set.MappedSqlSchema;
 
 import de.hpi.accidit.eclipse.model.Invocation;
 
-public class InvocationDao extends TraceElementDaoBase {
+public class InvocationDao extends TraceElementDaoBase<Invocation, InvocationDao> {
 	
-	private static final Mapping<Invocation> MAPPING = new ReflectiveMapping<Invocation>(Invocation.class) {
-		protected void injectField(Invocation record, String field, java.sql.ResultSet rs, int i) throws java.sql.SQLException {
-			if (field.equals("returned")) {
-				injectField(record, field, rs.getInt(i) == 1);
-				return;
-			}
-			if (field.equals("exitLine")) {
-				injectField(record, field, rs.getInt(i));
-				return;
-			}
-			super.injectField(record, field, rs, i);
-		};
-	};
-	
-	private static final MappedTemplateProvider<Invocation> TEMPLATE = new MappedDataQueryTemplateProvider<Invocation>(MAPPING){{
-		attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`, e.`thisId`",
-				"x.`line` AS `exitLine`", 
-				"m.`name` AS `method`, t.`name` AS `type`");
-		select("COALESCE(e.`parentStep`,-1) AS `callStep`");
-		optionalAttributes("m.`signature` AS `signature`, m.`id` AS `methodId`");
-		internalSelect("e.`line` AS `callLine`");
-		using("x")
-			.select("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`");
-		internalSelect("e.`parentStep`");
-		table("`CallTrace` e");
-		join("LEFT OUTER JOIN `ExitTrace` x ON e.`testId` = x.`testId` AND e.`exitStep` = x.`step`");
-		join("`Method` m ON e.`methodId` = m.`id`");
-		using("m")
-			.join("`Type` t ON m.`declaringTypeId` = t.`id`");
-		
-		where("step_BETWEEN", "e.`step` > ? AND e.`step` < ?");
-		where("exit_GT", "e.`exitStep` > ?");
-	}};
-	
-	public static final ViewR<Query> VIEW = Views.build(TEMPLATE).r(Query.class).build();
-	
-	@Impl(QueryImpl.class)
-	public static interface Query extends TraceElementDaoBase.Query<Invocation, Query> {
-		
-		Query inInvocation(Invocation inv);
-		
-		Query parentOf(Invocation inv);
-		
-		Query rootOfTest(int i);
-		
-		@Put("testId =")
-		Query inTest(int i);
-		
-		@Put("parentStep =")
-		Query inCall(long parentStep);
-		
-		@Put("step =")
-		Query atStep(long step);
-		
-		@Put("methodId =")
-		Query ofMethod(int id);
-		
-		@Require({"m", "t"})
-		@Where("t.`name` = ? AND m.`name` = ? AND m.`signature` = ?")
-		Query ofMethod(String clazz, String name, String signature);
-		
-		@Require({"m"})
-		@Where("m.`name` = ? AND m.`signature` = ?")
-		Query ofMethod(String name, String signature);
-		
-		@Put("exitStep =")
-		Query atExitStep(long step);
-		
-		@Where("e.`exitStep` < ?")
-		@Put(value="orderBy-exitStep DESC", mapArgs={})
-		Query beforeExit(long exitStep);
-		
-		@Put("callLine =")
-		Query callInLine(int line);
+	public static void init(MappedSqlSchema schema) {
+		MappedSqlBuilder<?,?> sql = schema.getMappingBuilder(Invocation.class);
+		TraceElementDaoBase.init(sql);
+		sql
+			.attributes("e.`testId`, e.`depth`, e.`step`, e.`exitStep`, e.`thisId`")
+//			.attributes("x.`line` AS `exitLine`")
+			.attributes("m.`name` AS `method`, m.`id` AS `methodId`, m.`signature`, t.`name` AS `type`")
+			.using("e").attribute("COALESCE(e.`parentStep`,-1) AS `callStep`")
+			.using("x").attributes("COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`")
+			.from("`CallTrace` e")
+			.join("LEFT `ExitTrace` x ON e.`testId` = x.`testId` AND e.`exitStep` = x.`step`")
+			.join("`Method` m ON e.`methodId` = m.`id`")
+			.using("m").join("`Type` t ON m.`declaringTypeId` = t.`id`");
 	}
 	
-	static class QueryImpl {
-		
-		public static void inInvocation(MappedInternalQueryBuilder query, Invocation inv) {
-			query.configure(CfgSetField.newInstance("parent", inv));
-			query.put("testId =", inv.getTestId());
-			//query.put("depth =", inv.depth+1);
-			query.put("parentStep =", inv.getStep());
-			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
-			query.put("orderBy-step");
-		}
-		
-		public static void parentOf(MappedInternalQueryBuilder query, Invocation inv) {
-			query.put("testId =", inv.getTestId());
-//			query.put("depth =", inv.depth-1);
-			query.put("step =", inv.getCallStep());
-//			query.put("exit_GT", inv.getStep());
-			//query.put("step_BETWEEN", inv.getStep(), inv.exitStep);
-//			query.put("orderBy-step");
-		}
-		
-		public static void rootOfTest(MappedInternalQueryBuilder query, int testId) {
-			query.put("testId =", testId);
-			query.put("depth =", 0);
-		}
+	protected InvocationDao(InvocationDao source) {
+		super(source);
 	}
 
+	public InvocationDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Invocation.class));
+	}
+	
+	@Override
+	protected void initializeSnippetLayer(SnippetTemplateLayer<MappedQuery<Invocation, SelectQuery>> snippetLayer) {
+		super.initializeSnippetLayer(snippetLayer);
+//		snippetLayer.setUp("callStep_EQ", (qry, a) -> 
+//				qry.getStatement().where().sql("e.`parentStep` = ?", a));
+//		snippetLayer.setUp("step_BETWEEN", (qry, a) -> 
+//				qry.getStatement().where().sql("e.`step` > ? AND e.`step` < ?", a));
+//		snippetLayer.setUp("exit_GT", (qry, a) -> 
+//				qry.getStatement().where().sql("e.`exitStep` > ?", a));
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		setUp(MappingKey.FETCH, 
+				"callStep", "depth", "thisId", 
+				"exitStep","exitLine", "returned", 
+				"method", "methodId", "signature", "type");
+//		sql(sql -> sql
+//				.select().sql("e.`testId`, e.`depth`, e.`step`, e.`exitStep`, e.`thisId`, " +
+//						"x.`line` AS `exitLine`, " + 
+//						"m.`name` AS `method`, t.`name` AS `type`, " +
+//						"COALESCE(e.`parentStep`,-1) AS `callStep`, " +
+//						"COALESCE(x.`returned`, 0) AS `returned`, COALESCE(x.`line`, -1) AS `exitLine`")
+//				.leftJoin().id(schema, "ExitTrace").sql(" x ON e.`testId` = x.`testId` AND e.`exitStep` = x.`step`")
+//				.join().id(schema, "Method").sql(" m ON e.`methodId` = m.`id`")
+//				.join().id(schema, "Type").sql(" t ON m.`declaringTypeId` = t.`id`"));
+	}
+	
+	public InvocationDao rootOfTest(int testId) {
+		return setUp(MappingKey.PROPERTY_FILTER, "testId", testId, "depth", 0);
+	}
+	
+	public InvocationDao inTest(int testId) {
+		return setUp(MappingKey.PROPERTY_FILTER, "testId", testId);
+	}
+	
+	public InvocationDao atStep(long step) {
+		return setUp(MappingKey.PROPERTY_FILTER, "step", step);
+	}
+	
+	public InvocationDao atExitStep(long exitStep) {
+		return setUp(MappingKey.PROPERTY_FILTER, "exitStep", exitStep);
+	}
+	
+	public InvocationDao beforeExit(long exitStep) {
+		return sql(sql -> sql
+				.where().sql("e.`exitStep` < ?", exitStep)
+				.orderBy().sql("e.`exitStep` DESC"));
+	}
+	
+	public InvocationDao inCall(long parentStep) {
+		return setUp(MappingKey.PROPERTY_FILTER, "callStep", parentStep);
+	}
+	
+	public InvocationDao ofMethod(int id) {
+		return sql(sql -> sql
+				.where().sql("e.`methodId` = ?", id));
+	}
+	
+	public InvocationDao ofMethod(String name, String signature) {
+		return compose(c -> c.require("m"))
+				.sql(sql -> sql
+						.where().sql("m.`name` = ? AND m.`signature` = ?", name, signature));
+	}
+	public InvocationDao parentOf(Invocation inv) {
+		return setUp(MappingKey.PROPERTY_FILTER, "testId", inv.getTestId(), "step", inv.getCallStep());
+	}
 }

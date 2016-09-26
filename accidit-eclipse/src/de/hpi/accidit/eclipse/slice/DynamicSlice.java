@@ -1,6 +1,6 @@
 package de.hpi.accidit.eclipse.slice;
 
-import static de.hpi.accidit.eclipse.DatabaseConnector.cnn;
+import static de.hpi.accidit.eclipse.DatabaseConnector.getTraceDB;
 
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -14,15 +14,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-
-import org.cthul.miro.DSL;
 
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.NamedValue;
@@ -32,7 +28,6 @@ import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
 import de.hpi.accidit.eclipse.slice.CodeDependency.CVDependency;
 import de.hpi.accidit.eclipse.slice.CodeDependency.TriDependency;
 import de.hpi.accidit.eclipse.slice.CodeDependency.ValueDependency;
-import de.hpi.accidit.eclipse.slice.DynamicSlice.DependencySet;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationAndArgsKey;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationArgKey;
 import de.hpi.accidit.eclipse.slice.EventKey.InvocationKey;
@@ -357,10 +352,9 @@ public class DynamicSlice {
 	
 	private Map<String, List<VariableValue>> fetchVariableHistories(Invocation inv) {
 		Map<String, List<VariableValue>> variables = new HashMap<>();
-		List<VariableValue> list = DSL
-					.select().from(NamedValue.VARIABLE_HISTORY_VIEW)
-					.inCall(inv.getTestId(), inv.getStep())
-				._execute(cnn())._asList();
+		List<VariableValue> list = getTraceDB().variableValues()
+				.history().inCall(inv.getTestId(), inv.getStep())
+				.result()._asList();
 		for (VariableValue vv: list) {
 			List<VariableValue> history = variables.get(vv.getName());
 			if (history == null) {
@@ -401,10 +395,9 @@ public class DynamicSlice {
 	}
 	
 	private List<ItemValue> fetchAryElementHistories(Invocation inv) {
-		List<ItemValue> items = DSL
-				.select().from(NamedValue.ARRAY_GET_HISTORY_VIEW)
-				.inCall(inv.getTestId(), inv.getStep())
-			._execute(cnn())._asList();
+		List<ItemValue> items = getTraceDB().arrayValues()
+				.readInCall(inv.getTestId(), inv.getStep())
+				.result()._asList();
 		return items;
 	}
 	
@@ -439,11 +432,9 @@ public class DynamicSlice {
 	}
 	
 	private List<FieldValue> fetchFieldHistories(Invocation inv) {
-		List<FieldValue> items = DSL
-				.select().from(NamedValue.OBJECT_GET_HISTORY_VIEW)
-				.inCall(inv.getTestId(), inv.getStep())
-			._execute(cnn())._asList();
-		return items;
+		return getTraceDB().fieldValues()
+				.readsInInvocation(inv.getTestId(), inv.getStep())
+				.result()._asList();
 	}
 	
 	private boolean collectInvocation(DependencySet bag, EventKey key, CodeDependency.InvocationResult iv) {
@@ -506,7 +497,8 @@ public class DynamicSlice {
 				}
 			} catch (RuntimeException ex) {
 				System.err.println(ex.getClass() + " " + ex.getMessage());
-				System.err.println(ex.getStackTrace()[0]);
+//				System.err.println(ex.getStackTrace()[0]);
+				ex.printStackTrace(System.err);
 			}
 			if (key instanceof InvocationKey) {
 				if (n.dependencyFlags != REACH) {

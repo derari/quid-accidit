@@ -1,23 +1,15 @@
 package de.hpi.accidit.eclipse.model;
 
-import static org.cthul.miro.DSL.select;
-
-import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.cthul.miro.view.ViewR;
-
-import de.hpi.accidit.eclipse.model.db.InvocationDao;
-import de.hpi.accidit.eclipse.model.db.InvocationDao.Query;
 import de.hpi.accidit.eclipse.model.db.TraceElementDaoBase;
 
 public class Invocation extends TraceElement {
-	
-	public static final ViewR<Query> VIEW = InvocationDao.VIEW;
 
 	public Long thisId;
 	
@@ -57,22 +49,27 @@ public class Invocation extends TraceElement {
 		return children;
 	}
 	
-	private <T extends TraceElement, Q extends TraceElementDaoBase.Query<T, Q>> List<T> selectEvents(ViewR<Q> view) throws SQLException {
-		return select("line", "step").from(view)
-				.where().inInvocation(this)
-				.orderBy().step_asc()
-				.execute(cnn()).asList();
+	private <T extends TraceElement, Dao extends TraceElementDaoBase<T, Dao>> List<T> selectEvents(Dao dao) {
+		try {
+			return dao.inInvocation(this)
+					.orderByStep()
+					.result().asList();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return Collections.emptyList();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	@Override
 	protected void lazyInitialize() throws Exception {
-		List<Invocation> calls = select().from(VIEW)
-				.where().inInvocation(Invocation.this)
-				.execute(cnn()).asList();
-		List<ExceptionEvent> catchs = selectEvents(ExceptionEvent.CATCH_VIEW);
-		List<ExceptionEvent> thrown = selectEvents(ExceptionEvent.THROW_VIEW);
-		List<FieldEvent> fields = selectEvents(FieldEvent.PUT_VIEW);
-		List<VariableEvent> vars = selectEvents(VariableEvent.PUT_VIEW);
+		List<Invocation> calls = selectEvents(db().invocations());
+		
+		List<ExceptionEvent> catchs = selectEvents(db().catchEvents());
+		List<ExceptionEvent> thrown = selectEvents(db().throwEvents());
+		List<FieldEvent> fields = selectEvents(db().fieldEvents());
+		List<VariableEvent> vars = selectEvents(db().variableEvents());
 		
 		SortedSet<TraceElement> major = new TreeSet<>();
 		major.addAll(calls);
@@ -117,8 +114,9 @@ public class Invocation extends TraceElement {
 
 	public Method quickGetMethod() {
 		if (methodObject == null) {
-			methodObject = Method.VIEW.select()
-					.byId(methodId)._execute(cnn())._getSingle();
+			methodObject = db().methods().
+					byId(methodId)
+					.result()._getSingle();
 		}
 		return methodObject;
 	}

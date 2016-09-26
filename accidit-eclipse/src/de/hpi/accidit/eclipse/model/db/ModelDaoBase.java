@@ -1,59 +1,67 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.lang.reflect.Field;
 
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.at.Always;
-import org.cthul.miro.at.Config;
-import org.cthul.miro.map.ConfigurationProvider;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.result.EntityConfiguration;
-import org.cthul.miro.result.EntityInitializer;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.db.MiException;
+import org.cthul.miro.entity.EntityInitializer;
+import org.cthul.miro.graph.TypeBuilder;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.map.layer.MappedQuery;
+import org.cthul.miro.request.template.TemplateLayer;
+import org.cthul.miro.sql.SelectQuery;
+import org.cthul.miro.sql.set.SqlEntitySet;
+import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.ModelBase;
 
-public class ModelDaoBase {
+public abstract class ModelDaoBase<Entity extends ModelBase, This extends ModelDaoBase<Entity, This>> extends SqlEntitySet<Entity, This> {
 	
-	public static final ConfigurationProvider<ModelBase> SET_CONNECTION = new ConfigurationProvider<ModelBase>() {
-		@Override
-		public <E extends ModelBase> EntityConfiguration<? super E> getConfiguration(MiConnection cnn, Mapping<E> mapping, Object[] args) {
-			return new SetMiConnection<>(cnn, mapping);
-		}
-	};
-	
-	private static class SetMiConnection<E extends ModelBase> implements EntityConfiguration<E>, EntityInitializer<E> {
-		
-		private final MiConnection cnn;
-		private final Mapping<E> mapping;
-
-		public SetMiConnection(MiConnection cnn, Mapping<E> mapping) {
-			this.cnn = cnn;
-			this.mapping = mapping;
-		}
-
-		@Override
-		public void apply(E entity) throws SQLException {
-			mapping.setField(entity, "cnn", cnn);
-		}
-
-		@Override
-		public void complete() throws SQLException { }
-
-		@Override
-		public void close() throws SQLException { }
-
-		@Override
-		public EntityInitializer<E> newInitializer(ResultSet rs) throws SQLException {
-			return this;
-		}
+	protected static void init(TypeBuilder<?,?,?> t) {
+		t.as("db").optional("-no-column-").field("db");
 	}
 	
-	@Always(
-	config = @Config(impl=ModelDaoBase.class,factory="SET_CONNECTION")		
-	)
-	public static interface Query {
-		
+	public ModelDaoBase(MiConnection cnn, TemplateLayer<MappedQuery<Entity, SelectQuery>> queryLayer) {
+		super(cnn, queryLayer);
+	}
+
+	protected ModelDaoBase(ModelDaoBase<Entity, This> source) {
+		super(source);
 	}
 	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		TraceDB db = DatabaseConnector.getTraceDB();
+		setUp(MappingKey.SET, sf -> sf.set("db", db));
+	}
+	
+	protected static <E> EntityInitializer<E> injectField(String field, Object value) {
+		return injectField(Object.class, field, value);
+	}
+	
+	protected static <E> EntityInitializer<E> injectField(Class<?> filter, String field, Object value) {
+		return e -> {
+			if (!filter.isInstance(e)) return;
+			Class<?> c = e.getClass();
+			Field f = null;
+			while (f == null && c != null) {
+				try {
+					f = c.getDeclaredField(field);
+				} catch (NoSuchFieldException ex) {
+					c = c.getSuperclass();
+				}
+			}
+			if (f == null) {
+				throw new IllegalArgumentException(e.getClass().getSimpleName() + "." + field);
+			}
+			try {
+				f.setAccessible(true);
+				f.set(e, value);
+			} catch (ReflectiveOperationException ex) {
+				throw new MiException(ex);
+			}
+		};
+	}
 }

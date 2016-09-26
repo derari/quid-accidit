@@ -1,97 +1,124 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import org.cthul.miro.db.MiConnection;
+import org.cthul.miro.entity.EntityConfiguration;
+import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.sql.set.MappedSqlSchema;
 
-import org.cthul.miro.MiConnection;
-import org.cthul.miro.dml.AbstractMappedSelect;
-import org.cthul.miro.dml.MappedDataQueryTemplateProvider;
-import org.cthul.miro.map.MappedTemplateProvider;
-import org.cthul.miro.map.Mapping;
-import org.cthul.miro.map.ReflectiveMapping;
-import org.cthul.miro.result.Results;
-import org.cthul.miro.util.CfgSetField;
-import org.cthul.miro.view.ViewR;
-import org.cthul.miro.view.Views;
-
-import de.hpi.accidit.eclipse.model.FieldEvent;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.SideEffects.FieldEffect;
 
-public class SideEffectsDao extends ModelDaoBase {
+public class SideEffectsDao extends ModelDaoBase<FieldEffect, SideEffectsDao> {
 	
-	private static final SimpleEntityConfig<FieldEffect> FIELD_EFFECT_READS = new SimpleEntityConfig<FieldEffect>() {
-		@Override
-		protected void apply(ResultSet rs, FieldEffect fe) throws SQLException {
-			int iThis = getFieldIndex(rs, "thisId");
-			int iField = getFieldIndex(rs, "id");
-			int iStep = getFieldIndex(rs, "nextGetStep");
+	protected static void init(MappedSqlSchema schema) {
+		ModelDaoBase.init(schema.getMappingBuilder(FieldEffect.class));
+	}
+	
+	private int testId = -1;
+	
+	protected SideEffectsDao(SideEffectsDao source) {
+		super(source);
+		this.testId = source.testId;
+	}
+
+	public SideEffectsDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(FieldEffect.class));
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
+		sql(sql -> sql
+				.select().sql("sideEffect.`step` AS `valueStep`, sideEffect.`thisId`, f.`id`, f.`name`, nextRead.`step` AS `nextGetStep`")
+				.from().id("Field").ql(" f")
+				.groupBy().sql("sideEffect.`step`, sideEffect.`thisId`, sideEffect.`fieldId`, nextRead.`step`"));
+		setUp(MappingKey.SET, sf -> sf.set("valueIsPut", true));
+		configureWith(FIELD_EFFECT_READS);
+	}
+
+	public SideEffectsDao inTest(int testId) {
+		return doSafe(me -> me.testId = testId)
+				.setUp(MappingKey.SET, sf -> sf.set("testId", testId));
+	}
+
+	public SideEffectsDao captureBetween(long start, long end) {
+		return sql(sql -> sql
+				.join().sql("(SELECT MAX(`step`) AS `step`, `thisId`, `fieldId` " +
+					"FROM `PutTrace` WHERE `testId` = ? AND `step` BETWEEN ? AND ? " + // testId, capStart, capEnd 
+					"GROUP BY `thisId`, `fieldId`) sideEffect ON f.`id` = sideEffect.`fieldId`", testId, start, end));
+	}
+
+	public SideEffectsDao targetBetween(long start, long end) {
+		return sql(sql -> sql
+				.leftJoin().sql(
+						"`PutTrace` nextChange ON nextChange.`testId` = ? AND nextChange.`step` > sideEffect.`step` AND nextChange.`step` <= ? " + // testId, tgtEnd
+						"AND nextChange.`thisId` = sideEffect.`thisId` AND nextChange.`fieldId` = sideEffect.`fieldId` ", testId, end)
+				.join().sql(
+						"`GetTrace` nextRead ON nextRead.`testId` = ? AND nextRead.`thisId` = sideEffect.`thisId` AND nextRead.`fieldId` = sideEffect.`fieldId` " + //testId
+						"AND nextRead.`step` > sideEffect.`step` AND nextRead.`step` > ? ", start) // tgtStart
+				.having().sql("nextRead.`step` < COALESCE(MIN(nextChange.step), ?);", end)); // tgtEnd
+	}
+	
+	private static final EntityConfiguration<FieldEffect> FIELD_EFFECT_READS = (rs, b) -> {
+		int iThis = rs.findColumn("thisId");
+		int iField = rs.findColumn("id");
+		int iStep = rs.findColumn("nextGetStep");
+		b.addInitializer(fe -> {
 			rs.previous();
 			while (rs.next() 
 					&& rs.getLong(iThis) == fe.getThisId() 
 					&& rs.getInt(iField) == fe.getFieldId() ) {
-				
 				FieldValue read = new FieldValue(fe.getTestId(), fe.getFieldId(), rs.getLong(iStep), false, fe.getName());
 				fe.addRead(read);
 			}
 			rs.previous();
-		}
+		});
 	};
 	
-	private static final Mapping<FieldEffect> FIELD_EFFECT_MAPPING = new ReflectiveMapping<>(FieldEffect.class);
-	
-	public static final ViewR<FieldSE> FIELDS = Views.build().r(FieldSE.class);
-	
-	public static class FieldSE {
+//	private static final Mapping<FieldEffect> FIELD_EFFECT_MAPPING = new ReflectiveMapping<>(FieldEffect.class);
+//	
+//	public static final ViewR<FieldSE> FIELDS = Views.build().r(FieldSE.class);
+//	
+//	public static class FieldSE {
+//
+//		private int testId = -1;
+//		private long capStart = -1;
+//		private long capEnd = -1;
+//		private long tgtStart = -1;
+//		private long tgtEnd = -1;
+//		
+//		public FieldSE(String[] fields) {
+//		}
+//		
+//		public FieldSE inTest(int testId) {
+//			this.testId = testId;
+//			return this;
+//		}
+//		
+//		public FieldSE captureBetween(long start, long end) {
+//			capStart = start;
+//			capEnd = end;
+//			return this;
+//		}
+//		
+//		public FieldSE targetBetween(long start, long end) {
+//			tgtStart = start;
+//			tgtEnd = end;
+//			return this;
+//		}
+//		
+//		public Results<FieldEffect> _execute(MiConnection cnn) {
+//			return Views.query(FIELD_EFFECT_MAPPING, FIELD_EFFECT_QUERY, 
+//					testId, capStart, capEnd,
+//					testId, tgtEnd,
+//					testId, tgtStart, tgtEnd)
+//				.configure(CfgSetField.newInstance("testId", testId))
+//				.configure(CfgSetField.newInstance("valueIsPut", true))
+//				.configure(FIELD_EFFECT_READS)
+//				.select("valueStep", "thisId", "id", "name", "nextGetStep")._execute(cnn);
+//		}
+//	}
+//	
+//	private static final String FIELD_EFFECT_QUERY = 
 
-		private int testId = -1;
-		private long capStart = -1;
-		private long capEnd = -1;
-		private long tgtStart = -1;
-		private long tgtEnd = -1;
-		
-		public FieldSE(String[] fields) {
-		}
-		
-		public FieldSE inTest(int testId) {
-			this.testId = testId;
-			return this;
-		}
-		
-		public FieldSE captureBetween(long start, long end) {
-			capStart = start;
-			capEnd = end;
-			return this;
-		}
-		
-		public FieldSE targetBetween(long start, long end) {
-			tgtStart = start;
-			tgtEnd = end;
-			return this;
-		}
-		
-		public Results<FieldEffect> _execute(MiConnection cnn) {
-			return Views.query(FIELD_EFFECT_MAPPING, FIELD_EFFECT_QUERY, 
-					testId, capStart, capEnd,
-					testId, tgtEnd,
-					testId, tgtStart, tgtEnd)
-				.configure(CfgSetField.newInstance("testId", testId))
-				.configure(CfgSetField.newInstance("valueIsPut", true))
-				.configure(FIELD_EFFECT_READS)
-				.select("valueStep", "thisId", "id", "name", "nextGetStep")._execute(cnn);
-		}
-	}
-	
-	private static final String FIELD_EFFECT_QUERY = 
-			"SELECT sideEffect.`step` AS `valueStep`, sideEffect.`thisId`, f.`id`, f.`name`, nextRead.`step` AS `nextGetStep` "+
-			"FROM `Field` f " +
-			"JOIN (SELECT MAX(`step`) AS `step`, `thisId`, `fieldId` " +
-					"FROM `PutTrace` WHERE `testId` = ? AND `step` BETWEEN ? AND ? " + // testId, capStart, capEnd 
-					"GROUP BY `thisId`, `fieldId`) sideEffect ON f.`id` = sideEffect.`fieldId` " +
-			"LEFT JOIN `PutTrace` nextChange ON nextChange.`testId` = ? AND nextChange.`step` > sideEffect.`step` AND nextChange.`step` <= ? " + // testId, tgtEnd
-					"AND nextChange.`thisId` = sideEffect.`thisId` AND nextChange.`fieldId` = sideEffect.`fieldId` " +
-			"JOIN `GetTrace` nextRead ON nextRead.`testId` = ? AND nextRead.`thisId` = sideEffect.`thisId` AND nextRead.`fieldId` = sideEffect.`fieldId` " + //testId
-					"AND nextRead.`step` > sideEffect.`step` AND nextRead.`step` > ? " + // tgtStart
-			"GROUP BY sideEffect.`step`, sideEffect.`thisId`, sideEffect.`fieldId`, nextRead.`step` "+
-			"HAVING nextRead.`step` < COALESCE(MIN(nextChange.step), ?);"; // tgtEnd
 }

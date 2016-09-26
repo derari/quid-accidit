@@ -5,11 +5,6 @@
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="icons"/>
-	<classpathentry exported="true" kind="lib" path="lib/miro-1.0-SNAPSHOT.jar" sourcepath="lib/miro-1.0-SNAPSHOT-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:platform:/resource/accidit-eclipse/lib/miro-1.0-SNAPSHOT-javadoc.jar!/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/ngdbc.jar"/>
 	<classpathentry kind="lib" path="lib/soot-trunk.jar" sourcepath="lib/sootsources-trunk.jar">
 		<attributes>
@@ -17,5 +12,10 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/hsqldb-2.2.9.jar"/>
+	<classpathentry kind="lib" path="lib/miro-lib-all-1.0-SNAPSHOT.jar" sourcepath="lib/miro-1.0-SNAPSHOT-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/accidit-eclipse/lib/miro-1.0-SNAPSHOT-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
