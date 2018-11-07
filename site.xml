@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description name="Quid Accidit Update Site">
+      The update site to install the Quid Accidit omniscient debugger. 
+In Eclipse, chose &quot;Help&quot; -&gt; &quot;Install New Software&quot; from the menu and add this URL as a new update site.
+   </description>
+   <feature url="features/de.hpi.accidit.eclipse.features_0.1.0.jar" id="de.hpi.accidit.eclipse.features" version="0.1.0">
+      <category name="de.hpi.accidit.eclipse.cat"/>
+   </feature>
+   <feature url="features/de.hpi.accidit.eclipse.features_0.1.1.jar" id="de.hpi.accidit.eclipse.features" version="0.1.1">
+      <category name="de.hpi.accidit.eclipse.cat"/>
+   </feature>
+   <category-def name="de.hpi.accidit.eclipse.cat" label="Quid Accidit"/>
+</site>
