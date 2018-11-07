@@ -96,11 +96,15 @@ public class ThreadTrace {
         return root;
     }
     
-    public synchronized ObjectTrace getObjectTrace(Object object) {
+    public ObjectTrace getObjectTrace(Object object) {
+        return getObjectTrace(object, false);
+    }
+    
+    public synchronized ObjectTrace getObjectTrace(Object object, boolean newObject) {
         if (object == null) return null;
         ObjectTrace ot = objects.get(object);
         if (ot == null) {
-            ot = new ObjectTrace(this, object);
+            ot = new ObjectTrace(this, object, newObject);
             objects.put(object, ot);
         }
         return ot;
@@ -180,14 +184,15 @@ public class ThreadTrace {
         }
     }
     
-    public void enter(int methodCode, Object instance) {
+    public void enter(int methodCode, Object instance, boolean newObject) {
         if (cflow) return;
         cflow = true;
         MethodDescriptor method = null;
         try {
             method = model.getMethod(methodCode);
             if (invocation == null) {
-                ObjectTrace otInstance = getObjectTrace(instance);
+//                boolean newObject = method.getName().equals("<init>");
+                ObjectTrace otInstance = getObjectTrace(instance, newObject);
                 invocation = new CallTrace(null, this, method, otInstance, step, -1, 0, false);
                 assert root == null : "Should not have traced yet";
                 root = invocation;

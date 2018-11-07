@@ -47,7 +47,7 @@ public class TraceDB {
 		this.invocationDao = new InvocationDao(cnn, schemaBuilder);
 
 		ValueDao.init(schemaBuilder);
-		this.valueDao = new ValueDao(cnn);
+		this.valueDao = new ValueDao(cnn, schemaBuilder);
 		
 		ObjectOccurranceDao.init(schemaBuilder);
 		this.objectOccurranceDao = new ObjectOccurranceDao(cnn, schemaBuilder);

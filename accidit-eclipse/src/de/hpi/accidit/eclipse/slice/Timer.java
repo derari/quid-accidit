@@ -6,6 +6,10 @@ public class Timer {
 
 	private AtomicLong t = new AtomicLong(0);
 	
+	public void reset() {
+		t.set(0);
+	}
+	
 	public void enter() {
 		t.addAndGet(-System.currentTimeMillis());
 	}

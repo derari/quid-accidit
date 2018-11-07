@@ -1,17 +1,12 @@
 package de.hpi.accidit.eclipse.model.db;
 
-import java.lang.reflect.Field;
-
 import org.cthul.miro.db.MiConnection;
-import org.cthul.miro.db.MiException;
-import org.cthul.miro.entity.EntityInitializer;
 import org.cthul.miro.graph.TypeBuilder;
 import org.cthul.miro.map.MappingKey;
 import org.cthul.miro.map.layer.MappedQuery;
 import org.cthul.miro.request.template.TemplateLayer;
 import org.cthul.miro.sql.SelectQuery;
 import org.cthul.miro.sql.set.SqlEntitySet;
-import org.cthul.miro.sql.template.SqlTemplatesBuilder;
 
 import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.ModelBase;
@@ -34,34 +29,38 @@ public abstract class ModelDaoBase<Entity extends ModelBase, This extends ModelD
 	protected void initialize() {
 		super.initialize();
 		TraceDB db = DatabaseConnector.getTraceDB();
-		setUp(MappingKey.SET, sf -> sf.set("db", db));
+		setUp(MappingKey.SET, "db", db);
 	}
 	
-	protected static <E> EntityInitializer<E> injectField(String field, Object value) {
-		return injectField(Object.class, field, value);
+	protected This where(String sql, Object... args) {
+		return sql(s -> s.where(sql, args));
 	}
 	
-	protected static <E> EntityInitializer<E> injectField(Class<?> filter, String field, Object value) {
-		return e -> {
-			if (!filter.isInstance(e)) return;
-			Class<?> c = e.getClass();
-			Field f = null;
-			while (f == null && c != null) {
-				try {
-					f = c.getDeclaredField(field);
-				} catch (NoSuchFieldException ex) {
-					c = c.getSuperclass();
-				}
-			}
-			if (f == null) {
-				throw new IllegalArgumentException(e.getClass().getSimpleName() + "." + field);
-			}
-			try {
-				f.setAccessible(true);
-				f.set(e, value);
-			} catch (ReflectiveOperationException ex) {
-				throw new MiException(ex);
-			}
-		};
-	}
+//	protected static <E> EntityInitializer<E> injectField(String field, Object value) {
+//		return injectField(Object.class, field, value);
+//	}
+//	
+//	protected static <E> EntityInitializer<E> injectField(Class<?> filter, String field, Object value) {
+//		return e -> {
+//			if (!filter.isInstance(e)) return;
+//			Class<?> c = e.getClass();
+//			Field f = null;
+//			while (f == null && c != null) {
+//				try {
+//					f = c.getDeclaredField(field);
+//				} catch (NoSuchFieldException ex) {
+//					c = c.getSuperclass();
+//				}
+//			}
+//			if (f == null) {
+//				throw new IllegalArgumentException(e.getClass().getSimpleName() + "." + field);
+//			}
+//			try {
+//				f.setAccessible(true);
+//				f.set(e, value);
+//			} catch (ReflectiveOperationException ex) {
+//				throw new MiException(ex);
+//			}
+//		};
+//	}
 }

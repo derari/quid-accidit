@@ -28,6 +28,11 @@ import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.slice.DynamicSlice;
 import de.hpi.accidit.eclipse.slice.EventKey;
+import de.hpi.accidit.eclipse.slice.SliceAPI;
+import de.hpi.accidit.eclipse.slice.SlicingCriteriaView;
+import de.hpi.accidit.eclipse.slice.EventKey.InvocationArgKey;
+import de.hpi.accidit.eclipse.slice.EventKey.MethodResultKey;
+import de.hpi.accidit.eclipse.slice.EventKey.VariableValueKey;
 import de.hpi.accidit.eclipse.slice.DynamicSlice.Node;
 import de.hpi.accidit.eclipse.views.util.DoInUiThread;
 import de.hpi.accidit.eclipse.views.util.WorkPool;
@@ -59,17 +64,17 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 	}
 
 	@Override
-	public void setStep(TraceElement te) {
+	public void setStep(TraceElement te, boolean before) {
 //		if (isSettingStep) return;
 		this.step = te.getStep();
 		scheduleUpdate();
 	}
 	
 	private void scheduleUpdate() {
-		final SortedSet<DynamicSlice.Node> nodes = new TreeSet<>();
+		final SortedSet<DynamicSlice.Node> nodes = new TreeSet<>();	
 		this.nodes = nodes;
 		this.currentNodes = new HashSet<>();
-		WorkPool.execute(() -> {
+		WorkPool.executePriority(() -> {
 			collectNodes(nodes);
 			DoInUiThread.run(() -> showNodes(nodes));
 		});
@@ -119,6 +124,13 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 //					nodes.add(n.getRepresentative());
 					nodesBag.add(n);
 //					nodes.add(n.getRepresentative().contextNode());
+				}
+			}
+		}
+		if (nodesBag.isEmpty()) {
+			for (Node n: TraceNavigatorUI.getGlobal().getSliceApi().getCriteria()) {
+				if (n.getFlags() != 0) {
+					nodesBag.add(n);
 				}
 			}
 		}
@@ -190,7 +202,11 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 //				lastStep = n.getKey().getStep();
 //			}
 			
-			addNode(rep, jumpOverCurrent, n.getKey().getStep() == lastStep);
+			boolean isArg = n.getKey().getStep() == lastStep;
+			addNode(rep, jumpOverCurrent, isArg, false);
+			if (!jumpOverCurrent && rep.getKey() instanceof MethodResultKey) {
+				addNode(rep, jumpOverCurrent, false, true);
+			}
 			lastStep = n.getKey().getStep();
 		}
 		scroll.setMinHeight(
@@ -259,9 +275,10 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		}
 	}
 	
-	private void addNode(final Node n, boolean jumpOverCurrent, boolean isArgument) {
+	private void addNode(final Node n, boolean jumpOverCurrent, boolean isArgument, boolean isReturn) {
 		final long step = n.getKey().getStep();
 		final long gotoStep = step;
+		final boolean gotoBefore = !isArgument && (isReturn || !(n.getKey() instanceof MethodResultKey));
 //				n.getKey().isInternalCode() ? 
 //				(n.getKey() instanceof EventKey.MethodResultKey) ?
 //				n.getKey().getInvocationKey().getStep() : step;
@@ -270,10 +287,24 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 			public void mouseUp(MouseEvent e) {
 //				isSettingStep = true;
 				try {
-					TraceNavigatorUI.getGlobal().setStep(gotoStep);
+					WorkPool.executePriority(() -> {
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException ex) {
+							Thread.currentThread().interrupt();
+						}
+						TraceNavigatorUI.getGlobal().setStep(gotoStep, gotoBefore);
+					});
 				} finally {
 //					isSettingStep = false;
 				}
+			}
+			@Override
+			public void mouseDoubleClick(MouseEvent e) {
+				SlicingCriteriaView slicingCriteriaView = TraceNavigatorUI.getGlobal().getOrOpenSlicingCriteriaView();
+				slicingCriteriaView.clear();
+				slicingCriteriaView.addEntry(n.getKey());
+				mouseUp(e);
 			}
 		};
 		
@@ -293,15 +324,40 @@ public class SlicingStatusView extends ViewPart implements AcciditView {
 		Label l = new Label(parent, SWT.NONE);
 		l.setImage(DEP[n.getDependencyFlags()]);
 		l.addMouseListener(onClickSlice);
+		if (isArgument || isReturn) {
+			GridData gd = new GridData();
+//			gd.heightHint = 15;
+//			gd.verticalIndent = -5;
+//			gd.verticalAlignment = SWT.TOP;
+			l.setLayoutData(gd);
+		}
+		
 		l = new Label(parent, SWT.NONE);
 		String s = n.getKey().getUserString();
-		l.setText((isArgument ? "   " : "") + s.substring(s.indexOf(':') + 1));
-		l.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+		if (isArgument) {
+			s = "\u2516      " + s.substring(s.indexOf(':') + 1);
+		} else if (isReturn) {
+			s = "\u2516      return " + s.substring(s.indexOf('\u21B5') + 1);
+		}
+		l.setText(s);
+		if (isArgument || isReturn) {
+			GridData gd = new GridData(SWT.LEFT, SWT.TOP, true, false);
+//			gd.verticalIndent = -4;
+//			gd.heightHint = 15;
+			l.setLayoutData(gd);
+		} else {
+//			int i = s.indexOf('\u21B5');
+//			if (i > 0) s = s.substring(0, i);
+			l.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, true, false));
+		}
 		l.addMouseListener(onClickGotoStep);
+		
 		if (jumpOverCurrent) l.setForeground(greyFont);
 		l = new Label(parent, SWT.NONE);
-		l.setText(String.valueOf(step));
-		l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		if (!isArgument && !isReturn) {
+			l.setText(String.valueOf(step));
+			l.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+		}
 		l.addMouseListener(onClickGotoStep);
 		if (jumpOverCurrent) l.setForeground(greyFont);
 	}

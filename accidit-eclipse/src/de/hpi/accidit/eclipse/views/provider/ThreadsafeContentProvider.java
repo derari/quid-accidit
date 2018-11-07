@@ -232,7 +232,7 @@ public class ThreadsafeContentProvider implements ILazyTreeContentProvider {
 			if (value instanceof ModelBase) {
 				((ModelBase) value).onInitComplete(onValueInitialized());
 			} else {
-				WorkPool.execute(() -> {
+				WorkPool.executePriority(() -> {
 					try {
 						initializeValueAsynch(value);
 						onValueInitialized().call(MiFutures.value(value));

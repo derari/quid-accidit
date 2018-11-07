@@ -45,8 +45,8 @@ public class VariableDao extends SqlEntitySet<Variable, VariableDao> {
 	
 	public VariableDao inCall(int testId, long callStep) {
 		return doSafe(me -> me
-				.snippet("Method")
-				.snippet("CallTrace")
+				.build("Method")
+				.build("CallTrace")
 				.sql(sql -> sql.where().sql("c.`testId` = ? AND c.`step` = ?", testId, callStep)));
 	}
 	

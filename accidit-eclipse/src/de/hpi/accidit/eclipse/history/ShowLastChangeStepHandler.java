@@ -25,7 +25,7 @@ public class ShowLastChangeStepHandler extends AbstractHandler {
 			if (step < 0) { // the correct step is already selected
 				TraceNavigatorUI.getGlobal().getTraceExplorer().setFocus();
 			} else {
-				TraceNavigatorUI.getGlobal().setStep(step);
+				TraceNavigatorUI.getGlobal().setStep(step, true);
 			}
 		}
 

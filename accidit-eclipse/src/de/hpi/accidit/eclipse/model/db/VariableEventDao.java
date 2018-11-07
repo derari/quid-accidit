@@ -11,8 +11,7 @@ public class VariableEventDao extends TraceElementDaoBase<VariableEvent, Variabl
 	public static void init(MappedSqlSchema schema) {
 		MappedSqlBuilder<?,?> sql = schema.getMappingBuilder(VariableEvent.class);
 		TraceElementDaoBase.init(sql);
-		sql.attribute("e.`callStep`");
-		sql.from("`VariableTrace` e");
+		sql.sql("SELECT e.`callStep` FROM `VariableTrace` e");
 	}
 	
 	protected VariableEventDao(ModelDaoBase<VariableEvent, VariableEventDao> source) {
@@ -22,16 +21,4 @@ public class VariableEventDao extends TraceElementDaoBase<VariableEvent, Variabl
 	public VariableEventDao(MiConnection cnn, MappedSqlSchema schema) {
 		super(cnn, schema.getSelectLayer(VariableEvent.class));
 	}
-
-	
-	
-	
-//private static final Mapping<VariableEvent> MAPPING = new ReflectiveMapping<>(VariableEvent.class);
-	
-//	public static final ViewR<PutQuery> PUT = Views.build(MAPPING).r(PutQuery.class);
-//	
-//	@From("`VariableTrace` e")
-//	public static interface PutQuery extends Query<VariableEvent, PutQuery> {
-//		
-//	}
 }

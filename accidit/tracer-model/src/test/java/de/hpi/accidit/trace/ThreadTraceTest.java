@@ -71,7 +71,7 @@ public class ThreadTraceTest {
     public void test_begin() {
         AClass a = new AClass();
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.returned(-1, -1, null);
         t.end();
         verify(out).traceCall(argThat(call("test1")));
@@ -82,14 +82,14 @@ public class ThreadTraceTest {
     public void test_enter_exit() {
         AClass a = new AClass();
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.line(0); 
         t.call(m("super1", desc("V")));
-        t.enter(m("super1", desc("V")), a);
+        t.enter(m("super1", desc("V")), a, false);
         t.returned(-1, 0, null);
         t.line(1);
         t.call(m("test2", desc("V")));
-        t.enter(m("test2", desc("V")), a);
+        t.enter(m("test2", desc("V")), a, false);
         t.returned(-1, 1, null);
         t.returned(-1, -1, null);
         t.end();
@@ -106,7 +106,7 @@ public class ThreadTraceTest {
         float result = 3.1415f;
         long resultBits = Float.floatToIntBits(result);
         
-        t.enter(m("testF1", desc("F")), a);
+        t.enter(m("testF1", desc("F")), a, false);
         t.returned(-1, -1, result);
         t.end();
         
@@ -122,7 +122,7 @@ public class ThreadTraceTest {
         test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.argument(0, 17);
         t.argument(1, new Object[]{1});
         t.returned(-1, 5, null);
@@ -137,7 +137,7 @@ public class ThreadTraceTest {
         test1.addVariable(1, 0, "anArray", "java.lang.Object[]");
         
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.variable(6, 0, 0, 17);
         t.variable(7, 0, 1, new Object[]{1});
         t.returned(-1, 8, null);
@@ -152,7 +152,7 @@ public class ThreadTraceTest {
         test1.addVariable(1, 10, "anArray", "java.lang.Object[]");
         
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.variable(6,  0, 0, 17);
         t.variable(7,  0, 1, new Object[]{1});
         t.variable(6, 10, 0, 17);
@@ -164,7 +164,7 @@ public class ThreadTraceTest {
     public void test_fields() {
         AClass a = new AClass();
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.put(a, 1.0d, fADouble, 6);
         t.get(a, 1.0d, fADouble, 7);
         t.get(null, AClass.staticText, fStaticText, 7);
@@ -177,7 +177,7 @@ public class ThreadTraceTest {
         AClass a = new AClass();
         char[] array = AClass.staticText;
         ThreadTrace t = tracerForTesting();
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.arrayStore(array, 'x', 0, 6);
         t.arrayLoad(array, 'x', 0, 7);
         t.returned(-1, 9, null);
@@ -190,7 +190,7 @@ public class ThreadTraceTest {
         ThreadTrace t = tracerForTesting(); 
         Throwable ex = new RuntimeException();
         
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.thrown(6, ex);
         t.caught(8, ex);
         t.returned(-1, 9, null);
@@ -202,7 +202,7 @@ public class ThreadTraceTest {
         AClass a = new AClass();
         Throwable ex = new RuntimeException();
         ThreadTrace t = tracerForTesting();
-        t.enter( m("test1", desc("V")), a);
+        t.enter( m("test1", desc("V")), a, false);
         nested1(t, a, ex, true);
         t.caught(9, ex);
         t.returned(-1, 10, null);
@@ -230,14 +230,14 @@ public class ThreadTraceTest {
             t.line(6);
             t.call(m("test1", desc("V")));
         }
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         nested2(t, a, ex);
     }
 
     private void nested2(ThreadTrace t, AClass a, Throwable ex) {
         t.line(7);
         t.call(m("test1", desc("V")));
-        t.enter(m("test1", desc("V")), a);
+        t.enter(m("test1", desc("V")), a, false);
         t.thrown(8, ex);
     }
 

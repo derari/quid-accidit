@@ -81,20 +81,19 @@ public class FieldValueDao extends NamedValueDao<FieldValue, FieldValueDao> {
 	
 	public FieldValueDao atStep(int testId, long thisId, long step) {
 		return doSafe(me -> me
-				.snippet("last_and_next", testId, thisId, step)
+				.build("last_and_next", testId, thisId, step)
 				.setUp(MappingKey.LOAD, "valueStep", "valueIsPut", "nextChangeStep", "nextGetStep", "lastGetStep")
 				.configureStep(testId, step));
 	}
 	
 	public FieldValueDao setBeforeStep(int testId, long thisId, long step) {
 		return sql(sql -> sql
-				.select().sql("t.`testId`, t.`thisId`, t.`step`, t.`callStep`, t.`line`")
-				.join().id("PutTrace").sql(" t ON t.`fieldId` = m.`id`")
-				.where().sql("t.`testId` = ? AND t.`thisId` = ? AND t.`step` < ?", testId, thisId, step)
-				.orderBy().sql("t.`step` DESC"))
-			.setUp(MappingKey.SET, sf -> sf.set("testId", testId))
-			.setUp(MappingKey.LOAD, "thisId", "step", "callStep", "line");
-//			.setUp(MappingKey.LOAD_FIELD, lf -> lf.add("testId"))
+				.select("t.`testId`, t.`step`, t.`step` AS `valueStep`, t.`callStep`, t.`line`")
+				.join("`PutTrace` t ON t.`fieldId` = m.`id`")
+				.where("t.`testId` = ? AND t.`thisId` = ? AND t.`step` < ?", testId, thisId, step)
+				.orderBy("t.`step` DESC"))
+			.setUp(MappingKey.SET, "testId", testId, "thisId", thisId)
+			.setUp(MappingKey.LOAD, "step", "valueStep", "callStep", "line");
 	}
 	
 	public FieldValueDao historyOfObject(int testId, long thisId) {
@@ -126,39 +125,20 @@ public class FieldValueDao extends NamedValueDao<FieldValue, FieldValueDao> {
 	
 	public FieldValueDao writesAtStep(int testId, long step) {
 		return sql(sql -> sql
-				.select().sql("t.`testId`, t.`thisId`, t.`step`, t.`callStep`, t.`line`")
+				.select().sql("t.`testId`, COALESCE(t.`thisId`, -1) AS `thisId`, t.`step`, t.`step` AS `valueStep`, t.`callStep`, t.`line`")
 				.join().id("PutTrace").sql(" t ON t.`fieldId` = m.`id`")
 				.where().sql("t.`testId` = ? AND t.`step` = ?", testId, step))
-			.setUp(MappingKey.SET, sf -> sf.set("testId", testId))
-			.setUp(MappingKey.LOAD, "step", "thisId", "callStep", "line");
+			.setUp(MappingKey.SET, "testId", testId)
+			.setUp(MappingKey.LOAD, "step", "valueStep", "thisId", "callStep", "line");
 	}
 
 	public FieldValueDao readsInInvocation(int testId, long callStep) {
 		return sql(sql -> sql
-				.select().sql("t.`thisId`, t.`step`, t.`line`")
+				.select().sql("COALESCE(t.`thisId`, -1) AS `thisId`, t.`step`, t.`step` AS `valueStep`, t.`line`")
 				.join().id("GetTrace").sql(" t ON t.`fieldId` = m.`id`")
 				.where().sql("t.`testId` = ? AND t.`callStep` = ?", testId, callStep))
 			.setUp(MappingKey.SET, sf -> sf.set("testId", testId))
 			.setUp(MappingKey.SET, sf -> sf.set("callStep", callStep))
-			.setUp(MappingKey.LOAD, "step", "thisId", "line");
+			.setUp(MappingKey.LOAD, "step", "valueStep", "thisId", "line");
 	}
-
-	
-//	attributes("m.`name`, m.`id`");
-//	using("val")
-//		.select("val.`testId`, val.`callStep`, val.`step` AS `valueStep`, val.`step` AS `step`, COALESCE(val.`thisId`, 0) AS `thisId`");
-//	
-//	table("`Field` m");
-//	
-//	join("`GetTrace` val ON val.`fieldId` = m.`id`");
-//	
-//	where("call_EQ", "val.`testId` = ? AND val.`callStep` = ?");
-//	
-//	always()
-////		.groupBy("m.`id`, val.`step`")
-//		.orderBy("val.`step`");
-//	always().configure("cfgCnn", SET_CONNECTION)
-//			.configure("cfgIsPut", CfgSetField.newInstance("valueIsPut", false));
-//}};
-
 }

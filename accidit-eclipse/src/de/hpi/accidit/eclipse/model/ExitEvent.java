@@ -3,12 +3,14 @@ package de.hpi.accidit.eclipse.model;
 public class ExitEvent extends TraceElement {
 
 	public boolean returned;
+	private Value value;
 	
-	public ExitEvent(Invocation parent, boolean returned, int line, long step) {
+	public ExitEvent(Invocation parent, boolean returned, int line, long step, Value value) {
 		this.parent = parent;
 		this.returned = returned;
 		this.line = line;
 		this.step = step;
+		this.value = value;
 	}
 	
 	@Override
@@ -18,7 +20,11 @@ public class ExitEvent extends TraceElement {
 	
 	@Override
 	public String getShortText() {
-		return returned ? "return" : "fail";
+		if (value == null) {
+			return returned ? "return" : "fail";
+		} else {
+			return returned ? "return " : "fail  --  " + value.getShortString();
+		}
 	}
 	
 }

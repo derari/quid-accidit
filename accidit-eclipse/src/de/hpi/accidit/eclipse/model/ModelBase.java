@@ -6,6 +6,7 @@ import org.cthul.miro.futures.MiFuture;
 import org.cthul.miro.futures.MiFutures;
 import org.cthul.miro.futures.MiResettableFuture;
 
+import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.db.TraceDB;
 
 public class ModelBase {
@@ -23,6 +24,7 @@ public class ModelBase {
 	}
 
 	public TraceDB db() {
+		if (db == null) db = TraceNavigatorUI.getGlobal().db();
 		return db;
 	}
 	

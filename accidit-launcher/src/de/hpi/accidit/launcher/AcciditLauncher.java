@@ -44,7 +44,7 @@ public class AcciditLauncher {
 	}
 	
 	protected String getAgentArg(String entryPoint) {
-		return "-javaagent:"
+		String arg = "-javaagent:"
 				+ TracingJarManager.getInstance().getTracerJar().getAbsolutePath()
 				+ "="
 				+ TracingJarManager.getInstance().getModelJar().getAbsolutePath()
@@ -52,6 +52,8 @@ public class AcciditLauncher {
 				+ traceDir.getAbsolutePath()
 				+ "#n#"
 				+ tmpFile.getAbsolutePath();
+		System.out.println(arg);
+		return arg;
 	}
 	
 	public void startImportJob(IJavaProject jp) {

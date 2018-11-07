@@ -60,7 +60,7 @@ public class BreakpointsView extends ViewPart implements AcciditView {
 	public void sliceChanged() { }
 	
 	@Override
-	public void setStep(TraceElement te) { }
+	public void setStep(TraceElement te, boolean before) { }
 	
 	private void addHeadline() {
 		@SuppressWarnings("unused")

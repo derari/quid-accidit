@@ -37,6 +37,8 @@ public class TracerTransformer implements ClassFileTransformer {
         "java/security",
         "sun",
         "org/h2",
+        "junit/framework/TestCase",
+        "java/util/IdentityHashMap$IdentityHashMapIterator",
 //        "org/camunda/bpm/engine/impl/juel/Parser",
         
         // excluded for performance reasons
@@ -139,6 +141,11 @@ public class TracerTransformer implements ClassFileTransformer {
             try {
                 if (className != null) {
                     putKnownClass(className.replace('.', '/'), classBeingRedefined);
+                    if (className.contains("String")) {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        System.out.println(className);
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    }
                 }
                 PreMain.Init.TO_BE_REDEFINED.remove(classBeingRedefined);
                 if (!circulars.isEmpty()) {
@@ -330,7 +337,7 @@ public class TracerTransformer implements ClassFileTransformer {
         private static final String CALL = "call";
         private static final String CALL_DESC = "(I)V";
         private static final String ENTER = "enter";
-        private static final String ENTER_DESC = "(ILjava/lang/Object;)V";
+        private static final String ENTER_DESC = "(ILjava/lang/Object;Z)V";
         private static final String RETURN_ = "return";
         private static final String RETURN_DESC_2 = "II)V";
         private static final String STORE_ = "store";
@@ -432,8 +439,10 @@ public class TracerTransformer implements ClassFileTransformer {
             super.visitLdcInsn(me.getCodeId());
             if (isStatic) {
                 super.visitInsn(ACONST_NULL);
+                super.visitLdcInsn(0);
             } else {
                 super.visitVarInsn(ALOAD, 0);
+                super.visitLdcInsn(isInit ? 1 : 0);
             }
             superVisitMethodInsn(INVOKESTATIC, TRACER, ENTER, ENTER_DESC);
             traceArgs();

@@ -120,9 +120,9 @@ public class Tracer {
         </@>
     }
 
-    public static void enter(int methodCode, Object inst) {
+    public static void enter(int methodCode, Object inst, boolean newObject) {
         <@traced>
-            t.enter(methodCode, inst);
+            t.enter(methodCode, inst, newObject);
         </@>
     }
     

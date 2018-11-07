@@ -1,5 +1,7 @@
 package de.hpi.accidit.model;
 
+import de.hpi.accidit.trace.ThreadTrace;
+
 public enum PrimitiveType {
     
     OBJECT,
@@ -90,6 +92,14 @@ public enum PrimitiveType {
         }
     }
 
+    public long toValueId(ThreadTrace t, Object value) {
+        if (this == OBJECT) {
+            return t.getObjectId(value);
+        } else {
+            return toValueId(value);
+        }
+    }
+    
     public long toValueId(Object value) {
         if (value == null) {
             if (this == VOID) return 0;

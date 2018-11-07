@@ -3,7 +3,6 @@ package de.hpi.accidit.eclipse.views;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.cthul.miro.db.MiConnection;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
@@ -25,7 +24,6 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.part.ViewPart;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.TraceElement;
@@ -111,7 +109,10 @@ public class VariablesView extends ViewPart implements AcciditView {
 	}
 	
 	@Override
-	public void setStep(TraceElement te) {
+	public void setStep(TraceElement te, boolean before) {
+		if (!before) {
+			te = TraceNavigatorUI.getGlobal().getTrace().getStep(te.getStep()+1);
+		}
 		rootNode.setStep(te.getTestId(), te.getCallStep(), te.getStep());
 	}
 	

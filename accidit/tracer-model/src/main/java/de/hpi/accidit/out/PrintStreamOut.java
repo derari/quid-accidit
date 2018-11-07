@@ -107,6 +107,12 @@ public class PrintStreamOut implements Out {
     }
 
     @Override
+    public void traceExistingField(int traceId, FieldTrace field) {
+        printStep(traceId, field.getStep(), field.getLine(), -1);
+        out.println(">>> " + field);
+    }
+
+    @Override
     public void traceArrayGet(CallTrace call, ArrayItemTrace array) {
         printStep(call.getTrace().getId(), array.getStep(), array.getLine(), call.getDepth());
 //        indent(call.getDepth());
@@ -119,6 +125,12 @@ public class PrintStreamOut implements Out {
 //        indent(call.getDepth());
         out.println("PUT " + array);
     }
+
+    @Override
+    public void traceExistingItem(int traceId, ArrayItemTrace array) {
+        printStep(traceId, array.getStep(), array.getLine(), -1);
+//        indent(call.getDepth());
+        out.println(">>> " + array);    }
 
     @Override
     public void end(ThreadTrace trace) {

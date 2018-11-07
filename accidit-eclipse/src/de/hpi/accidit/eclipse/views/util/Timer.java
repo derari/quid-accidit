@@ -1,7 +1,6 @@
 package de.hpi.accidit.eclipse.views.util;
 
 import java.util.Arrays;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,17 +37,16 @@ public class Timer {
 		}
 		
 		private void initial() {
-			if (first) {
-				if (done) return;
-				System.out.println(n + ": " + query);
-				System.out.println(n + ": " + Arrays.toString(args));
-				first = false;
-			}
 			EXECUTOR.schedule(this::update, 3, TimeUnit.SECONDS);
 		}
 		
 		private void update() {
 			if (done) return;
+			if (first) {
+				System.out.println(n + ": " + query);
+				System.out.println(n + ": " + Arrays.toString(args));
+				first = false;
+			}
 			System.out.println(n + ": " + (System.currentTimeMillis() - start)/1000 + "s");
 			EXECUTOR.schedule(this::update, 1, TimeUnit.SECONDS);
 		}

@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.views;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedSet;
 
 import org.eclipse.core.commands.Command;
@@ -49,6 +50,7 @@ import de.hpi.accidit.eclipse.TraceNavigatorUI;
 import de.hpi.accidit.eclipse.handlers.AbstractToggleHandler;
 import de.hpi.accidit.eclipse.handlers.ToggleAutoCollapseHandler;
 import de.hpi.accidit.eclipse.handlers.ToggleCustomArrowNavigationHandler;
+import de.hpi.accidit.eclipse.model.ExitEvent;
 import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Pending;
 import de.hpi.accidit.eclipse.model.Trace;
@@ -68,6 +70,7 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 	private static final String STORE_TEST_ID = "Accidit.TestId";
 	private IMemento memento;
 	
+	private Object curProject = null;
 	private TraceElement current;
 	private boolean isUpdatingStep = false;
 
@@ -169,17 +172,23 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		refresh();
 	}
 	
+	public void refreshTrace() {
+		curProject = null;
+	}
+	
 	@Override
-	public void setStep(TraceElement te) {
+	public void setStep(TraceElement te, boolean before) {
 		if (current == te) {
 			return;
 		}
 		isUpdatingStep = true;
 		try {
-			if (current == null || current.getTestId() != te.getTestId()) {
+			if (current == null || current.getTestId() != te.getTestId() ||
+					!Objects.equals(curProject, DatabaseConnector.getSelectedProject())) {
+				curProject = DatabaseConnector.getSelectedProject();
 				treeViewer.setInput(ui.getTrace());
 			}
-			getSelectionAdapter().selectAtStep(te.getStep());
+			getSelectionAdapter().selectAtStep(te.getStep(), before);
 		} finally {
 			isUpdatingStep = false;
 		}
@@ -203,8 +212,8 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 			if (!isUpdatingStep && obj instanceof TraceElement) {
 				TraceElement te = (TraceElement) obj;
 				current = te;
-				ui.setStep(te);
-			} else if (obj instanceof TraceElement) {
+				ui.setStep(te, true);
+//			} else if (obj instanceof TraceElement) {
 				ui.showCode((TraceElement) obj);
 			}
 			setFocus();
@@ -313,8 +322,12 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 		}
 		
 		/** Selects the calling trace element of certain trace element that is identified by its step. */
-		public void selectAtStep(long step) {
+		public void selectAtStep(long step, boolean before) {
 			List<TraceElement> stack = ui.getTrace().getStack(step);
+			
+			if (!before && stack.get(stack.size()-1) instanceof ExitEvent) {
+				stack.remove(stack.size()-1);
+			}
 			
 			for (int i = 1; i < stack.size(); i++) {
 				treeViewer.expandToLevel(new TreePath(stack.subList(0, i).toArray()), 1);
@@ -372,6 +385,21 @@ public class TraceExplorerView extends ViewPart implements ISelectionChangedList
 
 		@Override
 		public void keyPressed(KeyEvent e) {
+			if (e.keyCode == SWT.ARROW_RIGHT) {
+				ITreeSelection sel = treeViewer.getStructuredSelection();
+				TraceElement te = (TraceElement) sel.getFirstElement();
+				if (te instanceof ExitEvent && ((ExitEvent) te).returned == false) {
+					TraceNavigatorUI.getGlobal().db().throwEvents()
+						.lastBefore(te.getTestId(), te.getStep())
+						.result().first().submit()
+						.andThen(throwEvent -> {
+							DoInUiThread.run(() -> TraceNavigatorUI.getGlobal().setStep(throwEvent, true));
+							return null;
+						});
+					return;
+				}
+			}
+			
 			if (!customArrowNavigationEnabled()) return;
 			
 			e.doit = false;

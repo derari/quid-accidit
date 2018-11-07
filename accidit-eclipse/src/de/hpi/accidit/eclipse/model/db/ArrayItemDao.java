@@ -8,8 +8,6 @@ import org.cthul.miro.sql.SelectQuery;
 import org.cthul.miro.sql.set.MappedSqlBuilder;
 import org.cthul.miro.sql.set.MappedSqlSchema;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
-import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 
 public class ArrayItemDao extends NamedValueDao<ItemValue, ArrayItemDao> {
@@ -25,6 +23,11 @@ public class ArrayItemDao extends NamedValueDao<ItemValue, ArrayItemDao> {
 	
 	public ArrayItemDao(MiConnection cnn, MappedSqlSchema schema) {
 		super(cnn, schema.getSelectLayer(ItemValue.class));
+	}
+	
+	@Override
+	protected void initialize() {
+		super.initialize();
 	}
 
 	@Override
@@ -71,43 +74,49 @@ public class ArrayItemDao extends NamedValueDao<ItemValue, ArrayItemDao> {
 	}
 	
 	public ArrayItemDao atIndex(int index) {
-		return snippet("index_EQ", index);
+		return build("index_EQ", index);
 	}
 	
 	public ArrayItemDao atStep(int testId, long thisId, long step) {
-		return snippet("last_and_next", testId, thisId, step);
+		return build("last_and_next", testId, thisId, step)
+				.setUp(MappingKey.LOAD, "id", "valueStep", "valueIsPut", "nextChangeStep", "nextGetStep")
+				.setUp(MappingKey.SET, "testId", testId, "step", step, "thisId", thisId);
 	}
 	
 	public ArrayItemDao setBeforeStep(int testId, long thisId, long step) {
 		return sql(sql -> sql
-				.select().sql("t.`testId`, t.`thisId`, t.`step`, t.`callStep`, t.`index` AS `id`, t.`line`")
+				.select().sql("t.`step`, t.`callStep`, t.`index` AS `id`, t.`line`")
 				.from().id("ArrayPutTrace").ql(" t")
 				.where().sql("t.`testId` = ? AND t.`thisId` = ? AND t.`step` < ?", testId, thisId, step)
-				.orderBy().sql("t.`step` DESC"));
+				.orderBy().sql("t.`step` DESC"))
+				.setUp(MappingKey.LOAD, "id", "line", "step", "callStep")
+				.setUp(MappingKey.SET, "testId", testId, "thisId", thisId);
 	}
 		
 	public ArrayItemDao historyOfObject(int testId, long thisId) {
 		return sql(sql -> sql
-			.select()
-				.sql("val.`index` AS `id`")
-				.sql("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`")
-				.sql("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`")
-				.sql("COALESCE(MIN(nextGet.`step`), -1) AS `nextGetStep`")
-			.from()
-				.sql("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
-			    "UNION " +
-			    "SELECT `testId`, `step`, `index`, 0 AS `valueIsPut` FROM `ArrayGetTrace` WHERE `testId` = ? AND `thisId` = ?)", 
-			    testId, thisId, testId, thisId)
-			.leftJoin()
-				.sql("`ArrayPutTrace` nextPut " +
-				"ON nextPut.`index` = val.`index` AND nextPut.`step` > val.`step` " +
-				"AND nextPut.`testId` = ? AND nextPut.`thisId` = ?", testId, thisId)
-			.leftJoin()
-				.sql("`ArrayGetTrace` nextGet " +
-				"ON nextGet.`index` = val.`index` AND nextGet.`step` >= val.`step` " +
-				"AND nextGet.`testId` = ? AND nextGet.`thisId` = ?", testId, thisId)
-			.groupBy().sql("val.`index`, val.`step`")
-			.orderBy().sql("val.`step`"));
+				.select()
+					.sql("val.`index` AS `id`")
+					.sql("val.`step` AS `valueStep`, val.`step` AS `step`, val.`valueIsPut` AS `valueIsPut`")
+					.sql("COALESCE(MIN(nextPut.`step`), -1) AS `nextChangeStep`")
+					.sql("COALESCE(MIN(nextGet.`step`), -1) AS `nextGetStep`")
+				.from()
+					.sql("(SELECT `testId`, `step`, `index`, 1 AS `valueIsPut` FROM `ArrayPutTrace` WHERE `testId` = ? AND `thisId` = ? " +
+				    "UNION " +
+				    "SELECT `testId`, `step`, `index`, 0 AS `valueIsPut` FROM `ArrayGetTrace` WHERE `testId` = ? AND `thisId` = ?)", 
+				    testId, thisId, testId, thisId)
+				.leftJoin()
+					.sql("`ArrayPutTrace` nextPut " +
+					"ON nextPut.`index` = val.`index` AND nextPut.`step` > val.`step` " +
+					"AND nextPut.`testId` = ? AND nextPut.`thisId` = ?", testId, thisId)
+				.leftJoin()
+					.sql("`ArrayGetTrace` nextGet " +
+					"ON nextGet.`index` = val.`index` AND nextGet.`step` >= val.`step` " +
+					"AND nextGet.`testId` = ? AND nextGet.`thisId` = ?", testId, thisId)
+				.groupBy().sql("val.`index`, val.`step`")
+				.orderBy().sql("val.`step`"))
+			.setUp(MappingKey.LOAD, "id", "step", "valueStep", "valueIsPut", "nextChangeStep", "nextGetStep")
+			.setUp(MappingKey.SET, "testId", testId, "thisId", thisId);
 	}
 	
 	public ArrayItemDao byId(int id) {
@@ -118,12 +127,13 @@ public class ArrayItemDao extends NamedValueDao<ItemValue, ArrayItemDao> {
 		return sql(sql -> sql
 			.select()
 				.sql("val.`index` AS `id`, val.`thisId` AS `thisId`")
-				.sql("val.`testId`, val.`step` AS `valueStep`, val.`step` AS `step`")
+				.sql("val.`step` AS `valueStep`, val.`step` AS `step`")
 			.from()
 				.id("ArrayGetTrace").ql(" val")
 			.where()
 				.sql("val.`testId` = ? AND val.`callStep` = ?", testId, callStep)
 			.orderBy().sql("val.`step`"))
-		.setUp(MappingKey.SET, sf -> sf.set("valueIsPut", false));
+		.setUp(MappingKey.LOAD, "id", "valueStep", "step", "thisId")
+		.setUp(MappingKey.SET, "testId", testId, "valueIsPut", false);
 	}
 }

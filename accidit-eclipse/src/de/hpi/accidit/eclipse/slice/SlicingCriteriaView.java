@@ -46,7 +46,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 	public void sliceChanged() { }
 	
 	@Override
-	public void setStep(TraceElement te) { }
+	public void setStep(TraceElement te, boolean before) { }
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -99,7 +99,7 @@ public class SlicingCriteriaView extends ViewPart implements AcciditView {
 					.inTest(value.getTestId())
 					.atStep(value.getValueStep())
 					.byId(value.getId())
-					.result()._getSingle();
+					.result()._getFirst();
 			if (newValue != null) value = newValue;
 		}
 		

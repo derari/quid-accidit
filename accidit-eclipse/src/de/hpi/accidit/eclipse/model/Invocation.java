@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 import de.hpi.accidit.eclipse.model.db.TraceElementDaoBase;
 
 public class Invocation extends TraceElement {
@@ -18,6 +19,9 @@ public class Invocation extends TraceElement {
 	
 	public boolean returned;
 	public int exitLine = -1;
+	
+	public String exitPrimType = null;
+	public long exitValueId = -1;
 	
 	public int methodId = -1;
 	public String type;
@@ -107,7 +111,11 @@ public class Invocation extends TraceElement {
 			}
 		}
 		
-		result.add(new ExitEvent(this, returned, exitLine, exitStep));
+		Value v = null;
+		if (exitPrimType != null && !exitPrimType.isEmpty()) {
+			v = Value.newValue(testId, exitPrimType.charAt(0), exitValueId, db(), exitStep);
+		}
+		result.add(new ExitEvent(this, returned, exitLine, exitStep, v));
 		
 		children = result.toArray(new TraceElement[result.size()]);
 	}

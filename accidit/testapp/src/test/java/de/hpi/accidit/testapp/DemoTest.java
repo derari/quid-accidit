@@ -6,6 +6,27 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 public class DemoTest {
+	
+	static {
+		try {
+			new DemoTest().test_geometry();
+		} catch ( Throwable t) {
+			
+		}
+		try {
+			new DemoTest().test_initialize();
+		} catch ( Throwable t) {
+			
+		}
+	}
+	
+	private void test_initialize() {
+		try {
+			test_geometry();
+		} catch ( Throwable t) {
+			
+		}
+	}
     
     public DemoTest() {
     }
@@ -84,12 +105,26 @@ public class DemoTest {
     
     @Test
     public void test_geometry() {
-    	Square base = new Square(2);
-    	Pyramid shape = new Pyramid(base, 6);
-    	assertEquals(0, shape.getVolume(), 999999);
-//    	double volume = shape.getVolume();
-//    	System.out.println(volume);
+    	Pyramid shape = new Pyramid(new Square(2), 6);
+    	assertEquals(8.0, shape.getVolume(), 0.01);
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
 //    @Test

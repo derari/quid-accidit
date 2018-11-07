@@ -1,142 +1,146 @@
 package de.hpi.accidit.eclipse.model.db;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.List;
 
 import org.cthul.miro.db.MiConnection;
 import org.cthul.miro.db.MiException;
-import org.cthul.miro.db.MiResultSet;
-import org.cthul.miro.entity.EntityConfiguration;
-import org.cthul.miro.entity.EntityInitializer;
-import org.cthul.miro.entity.InitializationBuilder;
-import org.cthul.miro.entity.map.EntityProperties;
-import org.cthul.miro.graph.GraphApi;
 import org.cthul.miro.map.MappingKey;
+import org.cthul.miro.sql.SelectBuilder;
+import org.cthul.miro.sql.SqlBuilder.Code;
+import org.cthul.miro.sql.set.MappedSqlBuilder;
 import org.cthul.miro.sql.set.MappedSqlSchema;
-import org.cthul.miro.sql.set.MappedSqlType;
+import org.cthul.miro.sql.syntax.MiSqlParser;
+import org.cthul.miro.util.XBiConsumer;
 
-import de.hpi.accidit.eclipse.DatabaseConnector;
 import de.hpi.accidit.eclipse.model.Value;
 import de.hpi.accidit.eclipse.model.Value.ObjectSnapshot;
 
 public class ValueDao extends ModelDaoBase<Value, ValueDao> {
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static void init(MappedSqlSchema schema) {
-//		MappedSqlBuilder<?,?> sql = schema.getMappingBuilder(ObjectOccurranceDao.class);
-//		ModelDaoBase.init(sql);
-//		sql.attributes("`thisId`, MIN(`step`) AS `first`, MAX(`step`) AS `last`");
+		MappedSqlBuilder<Value, ?> sql = schema.getMappingBuilder(Value.class);
+		ModelDaoBase.init(sql);
+		Arrays.asList("testId", "primType", "valueId").forEach(k -> {
+			sql.key(k).require(k).readOnly();
+		});
+		Arrays.asList("step", "arrayLength", "typeName").forEach(a -> {
+			sql.require(a).set(writeField(a));
+		});
+		sql.constructor(args -> {
+			int testId = (Integer) args[0];
+			char primType = ((String) args[1]).charAt(0);
+			long valueId = (Long) args[2];
+			return Value.newValue(testId, primType, valueId);				
+		});
+		sql.attributes("o.`arrayLength`, y.`name` AS `typeName`")
+		   .join("LEFT `Type` y ON y.`id` = o.`typeId`")
+			// code that joins ObjectTrace as o
+		   .selectSnippet("o", (s,a) -> s.include((Code) a[0]))
+		   // queries a table as t
+		   .selectSnippet("t", (s,a) -> s.from().id((String) a[0]).ql(" t")) 
+		   // filters by some attribute of t
+		   .selectSnippet("t.f=", (s,a) -> s.where().ql("t.").id((String) a[0]).sql(" = ?", a[1]))
+		   ;
 	}
 	
 	public ValueDao(ValueDao source) {
 		super(source);
 	}
 
-	public ValueDao(MiConnection cnn) {
-		super(cnn, TYPE.getSelectLayer());
+	public ValueDao(MiConnection cnn, MappedSqlSchema schema) {
+		super(cnn, schema.getSelectLayer(Value.class));
 	}
 	
 	@Override
 	protected void initialize() {
 		super.initialize();
-		withConnection(DatabaseConnector.cnn());
-		configureWith(TYPE.getAttributeReader(null, Arrays.asList("arrayLength", "typeName")));
-//		setUp(MappingKey.FETCH, "testId");
+		setUp(MappingKey.FETCH, "arrayLength", "typeName");
 	}
 	
-	protected ValueDao valueQuery(String table, String idField, int id, int testId, long step) {
-		return sql	(sql -> sql
-				.select().sql("t.`testId`, t.`primType`, t.`valueId`, o.`arrayLength`, y.`name` AS `typeName`")
-				.from().id(table).ql(" t")
-				.leftJoin().id("ObjectTrace").sql(" o ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id`")
-				.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
-				.where().ql("t.").id(idField).sql(" = ? AND t.`testId` = ? AND t.`step` = ?", id, testId, step))
-			.loadObjectAttributes();
+	private static final Code<SelectBuilder> VALUE_QUERY = MiSqlParser.parsePartialSelect(
+			"SELECT t.`testId`, t.`primType`, t.`valueId` " +
+			"LEFT JOIN `ObjectTrace` o ON t.`primType` = 'L' AND t.`testId` = o.`testId` AND t.`valueId` = o.`id`");
+	
+	protected ValueDao valueQuery(String table, String idField, int id, int testId, long valueStep, long step) {
+		return doSafe(me -> me
+				.snippet("t", table)
+				.snippet("o", VALUE_QUERY)
+				.snippet("t.f=", idField, id)
+				.where("t.`testId` = ? AND t.`step` = ?", testId, valueStep)
+				.setStep(step)
+			);
 	}
 	
 	protected ValueDao setStep(long step) {
-		return initializeWith(injectField(ObjectSnapshot.class, "step", step));
-	}
-	
-	protected ValueDao loadObjectAttributes() {
-		return this;
-//		return configureWith((EntityConfiguration) ATTRIBUTES.newConfiguration(Arrays.asList("arrayLength", "typeName")));
+		return setUp(MappingKey.SET, "step", step);
 	}
 	
 	public ValueDao ofVariable(int varId, int testId, long valueStep, long step) {
-		return valueQuery("VariableTrace", "variableId", varId, testId, valueStep).setStep(step);
+		return valueQuery("VariableTrace", "variableId", varId, testId, valueStep, step);
 	}
 	
 	public ValueDao ofField(boolean put, int fieldId, int testId, long valueStep, long step) {
-		return valueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep).setStep(step);
+		return valueQuery(put ? "PutTrace" : "GetTrace", "fieldId", fieldId, testId, valueStep, step);
 	}
 
 	public ValueDao ofArray(boolean put, int index, int testId, long valueStep, long step) {
-		return valueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep).setStep(step);
+		return valueQuery(put ? "ArrayPutTrace" : "ArrayGetTrace", "index", index, testId, valueStep, step);
 	}
+	
+	private static final Code<SelectBuilder> OF_OBJECT_QUERY = MiSqlParser.parsePartialSelect(
+			"SELECT o.`testId`, 'L' AS `primType`, o.`id` AS `valueId` " +
+			"FROM `ObjectTrace` o");
 
 	public ValueDao ofObject(int testId, long thisId, long step) {
-		return sql(sql -> sql
-				.select().sql("o.`testId`, 'L' AS `primType`, o.`id` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
-				.from().id("ObjectTrace").ql(" o")
-				.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
-				.where().sql("o.`testId` = ? AND o.`id` = ?", testId, thisId))
-			.setStep(step)
-			.loadObjectAttributes();
+		return doSafe(me -> me
+				.snippet("o", OF_OBJECT_QUERY)
+				.where("o.`testId` = ? AND o.`id` = ?", testId, thisId)
+				.setStep(step)
+			);
 	}
+	
+	private static final Code<SelectBuilder> INV_THIS_QUERY = MiSqlParser.parsePartialSelect(
+			"SELECT t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`" +
+			"FROM `CallTrace` t "+
+			"LEFT JOIN `ObjectTrace` o ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`");
 	
 	public ValueDao this_inInvocation(int testId, long callStep, long step) {
-		return sql(sql -> sql
-			.select()
-				.sql("t.`testId`, 'L' AS `primType`, COALESCE(t.`thisId`, 0) AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
-			.from().id("CallTrace").ql(" t")
-			.leftJoin().id("ObjectTrace").sql(" o ON t.`testId` = o.`testId` AND t.`thisId` = o.`id`")
-			.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
-			.where().sql("t.`testId` = ? AND t.`step` = ?", testId, callStep))
-		.setStep(step)
-		.loadObjectAttributes();
+		return doSafe(me -> me
+				.snippet("o", INV_THIS_QUERY)
+				.where("t.`testId` = ? AND t.`step` = ?", testId, callStep)
+				.setStep(step)
+			);
 	}
 
+	private static final Code<SelectBuilder> INV_RESULT_QUERY = MiSqlParser.parsePartialSelect(
+			"SELECT t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`" +
+			"FROM `CallTrace` t " +
+			"JOIN `ExitTrace` e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep` " +
+			"LEFT JOIN `ObjectTrace` o ON t.`testId` = o.`testId` AND e.`valueId` = o.`id`");
+	
 	public ValueDao result_ofInvocation(int testId, long callStep) {
-		return sql(sql -> sql
-			.select()
-				.sql("t.`testId`, t.`exitStep` AS `step`, e.`primType` AS `primType`, e.`valueId` AS `valueId`, o.`arrayLength`, y.`name` AS `typeName`")
-			.from().id("CallTrace").ql(" t")
-			.join().id("ExitTrace").sql("e ON e.`testId` = t.`testId` AND e.`step` = t.`exitStep`")
-			.leftJoin().id("ObjectTrace").sql(" o ON t.`testId` = o.`testId` AND e.`valueId` = o.`id` AND e.`primType` = 'L'")
-			.leftJoin().id("Type").sql(" y ON y.`id` = o.`typeId`")
-			.where().sql("t.`testId` = ? AND t.`step` = ?", testId, callStep))
-		.loadObjectAttributes();
+		return doSafe(me -> me
+				.snippet("o", INV_RESULT_QUERY)
+				.where("t.`testId` = ? AND t.`step` = ?", testId, callStep)
+				.setUp(MappingKey.LOAD, "step")
+			);
 	}
 	
-	
-	private static final MappedSqlType<Value> TYPE = new MappedSqlType<Value>(Value.class) {
-		{
-			ModelDaoBase.init(this);
-			Arrays.asList("testId", "primType", "valueId").forEach(k -> {
-				key(k).require(k).readOnly();
-			});
-			constructor(args -> {
-				int testId = (Integer) args[0];
-				char primType = ((String) args[1]).charAt(0);
-				long valueId = (Long) args[2];
-				return Value.newValue(testId, primType, valueId);				
-			});
+	private static XBiConsumer<Value, ?, MiException> writeField(String name) {
+		try {
+			Field f = ObjectSnapshot.class.getDeclaredField(name);
+			f.setAccessible(true);
+			return (v, o) -> {
+				try {
+					if (v instanceof ObjectSnapshot) f.set(v, o);
+				} catch (ReflectiveOperationException e) {
+					throw new MiException(e);
+				}
+			};
+		} catch (NoSuchFieldException e) {
+			throw new IllegalArgumentException(e);
 		}
-		@Override
-		protected EntityConfiguration<Value> createAttributeReader(GraphApi graph, List<?> attributes) {
-			return (rs, b) -> this.newInitializer(rs, b, attributes);
-		}
-		protected void newInitializer(MiResultSet rs, InitializationBuilder<? extends Value> builder, List<?> attributes) throws MiException {
-			EntityInitializer<ObjectSnapshot> ei = builder.nestedInitializer(b -> ATTRIBUTES.newInitializer(rs, null, flattenStr(attributes), b));
-			builder.addName("Init ObjectSnapshot")
-				.addInitializer(v -> {
-					if (v instanceof ObjectSnapshot) ei.apply((ObjectSnapshot) v);
-				}); 
-		};
-	};
-	
-	private static final EntityProperties<ObjectSnapshot,?> ATTRIBUTES = EntityProperties
-			.build(ObjectSnapshot.class)
-			.require("arrayLength").field("arrayLength")
-			.require("typeName").field("typeName");
+	}
 }

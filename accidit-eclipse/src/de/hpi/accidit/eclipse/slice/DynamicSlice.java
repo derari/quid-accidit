@@ -19,9 +19,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import de.hpi.accidit.eclipse.model.Invocation;
-import de.hpi.accidit.eclipse.model.NamedValue;
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
@@ -145,6 +145,10 @@ public class DynamicSlice {
 		});
 	}
 	
+	public Set<Node> getCriteria() {
+		return criteria;
+	}
+	
 	public Node getNode(EventKey vk) {
 		return nodes.get(vk);
 	}
@@ -154,23 +158,33 @@ public class DynamicSlice {
 	}
 	
 	private synchronized void newSlice() {
+		slice_time.reset();
+		slice_time.enter();
 		slice = new ConcurrentSkipListMap<>();
 		execute(() -> createNewSlice(slice));
 	}
 	
-	private synchronized void createNewSlice(ConcurrentNavigableMap<EventKey, Node> slice) {
-		if (slice != this.slice) return;
-		if (criteria.isEmpty()) {
-			nodes.clear();
+	private void createNewSlice(ConcurrentNavigableMap<EventKey, Node> slice) {
+		synchronized (this) {
+			if (slice != this.slice) return;
+			if (criteria.isEmpty()) {
+				nodes.clear();
+			}			
 		}
 		for (Node n: nodes.values()) {
+			// first run will wait for all remaining tasks of last slice
+			n.clearInheritedFlags();
+		}
+		for (Node n: nodes.values()) {
+			// clear again in case an old task did some late changes
 			n.clearInheritedFlags();
 		}
 		for (Node n: criteria) {
 			n.fillSlice(slice);
 		}
-		internalVariables.clear(); // most of the data is redundant by now
 	}
+	
+	
 	
 	public SortedMap<EventKey, Node> getSlice() {
 		if (slice == null) return new TreeMap<>();
@@ -185,9 +199,17 @@ public class DynamicSlice {
 			} catch (Throwable e) {
 				e.printStackTrace(System.err);
 			} finally {
-				int c = pendingTasksCounter.decrementAndGet();
+				boolean done = pendingTasksCounter.decrementAndGet() == 0;
 				updateId++;
-				onUpdate.run(c == 0);
+				onUpdate.run(done);
+				if (done) {
+					slice_time.exit();
+					long c = slice.values().stream().map(n -> n.key.step)
+							.collect(Collectors.toSet()).size();
+					System.out.println("-------------------------------");
+					System.out.println("SLICE " + c + " " + slice_time.toString());
+					internalVariables.clear(); // most of the data is redundant by now
+				}
 			}
 		});
 	}
@@ -263,6 +285,7 @@ public class DynamicSlice {
 				// special case: we want the invocation, not the return value
 				return collectInvocation(bag, key, iv);						
 			}
+			collectDependencies(bag.controlOnly(), key, iv.getSelf());
 			EventKey resultKey = key.newResultKey(iv.getType(), iv.getMethod(), iv.getSignature(), key.getStep());
 			if (resultKey == null) {
 				System.out.println("!! no result found: " + key.getInvocationKey() + " " + iv);
@@ -432,9 +455,10 @@ public class DynamicSlice {
 	}
 	
 	private List<FieldValue> fetchFieldHistories(Invocation inv) {
-		return getTraceDB().fieldValues()
+		List<FieldValue> list = getTraceDB().fieldValues()
 				.readsInInvocation(inv.getTestId(), inv.getStep())
 				.result()._asList();
+		return list;
 	}
 	
 	private boolean collectInvocation(DependencySet bag, EventKey key, CodeDependency.InvocationResult iv) {
@@ -703,9 +727,12 @@ public class DynamicSlice {
 		private synchronized void initialize() {
 			if (dependencies != null) return;
 			dependencies = new DependencySet();
+			if (key.getMethodId().contains("getDaysInYearMonth")) {
+				System.out.println(".");
+			}
 			MethodSlicer slicer = methodSlicers.get(key.getMethodId());
 			slicer.fillDependencies(this);
-//			logDependencies();
+			logDependencies();
 		}
 		
 		public int getFlags() {
@@ -864,6 +891,11 @@ public class DynamicSlice {
 //				n.dependencyFlags |= dependencyFlags;
 //				return n;
 			}
+//			if (key instanceof MethodResultKey) {
+//				Node n = new Node(new MethodResultFrameKey((MethodResultKey) key));
+//				n.setFlags(getFlags());
+//				return n;
+//			}
 			return this;
 		}
 		

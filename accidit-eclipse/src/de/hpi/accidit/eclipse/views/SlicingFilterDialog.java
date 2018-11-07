@@ -33,13 +33,13 @@ public class SlicingFilterDialog extends Dialog {
 		parent.setLayout(layout);
 		
 		cbValue = new Button(parent, SWT.CHECK);
-		cbValue.setText("Value");
+		cbValue.setText("Data");
 		cbValue.setSelection((flags & DynamicSlice.VALUE) != 0);
 		cbReach = new Button(parent, SWT.CHECK);
-		cbReach.setText("Reachability");
+		cbReach.setText("Control");
 		cbReach.setSelection((flags & DynamicSlice.REACH) != 0);
 		cbControl = new Button(parent, SWT.CHECK);
-		cbControl.setText("Control");
+		cbControl.setText("Choice");
 		cbControl.setSelection((flags & DynamicSlice.CONTROL) != 0);
 		
 		return parent;

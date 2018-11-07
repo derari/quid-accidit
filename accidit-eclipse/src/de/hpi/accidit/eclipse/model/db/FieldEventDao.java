@@ -11,8 +11,7 @@ public class FieldEventDao extends TraceElementDaoBase<FieldEvent, FieldEventDao
 	public static void init(MappedSqlSchema schema) {
 		MappedSqlBuilder<?,?> sql = schema.getMappingBuilder(FieldEvent.class);
 		TraceElementDaoBase.init(sql);
-		sql.attribute("e.`callStep`");
-		sql.from("`PutTrace` e");
+		sql.sql("SELECT e.`callStep` FROM `PutTrace` e");
 	}
 	
 	protected FieldEventDao(TraceElementDaoBase<FieldEvent, FieldEventDao> source) {

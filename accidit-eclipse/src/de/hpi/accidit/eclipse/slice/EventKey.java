@@ -387,6 +387,9 @@ public class EventKey implements Comparable<EventKey> {
 			Value v = db().values().result_ofInvocation(inv.getTestId(), inv.getStep())
 					.result()._getSingle();
 			setValue(v);
+			if (getValueString().endsWith("DateTime #30")) {
+				System.err.println(" .");
+			}
 		}
 		
 		@Override
@@ -415,6 +418,19 @@ public class EventKey implements Comparable<EventKey> {
 		}
 	}
 	
+	public static class MethodResultFrameKey extends EventKey {
+		// dummy key, only used to visualize returns in the slice navigator
+
+		public MethodResultFrameKey(MethodResultKey mr) {
+			super(mr.invD, mr.step);
+		}
+		
+		@Override
+		public String getUserString() {
+			return "trolololol";
+		}
+	}
+	
 	public static class VariableValueKey extends EventKey {
 		
 		private String variable;
@@ -439,7 +455,19 @@ public class EventKey implements Comparable<EventKey> {
 			int c = ci.compareTo(((VariableValueKey) o).ci);
 			if (c != 0) return c;
 			return variable.compareTo(((VariableValueKey) o).variable);
-		}		
+		}
+		
+		@Override
+		public String getUserString() {
+			InstructionKey t = getInstruction();
+			String s = t == null ? "" : t.toString();
+			int i = s.indexOf(':');
+			if (i > 0) s = s.substring(i+1);
+			s = detailString(s);
+			String vs = getValueString();
+			if (!vs.isEmpty()) s += " = " + vs;
+			return s;
+		}
 	}
 	
 	public static class FieldValueKey extends EventKey {
@@ -453,9 +481,7 @@ public class EventKey implements Comparable<EventKey> {
 //		}
 		
 		public FieldValueKey(InvocationData invD, FieldValue fv) {
-			this(invD, fv.isPut() ? fv : fieldSetBefore(invD.getInvocation().getTestId(), 
-										 fv.getThisId(), fv.getName(), fv.getStep()), 
-				 true);
+			this(invD, fv.isPut() ? fv : fieldSetBefore(fv), true);
 		}
 		
 		private FieldValueKey(InvocationData invD, FieldValue fv, boolean x) {
@@ -481,7 +507,7 @@ public class EventKey implements Comparable<EventKey> {
 		
 		@Override
 		protected String detailString(String s) {
-			if (thisId <= 0) return s;
+			if (thisId < 0) return s;
 			int i = s.lastIndexOf('>')+1;
 			return s.substring(0, i) + "#" + thisId + "." + s.substring(i);
 		}
@@ -497,7 +523,7 @@ public class EventKey implements Comparable<EventKey> {
 		
 		@Override
 		public boolean isInternal() {
-			if (step == 0) return true;
+			if (step == 0 && thisId < 0) return true;
 			return super.isInternal();
 		}
 		
@@ -595,7 +621,10 @@ public class EventKey implements Comparable<EventKey> {
 			Value os = objects.get(thisId);
 			if (os == null) {
 				os = db().values().ofObject(inv.getTestId(), thisId, Long.MAX_VALUE)
-						.result()._getSingle();
+						.result()._getFirst();
+				if (os == null) {
+					os = new Value.Primitive("null");
+				}
 				objects.put(thisId, os);
 				os.beInitialized();
 			}
@@ -699,7 +728,17 @@ public class EventKey implements Comparable<EventKey> {
 				.setBeforeStep(testId, thisId, getStep)
 				.atIndex(index)
 				.result()._getFirst();
+		if (iv != null) return iv;
+		iv = new ItemValue(testId, thisId, index, true, 0);
 		return iv;
+	}
+	
+	private static FieldValue fieldSetBefore(FieldValue get) {
+		FieldValue set = fieldSetBefore(get.getTestId(), get.getThisId(), get.getName(), get.getStep());
+		if (set != null) return set;
+		set = new FieldValue(get.getTestId(), get.getThisId(), get.getFieldId(), 0, true, get.getName());
+//		set.setValue(get.getValue());
+		return set;
 	}
 	
 	private static FieldValue fieldSetBefore(int testId, long thisId, String field, long getStep) {

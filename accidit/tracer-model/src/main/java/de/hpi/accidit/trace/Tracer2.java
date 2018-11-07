@@ -102,7 +102,7 @@ public class Tracer2 {
     private static final EventIA ENTER = new EventIA() {
         @Override
         protected void run(ThreadTrace t, int methodCode, Object inst) {
-            t.enter(methodCode, inst);
+//            t.enter(methodCode, inst);
         }
     };
     

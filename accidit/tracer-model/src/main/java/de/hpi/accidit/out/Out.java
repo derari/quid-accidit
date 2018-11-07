@@ -35,10 +35,14 @@ public interface Out {
     public void tracePut(CallTrace call, FieldTrace field);
 
     public void traceGet(CallTrace call, FieldTrace field);
+    
+    public void traceExistingField(int traceId, FieldTrace field);
 
     public void traceArrayPut(CallTrace call, ArrayItemTrace array);
 
     public void traceArrayGet(CallTrace call, ArrayItemTrace array);
+    
+    public void traceExistingItem(int traceId, ArrayItemTrace array);
 
     public void end(ThreadTrace trace);
 

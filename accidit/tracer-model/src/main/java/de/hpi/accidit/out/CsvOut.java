@@ -338,6 +338,18 @@ public class CsvOut implements Out {
     }
 
     @Override
+    public void traceExistingField(int traceId, FieldTrace field) {
+        tPut.p(traceId);
+        tPut.p(0);
+        tPut.p(field.getStep());
+        tPut.p(oId(field.getInstance()));
+        tPut.p(field.getField().getModelId());
+        tPut.pValue(field);
+        tPut.p(field.getLine());
+        tPut.nl();
+    }
+
+    @Override
     public void traceArrayGet(CallTrace call, ArrayItemTrace array) {
         tArrayGet.p(call.getTrace().getId());
         tArrayGet.p(call.getStep());
@@ -353,6 +365,18 @@ public class CsvOut implements Out {
     public void traceArrayPut(CallTrace call, ArrayItemTrace array) {
         tArrayPut.p(call.getTrace().getId());
         tArrayPut.p(call.getStep());
+        tArrayPut.p(array.getStep());
+        tArrayPut.p(array.getInstance().getId());
+        tArrayPut.p(array.getIndex());
+        tArrayPut.pValue(array);
+        tArrayPut.p(array.getLine());
+        tArrayPut.nl();
+    }
+
+    @Override
+    public void traceExistingItem(int traceId, ArrayItemTrace array) {
+        tArrayPut.p(traceId);
+        tArrayPut.p(0);
         tArrayPut.p(array.getStep());
         tArrayPut.p(array.getInstance().getId());
         tArrayPut.p(array.getIndex());

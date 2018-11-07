@@ -146,7 +146,7 @@ public class NavigatorView extends ViewPart implements AcciditView {
 	public void sliceChanged() { }
 	
 	@Override
-	public void setStep(TraceElement te) {
+	public void setStep(TraceElement te, boolean before) {
 		if (te.getTestId() != currentTest || te.getCallStep() != currentCall) {
 			currentTest = te.getTestId();
 			currentCall = te.getCallStep();

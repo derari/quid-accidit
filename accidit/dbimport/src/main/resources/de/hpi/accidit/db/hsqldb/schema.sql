@@ -113,7 +113,7 @@ CREATE TABLE "$SCHEMA$"."PutTrace" (
   "primType" CHAR NOT NULL ,
   "valueId" BIGINT NOT NULL ,
   "line" INT NULL ,
-  PRIMARY KEY ("testId", "callStep", "step") )
+  PRIMARY KEY ("testId", "callStep", "step", "fieldId") )
 
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ThrowTrace"
@@ -175,7 +175,7 @@ CREATE TABLE "$SCHEMA$"."ArrayPutTrace" (
   "primType" CHAR NOT NULL ,
   "valueId" BIGINT NOT NULL ,
   "line" INT NULL ,
-  PRIMARY KEY ("testId", "callStep", "step") )
+  PRIMARY KEY ("testId", "callStep", "step", "index") )
 
 -- -----------------------------------------------------
 -- Table "$SCHEMA$"."ArrayGetTrace"

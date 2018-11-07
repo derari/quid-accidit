@@ -238,7 +238,9 @@ public class NamedValue extends ModelBase implements NamedEntity {
 		@Override
 		protected Value fetchValue() throws Exception {
 			if (valueStep == -1) {
-				return new Value.Primitive("--> " + nextChangeStep);
+				valueStep = nextChangeStep;
+				return Value.Future.ofVariable(db(), id, testId, nextChangeStep, step);
+//				return new Value.Primitive("--> " + nextChangeStep);
 			}
 			return db().values().ofVariable(id, testId, valueStep, step)
 					.result().getFirst();
@@ -255,8 +257,9 @@ public class NamedValue extends ModelBase implements NamedEntity {
 		public FieldValue() {
 		}
 		
-		public FieldValue(int testId, int fieldId, long valueStep, boolean valueIsPut, String name) {
+		public FieldValue(int testId, long thisId, int fieldId, long valueStep, boolean valueIsPut, String name) {
 			this.testId = testId;
+			this.thisId = thisId;
 			this.id = fieldId;
 			this.valueStep = valueStep;
 			this.step = valueStep;
@@ -274,17 +277,26 @@ public class NamedValue extends ModelBase implements NamedEntity {
 			return getId();
 		}
 		
+		public void setValue(Value value) {
+			this.value = value;
+		}
+		
 		@Override
 		protected Value fetchValue() throws Exception {
 			if (valueStep == -1) {
-				if (nextGetStep != -1 && 
+				if (nextChangeStep == 0) {
+					// special case: pre-initialized value
+					valueIsPut = true;
+					valueStep = 0;
+				} else if (nextGetStep != -1 && 
 						(nextChangeStep == -1 || nextGetStep < nextChangeStep)) {
 					// assume the next get will tell us the value
 					valueStep = nextGetStep;
 					valueIsPut = false;
 				} else {
 					// no value yet
-					return new Value.Primitive("--> " + nextChangeStep);
+					valueStep = nextChangeStep;
+					return Value.Future.ofField(db(), id, testId, nextChangeStep, step);
 				}
 			}
 			
@@ -308,6 +320,18 @@ public class NamedValue extends ModelBase implements NamedEntity {
 	
 	public static class ItemValue extends NamedValue {
 		
+		public ItemValue() {
+		}
+		
+		public ItemValue(int testId, long thisId, int index, boolean isPut, long step) {
+			this.testId = testId;
+			this.thisId = thisId;
+			this.id = index;
+			this.valueIsPut = isPut;
+			this.step = step;
+			this.valueStep = step;
+		}
+		
 		private boolean valueIsPut;
 		
 		public boolean isPut() {
@@ -322,18 +346,24 @@ public class NamedValue extends ModelBase implements NamedEntity {
 		@Override
 		protected Value fetchValue() throws Exception {
 			if (valueStep == -1) {
-				if (nextGetStep != -1 && 
+				if (nextChangeStep == 0) {
+					// special case: initialized before trace
+					valueStep = 0;
+					valueIsPut = true;
+				} else if (nextGetStep != -1 && 
 						(nextChangeStep == -1 || nextGetStep < nextChangeStep)) {
 					// assume the next get will tell us the value
 					valueStep = nextGetStep;
 					valueIsPut = false;
 				} else {
 					// no value yet
-					return new Value.Primitive("--> " + nextChangeStep);
+					valueStep = nextChangeStep;
+					return Value.Future.ofArray(db(), id, testId, nextChangeStep, step);
+//					return new Value.Primitive("--> " + nextChangeStep);
 				}
 			}
 			return db().values().ofArray(valueIsPut, id, testId, valueStep, step)
-					.result().getSingle();
+					.result().getFirst();
 		}
 		
 		@Override

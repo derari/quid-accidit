@@ -106,7 +106,11 @@ public class InstructionKey implements Comparable<InstructionKey> {
 	public boolean equals(Object obj) {
 		if (!(obj instanceof InstructionKey)) return false;
 		InstructionKey t = (InstructionKey) obj;
-		return ci.equals(t.ci) && key.equals(t.key);
+		if (!ci.equals(t.ci)) return false;
+		// don't compare class name in case of polymorphism
+		String k1 = key.substring(key.indexOf('#')+1);
+		String k2 = t.key.substring(t.key.indexOf('#')+1);
+		return k1.equals(k2);
 	}
 	
 	@Override

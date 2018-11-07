@@ -26,7 +26,7 @@ public class ShowVariableHistoryHandler extends AbstractHandler {
 			if (result.length > 0) {
 				NamedValue variableValue = ((NamedValueNode) result[0]).getValue();
 				long step = variableValue.getStep();
-				TraceNavigatorUI.getGlobal().setStep(step);
+				TraceNavigatorUI.getGlobal().setStep(step, true);
 			}
 		}
 		return null;

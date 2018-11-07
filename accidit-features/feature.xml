@@ -2,7 +2,7 @@
 <feature
       id="de.hpi.accidit.eclipse.features"
       label="Quid Accidit? Omniscient Debugger"
-      version="0.1.0">
+      version="0.1.1">
 
    <description>
       This Plug-in provides the Quid Accidit? Omniscient Debugger.

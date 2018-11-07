@@ -17,8 +17,8 @@ public class FieldDao extends SqlEntitySet<Field, FieldDao> {
 	
 	public static void init(MappedSqlSchema schema) {
 		SqlTemplatesBuilder<?> sql = schema.getMappingBuilder(Field.class);
-		sql.attributes("m.`name`, m.`id`")
-			.from("`Field` m");
+		sql.attributes("f.`name`, f.`id`")
+			.from("`Field` f");
 	}
 	
 	protected FieldDao(FieldDao source) {
@@ -32,6 +32,7 @@ public class FieldDao extends SqlEntitySet<Field, FieldDao> {
 	@Override
 	protected void initialize() {
 		super.initialize();
+		setUp(MappingKey.FETCH, "name", "id");
 		sql(sql -> sql
 				.groupBy().sql("f.`id`, f.`name`")
 				.orderBy().sql("f.`name`"));
@@ -44,7 +45,7 @@ public class FieldDao extends SqlEntitySet<Field, FieldDao> {
 		snippetLayer.setUp("evt", (qry, a) -> qry.getStatement().join().sql(
 				"(SELECT `fieldId` FROM `PutTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId` " +
 				" UNION " +
-				" SELECT `fieldId` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId`)", a)
+				" SELECT `fieldId` FROM `GetTrace` WHERE `testId` = ? AND `thisId` = ? GROUP BY `fieldId`) evt", a)
 			.on().sql("f.`id` = evt.`fieldId`"));
 	}
 	
@@ -53,7 +54,7 @@ public class FieldDao extends SqlEntitySet<Field, FieldDao> {
 	}
 	
 	public FieldDao ofObject(int testId, long thisId) {
-		return snippet("evt", testId, thisId, testId, thisId);
+		return build("evt", testId, thisId, testId, thisId);
 	}
 	
 	public FieldDao orderById() {

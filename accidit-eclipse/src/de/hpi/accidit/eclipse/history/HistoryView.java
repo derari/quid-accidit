@@ -44,7 +44,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 				if (sel == null || sel.getDepth() != 1) return;
 				
 				NamedValue variableValue = sel.getValue();
-				TraceNavigatorUI.getGlobal().setStep(variableValue.getStep());
+				TraceNavigatorUI.getGlobal().setStep(variableValue.getStep(), true);
 			}
 		});
 
@@ -65,7 +65,7 @@ public class HistoryView extends ViewPart implements AcciditView, ISelectionList
 	}
 	
 	@Override
-	public void setStep(TraceElement te) {		
+	public void setStep(TraceElement te, boolean before) {		
 		int testId = te.getTestId();
 		long callStep = te.getCallStep();
 		if (testId == currentTestId && callStep == currentCallStep) return;

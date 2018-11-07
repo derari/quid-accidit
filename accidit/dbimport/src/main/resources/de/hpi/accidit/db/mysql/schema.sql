@@ -238,7 +238,7 @@ CREATE INDEX `fk_LocalTrace_InvocationTrace_idx` ON `$SCHEMA$`.`VariableTrace` (
 -- Table `$SCHEMA$`.`PutTrace`
 -- -----------------------------------------------------
 CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`PutTrace` (
-  `testId` INT NULL ,
+  `testId` INT NOT NULL ,
   `callStep` BIGINT NOT NULL ,
   `step` BIGINT NOT NULL ,
   `thisId` BIGINT NULL ,
@@ -246,7 +246,7 @@ CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`PutTrace` (
   `primType` CHAR NOT NULL ,
   `valueId` BIGINT NOT NULL ,
   `line` INT NULL ,
-  PRIMARY KEY (`testId`, `callStep`, `step`) ,
+  PRIMARY KEY (`testId`, `callStep`, `step`, `fieldId`) ,
   CONSTRAINT `fk_PutTrace_ObjectTrace`
     FOREIGN KEY (`testId` , `thisId` )
     REFERENCES `$SCHEMA$`.`ObjectTrace` (`testId` , `id` )
@@ -352,7 +352,7 @@ CREATE INDEX `fk_ExitTrace_CallTrace_idx` ON `$SCHEMA$`.`ExitTrace` (`testId` AS
 -- Table `$SCHEMA$`.`GetTrace`
 -- -----------------------------------------------------
 CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`GetTrace` (
-  `testId` INT NULL ,
+  `testId` INT NOT NULL ,
   `callStep` BIGINT NOT NULL ,
   `step` BIGINT NOT NULL ,
   `thisId` BIGINT NULL ,
@@ -389,7 +389,7 @@ CREATE INDEX `fk_FieldTrace_ObjectTrace_idx` ON `$SCHEMA$`.`GetTrace` (`testId` 
 -- Table `$SCHEMA$`.`ArrayPutTrace`
 -- -----------------------------------------------------
 CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`ArrayPutTrace` (
-  `testId` INT NULL ,
+  `testId` INT NOT NULL ,
   `callStep` BIGINT NOT NULL ,
   `step` BIGINT NOT NULL ,
   `thisId` BIGINT NULL ,
@@ -397,7 +397,7 @@ CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`ArrayPutTrace` (
   `primType` CHAR NOT NULL ,
   `valueId` BIGINT NOT NULL ,
   `line` INT NULL ,
-  PRIMARY KEY (`testId`, `callStep`, `step`) ,
+  PRIMARY KEY (`testId`, `callStep`, `step`, `index`) ,
   CONSTRAINT `fk_ArrayPutTrace_ObjectTrace`
     FOREIGN KEY (`testId` , `thisId` )
     REFERENCES `$SCHEMA$`.`ObjectTrace` (`testId` , `id` )
@@ -419,7 +419,7 @@ CREATE INDEX `fk_FieldTrace_ObjectTrace_idx` ON `$SCHEMA$`.`ArrayPutTrace` (`tes
 -- Table `$SCHEMA$`.`ArrayGetTrace`
 -- -----------------------------------------------------
 CREATE  TABLE IF NOT EXISTS `$SCHEMA$`.`ArrayGetTrace` (
-  `testId` INT NULL ,
+  `testId` INT NOT NULL ,
   `callStep` BIGINT NOT NULL ,
   `step` BIGINT NOT NULL ,
   `thisId` BIGINT NULL ,

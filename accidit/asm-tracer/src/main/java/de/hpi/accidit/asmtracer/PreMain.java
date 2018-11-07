@@ -90,28 +90,29 @@ public class PreMain {
             TracerSetup.setTraceSet(new TraceSet(new Model(createOut())));
             Tracer.setup(() -> {
                 try {
+                    TO_BE_REDEFINED.add(String.class);
                     TracerTransformer.fullTracingEnabled = true;
                     for (Class c: inst.getAllLoadedClasses()) {
                         if (inst.isModifiableClass(c) && 
-                                !c.getName().startsWith("java")) {
+                                !c.getName().contains("Lambda")) {
                             TO_BE_REDEFINED.add(c);
                         }
                     }
                     final int step = 64;
-                    final Class[] ary = new Class[step];
+                    final Class[] buf = new Class[step];
                     while (TO_BE_REDEFINED.size() > 0) {
                         System.out.println(TO_BE_REDEFINED.size() + " remaining ~~~~~~");
                         int len = Math.min(step, TO_BE_REDEFINED.size());
-                        Arrays.fill(ary, len, ary.length, null);
+                        Arrays.fill(buf, len, buf.length, null);
                         Iterator<Class> it = TO_BE_REDEFINED.iterator();
                         for (int i = 0; i < len; i++) {
-                            ary[i] = it.next();
+                            buf[i] = it.next();
                         }
                         try {
-                            inst.retransformClasses(ary);
+                            inst.retransformClasses(buf);
                         } catch (Throwable t) {
                             t.printStackTrace(System.err);
-                            Arrays.asList(ary).forEach(c -> {
+                            Arrays.asList(buf).forEach(c -> {
                                 System.err.println(c);
                                 TO_BE_REDEFINED.remove(c);
                             });

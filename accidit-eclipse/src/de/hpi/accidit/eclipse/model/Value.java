@@ -1,5 +1,10 @@
 package de.hpi.accidit.eclipse.model;
 
+import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+
+import org.cthul.miro.db.MiException;
+
 import de.hpi.accidit.eclipse.model.NamedValue.FieldValue;
 import de.hpi.accidit.eclipse.model.NamedValue.ItemValue;
 import de.hpi.accidit.eclipse.model.NamedValue.VariableValue;
@@ -156,7 +161,7 @@ public abstract class Value extends ModelBase {
 	public static class ObjectSnapshot extends ValueWithChildren {
 		
 		private int testId = -1;
-		private long step = -1;
+		public long step = -1;
 		private int typeId = -1;
 		private Integer arrayLength;
 		private String typeName;
@@ -278,7 +283,8 @@ public abstract class Value extends ModelBase {
 					.result().getFirst();
 			NamedValue[] c = db().variableValues()
 					.atStep(testId, callStep, step)
-					.result().asArray(VariableValue.class);
+					.result().asArray(NamedValue.class);
+			c = addMethodResult(c);
 			if (!(thisValue instanceof ObjectSnapshot)) {
 				// static method: `this` is null
 				return c;
@@ -287,6 +293,19 @@ public abstract class Value extends ModelBase {
 			c2[0] = new NamedValue("this", thisValue);
 			System.arraycopy(c, 0, c2, 1, c.length);
 			return c2;
+		}
+		
+		private NamedValue[] addMethodResult(NamedValue[] variables) throws Exception {
+			Invocation inv = db().invocations().inTest(testId).atStep(callStep)
+					.result()._getFirst();
+			if (inv == null) return variables;
+			Value v = db().values().result_ofInvocation(testId, callStep).result()._getFirst();
+			if (v == null) return variables;
+			v = new Value.Future(db(), inv.exitStep, v);
+			NamedValue result = new NamedValue(inv.returned ? "(return)" : "(throw)", v);
+			variables = Arrays.copyOf(variables, variables.length+1);
+			variables[variables.length-1] = result;
+			return variables;
 		}
 		
 		@Override
@@ -304,9 +323,58 @@ public abstract class Value extends ModelBase {
 		}
 	}
 	
-//	public static abstract class ValueHistory extends Value {
-//		
-//	}
+	public static class Future extends Value {
+		
+		public static Future ofVariable(TraceDB db, int varId, int testId, long valueStep, long step) throws InterruptedException, ExecutionException, MiException {
+			Value v = db.values().ofVariable(varId, testId, valueStep, step)
+					.result().getFirst();
+			if (v == null) v = new Primitive("?");
+			return new Future(db, valueStep, v);
+		}
+		
+		public static Future ofField(TraceDB db, int id, int testId, long valueStep, long step) throws InterruptedException, ExecutionException, MiException {
+			Value v = db.values().ofField(true, id, testId, valueStep, step)
+					.result().getFirst();
+			if (v == null) v = new Primitive("?");
+			return new Future(db, valueStep, v);
+		}
+		
+		public static Future ofArray(TraceDB db, int id, int testId, long valueStep, long step) throws InterruptedException, ExecutionException, MiException {
+			Value v = db.values().ofArray(true, id, testId, valueStep, step)
+					.result().getFirst();
+			if (v == null) v = new Primitive("?");
+			return new Future(db, valueStep, v);
+		}
+		
+		private final long step;
+		private final Value actual;
+		
+		public Future(TraceDB db, long step, Value actual) {
+			super(db);
+			this.step = step;
+			this.actual = actual;
+		}
+
+		@Override
+		public String getShortString() {
+			return "\u21E2"+step + " " + actual.getShortString();
+		}
+
+		@Override
+		public String getLongString() {
+			return "(\u21E2" + step + ") " + actual.getLongString();
+		}
+
+		@Override
+		public boolean hasChildren() {
+			return actual.hasChildren();
+		}
+
+		@Override
+		public NamedValue[] getChildren() {
+			return actual.getChildren();
+		}
+	}
 	
 	public static class VariableHistory extends ValueWithChildren {
 		
@@ -416,5 +484,14 @@ public abstract class Value extends ModelBase {
 		} else {
 			return new Primitive(primType, valueId);
 		}
-	}	
+	}
+	
+	public static Value newValue(int testId, char primType, long valueId, TraceDB db, long step) {
+		if (primType == 'L' && valueId != 0) {
+			return db.values().ofObject(testId, valueId, step).result()._getSingle();
+//			return new ObjectSnapshot(testId, valueId);
+		} else {
+			return new Primitive(primType, valueId);
+		}
+	}
 }

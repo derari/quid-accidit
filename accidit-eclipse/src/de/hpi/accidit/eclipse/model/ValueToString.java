@@ -20,6 +20,7 @@ public class ValueToString {
 				String s = getArrayContentString(v, children);
 				if (s != null && s.length() < 40) return s + " #" + v.getThisId();;
 			}
+			typeName = simpleLongTypeName(typeName);
 			int i = typeName.indexOf('[');
 			if (i < 0) {
 				return typeName + "[" + aLen + "] #" + v.getThisId();
@@ -113,23 +114,25 @@ public class ValueToString {
 		}
 		return l;
 	}
+	
+	private static String simpleLongTypeName(String t) {
+		if (t == null) return "?";
+		int i = t.length();
+		while (i > 0 && (t.length()-i) < 25) {
+			i = t.lastIndexOf('.', i-1);
+		}
+		return i < 0 ? t : t.substring(i);
+	}
 
 	private static String simpleLongName(ObjectSnapshot v) {
-		String t = v.getTypeName();
-		String n = "";
-		if (t == null) return "?#" + v.getThisId();
-		int i = t.length();
-		while (n.length() < 25 && i > 0) {
-			i = t.lastIndexOf('.', i-1);
-			n = i < 0 ? t : t.substring(i+1);
-		}
+		String n = simpleLongTypeName(v.getTypeName());
 		return n + " #" + v.getThisId();
 	}
 	
 	public static String simpleShortName(ObjectSnapshot v) {
 		String s = v.getTypeName();
 		int d = s.lastIndexOf('.');
-		if (d >= 0) s = s.substring(d+1);
+		if (d >= 0) s = s.substring(d);
 		if (s.isEmpty()) return "#" + v.getThisId();
 		return s + " #" + v.getThisId();
 	}
@@ -158,8 +161,8 @@ public class ValueToString {
 		if (vValue == null) {
 			return simpleShortName(v);
 		}
-		boolean anyMatch = false;
 		int len = vValue.getArrayLength();
+		boolean anyMatch = len == 0;
 		char[] array = new char[len];
 		Arrays.fill(array, '\u00B7');
 		for (NamedValue c: vValue.getChildren()) {

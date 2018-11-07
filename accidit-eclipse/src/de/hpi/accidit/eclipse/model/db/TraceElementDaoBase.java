@@ -15,7 +15,7 @@ public abstract class TraceElementDaoBase<Entity extends TraceElement, This exte
 	
 	protected static void init(MappedSqlBuilder<?,?> sql) {
 		ModelDaoBase.init(sql);
-		sql.attributes("e.`testId`, e.`line`, e.`step`");
+		sql.sql("SELECT e.`testId`, e.`line`, e.`step`");
 	}
 	
 	protected TraceElementDaoBase(ModelDaoBase<Entity, This> source) {

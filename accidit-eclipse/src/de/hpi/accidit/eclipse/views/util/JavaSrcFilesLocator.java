@@ -1,7 +1,12 @@
 package de.hpi.accidit.eclipse.views.util;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -27,19 +32,29 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import de.hpi.accidit.eclipse.DatabaseConnector;
+import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.TraceElement;
 
 public class JavaSrcFilesLocator {
 	
 	private static final String ORG_ECLIPSE_JDT_CORE_JAVANATURE = "org.eclipse.jdt.core.javanature";
 	private List<IJavaProject> javaWorkspaceProjects;
+	private IProject lastSelectedProject = null;
 	
 	private List<IJavaProject> getProjects() {
+		if (!Objects.equals(lastSelectedProject, DatabaseConnector.getSelectedProject())) {
+			lastSelectedProject = DatabaseConnector.getSelectedProject();
+			javaWorkspaceProjects = null;
+		}
 		if (javaWorkspaceProjects != null) return javaWorkspaceProjects;
 		
 		// Lazy loading failed. Initialize the projects member.
 		List<IJavaProject> projects = new LinkedList<IJavaProject>();
-		IProject[] workspaceProjects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
+		List<IProject> workspaceProjects = new ArrayList<>(Arrays.asList(ResourcesPlugin.getWorkspace().getRoot().getProjects()));
+		workspaceProjects.remove(lastSelectedProject);
+		workspaceProjects.add(0, lastSelectedProject);
+		
 		for(IProject project : workspaceProjects) {
 			if (!project.isOpen()) continue;
 			try {
@@ -83,7 +98,7 @@ public class JavaSrcFilesLocator {
 					public void run() {
 						try {
 							IEditorPart textEditor = IDE.openEditor(dPage, file, true);							
-							if (highlightLine(textEditor, te.line)) {
+							if (highlightLine(textEditor, te)) {
 								activeView.setFocus();
 							} else {
 								open(te.parent, dPage, activeView);
@@ -149,7 +164,8 @@ public class JavaSrcFilesLocator {
 //		}
 //	}
 	
-	private boolean highlightLine(IEditorPart editorPart, int lineNumber) {
+	private boolean highlightLine(IEditorPart editorPart, TraceElement te) {
+		int lineNumber = te.line;
 		if (!(editorPart instanceof ITextEditor) || lineNumber <= 0) return false;
 		
 		ITextEditor textEditor = (ITextEditor) editorPart;
@@ -164,7 +180,21 @@ public class JavaSrcFilesLocator {
 			// e.printStackTrace();
 		}
 		if (lineInfo == null) return false;
-		textEditor.selectAndReveal(lineInfo.getOffset(), lineInfo.getLength());
+		int offset = lineInfo.getOffset();
+		int length = lineInfo.getLength();
+		if (te instanceof Invocation) {
+			String name = ((Invocation) te).method;
+			int i = name.indexOf('(');
+			if (i > 0) name = name.substring(0, i);
+			if (name.equals("<init>")) name = ((Invocation) te).type;
+//			String line = document.get().substring(offset, offset+length);
+			Matcher m = Pattern.compile("(" + name + ")\\s*\\(").matcher(document.get());
+			if (m.find(offset)) {
+				offset = m.start(1);
+				length = m.end(1) - offset;
+			}
+		}
+		textEditor.selectAndReveal(offset, length);
 		return true;
 	}
 

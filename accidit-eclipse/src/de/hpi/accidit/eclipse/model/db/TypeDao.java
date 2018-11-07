@@ -45,7 +45,7 @@ public class TypeDao extends SqlEntitySet<Type, TypeDao> {
 	
 	public TypeDao ofObject(int testId, long thisId) {
 		return doSafe(me -> me
-				.snippet("ObjectTrace")
-				.snippet("ofObject", testId, thisId));
+				.build("ObjectTrace")
+				.build("ofObject", testId, thisId));
 	}
 }

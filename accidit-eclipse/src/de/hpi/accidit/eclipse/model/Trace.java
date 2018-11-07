@@ -72,7 +72,7 @@ public class Trace {
 		stack.add(currentElement);
 		if (currentElement instanceof Invocation) {
 			Invocation inv = (Invocation) currentElement;
-			if (inv.exitStep > step) {
+			if (inv.exitStep >= step) {
 				fillStack(step, inv.getChildren(), stack);
 			}
 		}

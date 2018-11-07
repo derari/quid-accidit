@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Quid Accidit Launcher
 Bundle-SymbolicName: de.hpi.accidit.eclipse.launcher;singleton:=true
-Bundle-Version: 0.1.0
+Bundle-Version: 0.1.1
 Bundle-Activator: de.hpi.accidit.launcher.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,

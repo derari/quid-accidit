@@ -58,7 +58,7 @@ public class VariableValueDao extends NamedValueDao<VariableValue, VariableValue
 	
 	public VariableValueDao atStep(int testId, long callStep, long step) {
 		return doSafe(me -> me
-				.snippet("last_and_next", testId, callStep, step)
+				.build("last_and_next", testId, callStep, step)
 				.setUp(MappingKey.LOAD, "valueStep", "nextChangeStep", "callStep")
 				.configureStep(testId, step));
 //				.setUp(MappingKey.LOAD_FIELD, lf -> lf.addAll(

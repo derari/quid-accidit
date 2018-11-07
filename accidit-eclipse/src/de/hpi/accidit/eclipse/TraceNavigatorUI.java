@@ -15,6 +15,8 @@ import org.eclipse.ui.PlatformUI;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsManager;
 import de.hpi.accidit.eclipse.breakpoints.BreakpointsView;
 import de.hpi.accidit.eclipse.history.HistoryView;
+import de.hpi.accidit.eclipse.model.ExitEvent;
+import de.hpi.accidit.eclipse.model.Invocation;
 import de.hpi.accidit.eclipse.model.Trace;
 import de.hpi.accidit.eclipse.model.TraceElement;
 import de.hpi.accidit.eclipse.model.db.TraceDB;
@@ -49,6 +51,7 @@ public class TraceNavigatorUI {
 	private int testId;
 	private Trace trace;
 	private TraceElement current;
+	private boolean currentBefore;
 	
 	private final SliceAPI sliceApi = new SliceAPI(new Runnable() {
 		@Override
@@ -75,7 +78,7 @@ public class TraceNavigatorUI {
 	
 	public void addView(AcciditView view) {
 		if (current != null) {
-			view.setStep(current);
+			view.setStep(current, currentBefore);
 		}
 		views.add(view);
 	}
@@ -185,24 +188,46 @@ public class TraceNavigatorUI {
 		if (getSlicingCriteriaView() != null) {
 			getSlicingCriteriaView().clear();
 		}
-		
-		if (getTraceExplorer() == null) {
-			// TODO: open trace explorer
+
+		// TODO: open trace explorer
+		if (getTraceExplorer() != null) {
+			getTraceExplorer().refreshTrace();
 		}
-		setStep(0);
+		
+		setStep(0, true);
 	}
 	
-	public void setStep(final long newStep) {
-		WorkPool.execute(() -> {
-			TraceElement te = getTrace().getStep(newStep);
-			DoInUiThread.run(() -> setStep(te));
+	public void setStep(long newStep, boolean before) {
+		WorkPool.executePriority(() -> {
+			try {
+				TraceElement te = getTrace().getStep(newStep);
+				DoInUiThread.run(() -> setStep(te, before));
+			} catch (Exception e) {
+				e.printStackTrace(System.err);
+			}
 		});
 	}
 	
-	public void setStep(TraceElement le) {
+	public void setStep(TraceElement le, boolean before) {
 		current = le;
+		currentBefore = before;
 		for (AcciditView v: views) {
-			v.setStep(le);
+			v.setStep(le, before);
+		}
+		if (!before) {
+			if (le instanceof ExitEvent) {
+				le = le.parent;
+			} else if (le instanceof Invocation) {
+				TraceElement[] te = ((Invocation) le).getChildren();
+				if (te != null && te.length > 0) {
+					le = te[0];
+				}
+			}
+		}
+		if (le == null) return;
+		if (le.parent == null) {
+			TraceElement te = getTrace().getStep(le.getStep());
+			le.parent = te.parent;
 		}
 		showCode(le);
 	}

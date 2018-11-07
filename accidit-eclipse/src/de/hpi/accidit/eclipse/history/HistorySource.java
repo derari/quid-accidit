@@ -33,8 +33,13 @@ public abstract class HistorySource {
 
 		@Override
 		public MiFuture<String> getTitle(TraceDB db, long step) {
-			String s = String.valueOf("#" + callStep);
-			return MiFutures.value(s);
+			return db.invocations().inTest(testId).atStep(callStep)
+						.result().first()
+						.andThen(i -> 
+							i == null ? ("#" + callStep) :
+							("#" + i.method + "  {" + callStep + "}")).submit();
+//			String s = String.valueOf("#" + callStep);
+//			return MiFutures.value(s);
 		}
 	}
 
@@ -64,7 +69,7 @@ public abstract class HistorySource {
 							return f.getException().getMessage();
 						}
 						return f.getResult().getSingle().getLongString();
-					});
+					}).submit();
 		}
 	}
 }

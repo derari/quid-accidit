@@ -3,6 +3,7 @@ package de.hpi.accidit.eclipse.slice;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -44,7 +45,12 @@ public class SliceAPI {
 	}
 	
 	public void reset(IJavaProject project, int testId) {
-		init(project, testId);
+		try {
+			init(project, testId);
+		} catch (NoSuchElementException e) {
+		} catch (RuntimeException e) {
+			e.printStackTrace(System.err);
+		}
 		clear();
 	}
 	
@@ -127,6 +133,10 @@ public class SliceAPI {
 	
 	public void removeCriterion(EventKey key) {
 		setCriterion(key, -1);
+	}
+	
+	public Set<Node> getCriteria() {
+		return dynamicSlice().getCriteria();
 	}
 
 	public int getFlags(EventKey key) {
